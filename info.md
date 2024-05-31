@@ -1,5 +1,9 @@
 ### Changes
 
+v4.0.23
+- Changed Owner to @BJReplay
+- Changed Github Repo to https://github.com/BJReplay/ha-solcast-solar
+
 v4.0.22
 - this time weather sensor is gone.. and midnight UTC reset works
 - (*)added a config for setting a hard limit for inverters with over sized solar arrays 
