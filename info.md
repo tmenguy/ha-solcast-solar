@@ -1,5 +1,8 @@
 ### Changes
 
+v4.0.25
+- HACS Submission
+
 v4.0.24
 - More changes to remove links to https://github.com/oziee that were missed the first time around
 - More changes to prepare to submit to HACSs
