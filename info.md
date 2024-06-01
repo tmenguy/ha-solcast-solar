@@ -1,5 +1,9 @@
 ### Changes
 
+v4.0.24
+- More changes to remove links to https://github.com/oziee that were missed the first time around
+- More changes to prepare to submit to HACSs
+
 v4.0.23
 - Changed Owner to @BJReplay
 - Changed Github Repo to https://github.com/BJReplay/ha-solcast-solar
