@@ -1,22 +1,32 @@
 
 # HA Solcast PV Solar Forecast Integration
 
+> [!WARNING]  
+> This repository is **Not** currently in HACS, so can't yet be installed via HACS.  While this PR remains open, you must install manually using the Manually in HACS instructions below: https://github.com/hacs/default/pull/2535
+
+> [!IMPORTANT]  
+> This repository is only sporadically maintained.  Breaking API changes from Solcast will be maintained on a best efforts basis.
+>
+> Collaborators are welcome, as are PRs for enhancements.
+>
+> Bug reports unrelated to API changes may not get the attention you want, as the the maintainer is largely retired for medical reasons, but knows the Solcast API as a former / user in this and other projects.
+
+
 Home Assistant(https://www.home-assistant.io) Integration Component
 
 This custom component integrates the Solcast Hobby PV Forecast API into Home Assistant.
-[<img src="https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png" width="200">](https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png)
+
+[<img src="https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png" width="300">](https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-```
-⚠️ Solcast have altered their API limits for new account creators
-
-Solcast now only offer new account creators 10 api calls per day (used to be 50). 
-Old account users still have 50 api calls
-
-The integration now no longer includes auto api polling. Users now need to create their own automations
-to call the update solcast service to poll for new data. Keep in mind your API poll limit.
-```
+> [!NOTE]  
+> Solcast have altered their API limits for new account creators
+>
+> Solcast now only offer new account creators 10 API calls per day (used to be 50). 
+> Old account users still have 50 API calls
+> 
+> The integration currently no longer includes auto API polling. Users now need to create their own automations to call the update solcast service to poll for new data. Keep in mind your API poll limit.
 
 ## Solcast Requirements:
 Sign up for an API key (https://solcast.com/)
