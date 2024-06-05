@@ -2,7 +2,7 @@
 # HA Solcast PV Solar Forecast Integration
 
 > [!WARNING]  
-> This repository is **Not** currently in HACS, so can't yet be installed via HACS.  While this PR remains open, you must install manually using the Manually in HACS instructions below: https://github.com/hacs/default/pull/2535
+> This repository is **Not** currently in HACS, so can't yet be installed via HACS.  While [this PR](https://github.com/hacs/default/pull/2535) remains open, you must install manually using the Manually in HACS instructions below: 
 
 > [!IMPORTANT]  
 > This repository is only sporadically maintained.  Breaking API changes from Solcast will be maintained on a best efforts basis.
