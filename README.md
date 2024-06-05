@@ -31,7 +31,7 @@ Copy the API Key for use with this integration (See [Configuration](#Configurati
 
 Using HACS. More info [here](https://hacs.xyz/)  
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=BJReplay&repository=ha-solcast-solar&category=plugin)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=BJReplay&repository=ha-solcast-solar&category=integration)
 
 Manually in HACS  
 Follow the link [here](https://hacs.xyz/docs/faq/custom_repositories/)  
