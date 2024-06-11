@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import aiofiles
 import copy
 import json
 import logging
@@ -227,8 +228,8 @@ class SolcastApi:
         try:
             if len(self._sites) > 0:
                 if file_exists(self._filename):
-                    with open(self._filename) as data_file:
-                        jsonData = json.load(data_file, cls=JSONDecoder)
+                    async with aiofiles.open(self._filename) as data_file:
+                        jsonData = json.load(await data_file, cls=JSONDecoder)
                         json_version = jsonData.get("version", 1)
                         #self._weather = jsonData.get("weather", "unknown")
                         _LOGGER.debug(f"SOLCAST - load_saved_data file exists.. file type is {type(jsonData)}")
