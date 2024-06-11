@@ -95,7 +95,7 @@ class SolcastApi:
             return
 
         async with self._serialize_lock:
-            with open(self._filename, "w") as f:
+            async with aiofiles.open(self._filename, "w") as f:
                 json.dump(self._data, f, ensure_ascii=False, cls=DateTimeEncoder)
 
     async def sites_data(self):
@@ -111,8 +111,8 @@ class SolcastApi:
                     apiCacheFileName = "sites.json"
                     if self.apiCacheEnabled and file_exists(apiCacheFileName):
                         status = 404
-                        with open(apiCacheFileName) as f:
-                            resp_json = json.load(f)
+                        async with aiofiles.open(apiCacheFileName) as f:
+                            resp_json = json.loads(await f.read())
                             status = 200
                     else:
                         resp: ClientResponse = await self.aiohttp_session.get(
@@ -122,7 +122,7 @@ class SolcastApi:
                         resp_json = await resp.json(content_type=None)
                         status = resp.status
                         if self.apiCacheEnabled:
-                            with open(apiCacheFileName, 'w') as f:
+                            async with aiofiles.open(apiCacheFileName, 'w') as f:
                                 json.dump(resp_json, f, ensure_ascii=False)
                             
                     _LOGGER.debug(f"SOLCAST - sites_data code http_session returned data type is {type(resp_json)}")
@@ -229,7 +229,7 @@ class SolcastApi:
             if len(self._sites) > 0:
                 if file_exists(self._filename):
                     async with aiofiles.open(self._filename) as data_file:
-                        jsonData = json.load(await data_file, cls=JSONDecoder)
+                        jsonData = json.loads(await data_file.read(), cls=JSONDecoder)
                         json_version = jsonData.get("version", 1)
                         #self._weather = jsonData.get("weather", "unknown")
                         _LOGGER.debug(f"SOLCAST - load_saved_data file exists.. file type is {type(jsonData)}")
@@ -661,8 +661,8 @@ class SolcastApi:
                 if self.apiCacheEnabled and file_exists(apiCacheFileName):
                     _LOGGER.debug(f"SOLCAST - Getting cached testing data for site {site}")
                     status = 404
-                    with open(apiCacheFileName) as f:
-                        resp_json = json.load(f)
+                    with aiofiles.open(apiCacheFileName) as f:
+                        resp_json = json.loads(await f.read())
                         status = 200
                         _LOGGER.debug(f"SOLCAST - Got cached file data for site {site}")
                 else:
@@ -682,7 +682,7 @@ class SolcastApi:
                     resp_json = await resp.json(content_type=None)
 
                     if self.apiCacheEnabled:
-                        with open(apiCacheFileName, 'w') as f:
+                        async with aiofiles.open(apiCacheFileName, 'w') as f:
                             json.dump(resp_json, f, ensure_ascii=False)
                         
                 _LOGGER.debug(f"SOLCAST - fetch_data code http_session returned data type is {type(resp_json)}")
