@@ -96,7 +96,7 @@ class SolcastApi:
 
         async with self._serialize_lock:
             async with aiofiles.open(self._filename, "w") as f:
-                json.dump(self._data, f, ensure_ascii=False, cls=DateTimeEncoder)
+                 await f.write(json.dumps(self._data, ensure_ascii=False, cls=DateTimeEncoder))
 
     async def sites_data(self):
         """Request data via the Solcast API."""
@@ -123,7 +123,7 @@ class SolcastApi:
                         status = resp.status
                         if self.apiCacheEnabled:
                             async with aiofiles.open(apiCacheFileName, 'w') as f:
-                                json.dump(resp_json, f, ensure_ascii=False)
+                                await f.write(json.dumps(resp_json, ensure_ascii=False))
                             
                     _LOGGER.debug(f"SOLCAST - sites_data code http_session returned data type is {type(resp_json)}")
                     _LOGGER.debug(f"SOLCAST - sites_data code http_session returned status {status}")
@@ -661,7 +661,7 @@ class SolcastApi:
                 if self.apiCacheEnabled and file_exists(apiCacheFileName):
                     _LOGGER.debug(f"SOLCAST - Getting cached testing data for site {site}")
                     status = 404
-                    with aiofiles.open(apiCacheFileName) as f:
+                    async with aiofiles.open(apiCacheFileName) as f:
                         resp_json = json.loads(await f.read())
                         status = 200
                         _LOGGER.debug(f"SOLCAST - Got cached file data for site {site}")
@@ -683,7 +683,7 @@ class SolcastApi:
 
                     if self.apiCacheEnabled:
                         async with aiofiles.open(apiCacheFileName, 'w') as f:
-                            json.dump(resp_json, f, ensure_ascii=False)
+                            await f.write(json.dumps(resp_json, ensure_ascii=False))
                         
                 _LOGGER.debug(f"SOLCAST - fetch_data code http_session returned data type is {type(resp_json)}")
                 _LOGGER.debug(f"SOLCAST - fetch_data code http_session status is {status}")
