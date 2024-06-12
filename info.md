@@ -1,5 +1,8 @@
 ### Changes
 
+v4.0.26
+- See: https://github.com/BJReplay/ha-solcast-solar/releases/tag/v4.0.26
+
 v4.0.25
 - HACS Submission
 
