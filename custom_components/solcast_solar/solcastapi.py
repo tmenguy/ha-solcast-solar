@@ -117,18 +117,22 @@ class SolcastApi:
                             status = 200
                     else:
                         _LOGGER.debug(f"SOLCAST - connecting to - {self.options.host}/rooftop_sites?format=json&api_key=REDACTED")
-                        retry = 10
+                        retries = 3
+                        retry = retries
                         success = False
                         while retry > 0:
                             resp: ClientResponse = await self.aiohttp_session.get(
                                 url=f"{self.options.host}/rooftop_sites", params=params, ssl=False
                             )
 
-                            resp_json = await resp.json(content_type=None)
                             status = resp.status
-
-                            _LOGGER.debug(f"SOLCAST - sites_data code http_session returned data type is {type(resp_json)}")
-                            _LOGGER.debug(f"SOLCAST - sites_data code http_session returned status {status}")
+                            try:
+                                resp_json = await resp.json(content_type=None)
+                                _LOGGER.debug(f"SOLCAST - sites_data code http_session returned data type is {type(resp_json)}")
+                                _LOGGER.debug(f"SOLCAST - sites_data code http_session returned status {status}")
+                            except json.decoder.JSONDecodeError:
+                                _LOGGER.error("SOLCAST - sites_data JSONDecodeError.. The data returned from Solcast is unknown, Solcast site could be having problems")
+                            except: raise
 
                             if status == 200:
                                 _LOGGER.debug(f"SOLCAST - writing sites data cache")
@@ -137,11 +141,17 @@ class SolcastApi:
                                 retry = 0
                                 success = True
                             else:
-                                _LOGGER.debug(f"SOLCAST - will retry GET rooftop_sites in six seconds, retry {(10 - retry) + 1}")
-                                await asyncio.sleep(6)
+                                _LOGGER.debug(f"SOLCAST - will retry GET rooftop_sites, retry {(retries - retry) + 1}")
+                                await asyncio.sleep(5)
                                 retry -= 1
                         if not success:
-                            raise Exception(f"SOLCAST - Timeout gathering rooftop sites data after one minute, last call result: {status}")
+                            _LOGGER.warning(f"SOLCAST - Timeout gathering rooftop sites data, last call result: {status}, using cached data if it exists")
+                            status = 404
+                            if file_exists(apiCacheFileName):
+                                _LOGGER.debug(f"SOLCAST - loading cached sites data")
+                                async with aiofiles.open(apiCacheFileName) as f:
+                                    resp_json = json.loads(await f.read())
+                                    status = 200
 
                 if status == 200:
                     d = cast(dict, resp_json)
@@ -158,8 +168,6 @@ class SolcastApi:
                         f"SOLCAST - sites_data Solcast.com http status Error {status} - Gathering rooftop sites data"
                     )
                     raise Exception(f"SOLCAST - HTTP sites_data error: Solcast Error gathering rooftop sites data")
-        except json.decoder.JSONDecodeError:
-            _LOGGER.error("SOLCAST - sites_data JSONDecodeError.. The data returned from Solcast is unknown, Solcast site could be having problems")
         except ConnectionRefusedError as err:
             _LOGGER.error("SOLCAST - sites_data ConnectionRefusedError Error.. %s",err)
         except ClientConnectionError as e:
