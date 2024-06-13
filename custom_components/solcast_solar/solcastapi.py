@@ -106,31 +106,46 @@ class SolcastApi:
             for spl in sp:
                 #params = {"format": "json", "api_key": self.options.api_key}
                 params = {"format": "json", "api_key": spl.strip()}
-                _LOGGER.debug(f"SOLCAST - trying to connect to - {self.options.host}/rooftop_sites?format=json&api_key=REDACTED")
                 async with async_timeout.timeout(60):
                     apiCacheFileName = "sites.json"
+                    _LOGGER.debug(f"SOLCAST apiCacheEnabled={str(self.apiCacheEnabled)}, {apiCacheFileName}={str(file_exists(apiCacheFileName))}")
                     if self.apiCacheEnabled and file_exists(apiCacheFileName):
+                        _LOGGER.debug(f"SOLCAST - loading cached sites data")
                         status = 404
                         async with aiofiles.open(apiCacheFileName) as f:
                             resp_json = json.loads(await f.read())
                             status = 200
                     else:
-                        resp: ClientResponse = await self.aiohttp_session.get(
-                            url=f"{self.options.host}/rooftop_sites", params=params, ssl=False
-                        )
+                        _LOGGER.debug(f"SOLCAST - connecting to - {self.options.host}/rooftop_sites?format=json&api_key=REDACTED")
+                        retry = 10
+                        success = False
+                        while retry > 0:
+                            resp: ClientResponse = await self.aiohttp_session.get(
+                                url=f"{self.options.host}/rooftop_sites", params=params, ssl=False
+                            )
 
-                        resp_json = await resp.json(content_type=None)
-                        status = resp.status
-                        if self.apiCacheEnabled:
-                            async with aiofiles.open(apiCacheFileName, 'w') as f:
-                                await f.write(json.dumps(resp_json, ensure_ascii=False))
+                            resp_json = await resp.json(content_type=None)
+                            status = resp.status
 
-                    _LOGGER.debug(f"SOLCAST - sites_data code http_session returned data type is {type(resp_json)}")
-                    _LOGGER.debug(f"SOLCAST - sites_data code http_session returned status {status}")
+                            _LOGGER.debug(f"SOLCAST - sites_data code http_session returned data type is {type(resp_json)}")
+                            _LOGGER.debug(f"SOLCAST - sites_data code http_session returned status {status}")
+
+                            if status == 200:
+                                _LOGGER.debug(f"SOLCAST - writing sites data cache")
+                                async with aiofiles.open(apiCacheFileName, 'w') as f:
+                                    await f.write(json.dumps(resp_json, ensure_ascii=False))
+                                retry = 0
+                                success = True
+                            else:
+                                _LOGGER.debug(f"SOLCAST - will retry GET rooftop_sites in six seconds, retry {(10 - retry) + 1}")
+                                await asyncio.sleep(6)
+                                retry -= 1
+                        if not success:
+                            raise Exception(f"SOLCAST - Timeout gathering rooftop sites data after one minute, last call result: {status}")
 
                 if status == 200:
                     d = cast(dict, resp_json)
-                    _LOGGER.debug(f"SOLCAST - sites_data returned data: {d}")
+                    _LOGGER.debug(f"SOLCAST - sites_data: {d}")
                     for i in d['sites']:
                         i['apikey'] = spl.strip()
                         #v4.0.14 to stop HA adding a pin to the map
@@ -140,9 +155,9 @@ class SolcastApi:
                     self._sites = self._sites + d['sites']
                 else:
                     _LOGGER.warning(
-                        f"SOLCAST - sites_data Solcast.com http status Error {status} - Gathering rooftop sites data."
+                        f"SOLCAST - sites_data Solcast.com http status Error {status} - Gathering rooftop sites data"
                     )
-                    raise Exception(f"SOLCAST - HTTP sites_data error: Solcast Error gathering rooftop sites data.")
+                    raise Exception(f"SOLCAST - HTTP sites_data error: Solcast Error gathering rooftop sites data")
         except json.decoder.JSONDecodeError:
             _LOGGER.error("SOLCAST - sites_data JSONDecodeError.. The data returned from Solcast is unknown, Solcast site could be having problems")
         except ConnectionRefusedError as err:
