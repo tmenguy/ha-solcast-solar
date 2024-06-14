@@ -186,11 +186,35 @@ class SolcastApi:
             params = {"api_key": sp[0]}
             _LOGGER.debug(f"SOLCAST - getting API limit and usage from solcast")
             async with async_timeout.timeout(60):
+                apiCacheFileName = "solcast-usage.json"
                 resp: ClientResponse = await self.aiohttp_session.get(
                     url=f"https://api.solcast.com.au/json/reply/GetUserUsageAllowance", params=params, ssl=False
                 )
-                resp_json = await resp.json(content_type=None)
-                status = resp.status
+                retries = 3
+                retry = retries
+                success = False
+                while retry > 0:
+                    resp_json = await resp.json(content_type=None)
+                    status = resp.status
+                    if status == 200:
+                        _LOGGER.debug(f"SOLCAST - writing usage cache")
+                        async with aiofiles.open(apiCacheFileName, 'w') as f:
+                            await f.write(json.dumps(resp_json, ensure_ascii=False))
+                        retry = 0
+                        success = True
+                    else:
+                        _LOGGER.debug(f"SOLCAST - will retry GET GetUserUsageAllowance, retry {(retries - retry) + 1}")
+                        await asyncio.sleep(5)
+                        retry -= 1
+                if not success:
+                    if statusTranslate.get(status): status = str(status) + statusTranslate[status]
+                    _LOGGER.warning(f"SOLCAST - Timeout getting usage allowance, last call result: {status}, using cached data if it exists")
+                    status = 404
+                    if file_exists(apiCacheFileName):
+                        _LOGGER.debug(f"SOLCAST - loading cached usage")
+                        async with aiofiles.open(apiCacheFileName) as f:
+                            resp_json = json.loads(await f.read())
+                            status = 200
 
             if status == 200:
                 d = cast(dict, resp_json)
@@ -198,7 +222,7 @@ class SolcastApi:
                 self._api_limit = d.get("daily_limit", None)
                 self._api_used = d.get("daily_limit_consumed", None)
             else:
-                raise Exception(f"SOLCAST - sites_usage: gathering site data failed. request returned Status code: {status} - Responce: {resp_json}.")
+                raise Exception(f"SOLCAST - sites_usage: gathering site data failed. Request returned Status code: {status} - Response: {resp_json}.")
 
         except json.decoder.JSONDecodeError:
             _LOGGER.error("SOLCAST - sites_usage JSONDecodeError.. The data returned from Solcast is unknown, Solcast site could be having problems")
