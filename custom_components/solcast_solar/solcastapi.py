@@ -159,6 +159,8 @@ class SolcastApi:
                                 async with aiofiles.open(apiCacheFileName) as f:
                                     resp_json = json.loads(await f.read())
                                     status = 200
+                            else:
+                                LOGGER.error(f"SOLCAST - cached sites data is not yet available to cope with Solcast API being too busy - at least one successful API call is needed")
 
                 if status == 200:
                     d = cast(dict, resp_json)
@@ -171,9 +173,10 @@ class SolcastApi:
 
                     self._sites = self._sites + d['sites']
                 else:
-                    _LOGGER.warning(
+                    _LOGGER.error(
                         f"SOLCAST - sites_data Solcast.com http status Error {status} - Gathering rooftop sites data"
                     )
+                    _LOGGER.error(f"SOLCAST - Solcast integration did not start correctly, as rooftop sites data is needed. Suggestion: Restart the integration")
                     raise Exception(f"SOLCAST - HTTP sites_data error: Solcast Error gathering rooftop sites data")
         except ConnectionRefusedError as err:
             _LOGGER.error("SOLCAST - sites_data ConnectionRefusedError Error.. %s",err)
