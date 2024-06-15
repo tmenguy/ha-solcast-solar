@@ -85,6 +85,12 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/install.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/install.png)
 
+> [!IMPORTANT]
+> After the integration is started, review the Home Assistant log.
+> 
+> Should an error that gathering rooftop sites data has failed occur then this is not an integration issue, rather a Solcast API issue. The best course of action is to restart the integration, or Home Assistant entirely, and monitor until the sites data can be acquired. Until rooftop sites data is acquired the integration cannot function. 
+> The integration does attempt retries when the Solcast API is busy, but sometimes even this does not help.
+
 ## Dampening Configuration
 
 New in v4.0.8 is the option to configure hourly dampening values
