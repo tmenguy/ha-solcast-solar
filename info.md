@@ -1,10 +1,38 @@
 ### Changes
 
+v4.0.28
+- Add retry for rooftop sites collection #12 by @autoSteve in https://github.com/BJReplay/ha-solcast-solar/pull/26
+- Full info.md changes since v4.0.25
+- Re-incorporate most v4.0.23 oziee changes by @autoSteve 
+- Retain cached data when API limit reached
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.27...v4.0.28
+
+New Collaborator
+
+- @autoSteve has made a huge contribution over the last few days - he has a sponsor button on his profile, so don't be afraid to mash it!
+
 v4.0.27
-- See: https://github.com/BJReplay/ha-solcast-solar/releases/tag/v4.0.27
+- docs: Update info.md by @Kolbi in https://github.com/BJReplay/ha-solcast-solar/pull/19
+- Use aiofiles with async open, await data_file by @autoSteve in https://github.com/BJReplay/ha-solcast-solar/pull/21
+- Add support for async_get_time_zone() by @autoSteve in https://github.com/BJReplay/ha-solcast-solar/pull/25
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.26...v4.0.27
+
+New Contributors
+- @Kolbi made their first contribution in https://github.com/BJReplay/ha-solcast-solar/pull/19
+- @autoSteve made their first contribution in https://github.com/BJReplay/ha-solcast-solar/pull/21
 
 v4.0.26
-- See: https://github.com/BJReplay/ha-solcast-solar/releases/tag/v4.0.26
+- Fixes #8 #9 #10 - My HA Button category by @mZ738 in https://github.com/BJReplay/ha-solcast-solar/pull/11
+- Update README.md by @wimdebruyn in https://github.com/BJReplay/ha-solcast-solar/pull/5
+- Prepare for new Release by @BJReplay in https://github.com/BJReplay/ha-solcast-solar/pull/13
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.25...v4.0.26
+ 
+New Contributors
+* @mZ738 made their first contribution in https://github.com/BJReplay/ha-solcast-solar/pull/11
+* @wimdebruyn made their first contribution in https://github.com/BJReplay/ha-solcast-solar/pull/5  
 
 v4.0.25
 - HACS Submission
