@@ -1,6 +1,7 @@
 """Support for Solcast PV forecast."""
 
 import logging
+import random
 
 from homeassistant import loader
 from homeassistant.config_entries import ConfigEntry
@@ -66,12 +67,13 @@ SERVICE_QUERY_SCHEMA: Final = vol.All(
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up solcast parameters."""
 
+    random.seed()
+
     #new in v4.0.16 for the selector of which field to use from the data
     if entry.options.get(KEY_ESTIMATE,None) is None:
         new = {**entry.options}
         new[KEY_ESTIMATE] = "estimate"
         hass.config_entries.async_update_entry(entry, options=new, version=7)
-
 
     optdamp = {}
     try:
@@ -111,7 +113,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         await solcast.sites_data()
-        #await solcast.sites_usage()
+        await solcast.sites_usage()
     except Exception as ex:
         raise ConfigEntryNotReady(f"Getting sites data failed: {ex}") from ex
 
@@ -140,7 +142,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info(f"SOLCAST - Solcast API data UTC times are converted to {hass.config.time_zone}")
 
     if options.hard_limit < 100:
-        _LOGGER.info(f"SOLCAST - Inverter hard limit value has been set. If the forecasts and graphs are not as you expect, try running the service 'solcast_solar.remove_hard_limit' to remove this setting. This setting is really only for advanced quirky solar setups.")
+        _LOGGER.info(
+            f"SOLCAST - Inverter hard limit value has been set. If the forecasts and graphs are not as you expect, try running the service 'solcast_solar.remove_hard_limit' to remove this setting. "
+            f"This setting is really only for advanced quirky solar setups."
+        )
 
     async def handle_service_update_forecast(call: ServiceCall):
         """Handle service call"""
