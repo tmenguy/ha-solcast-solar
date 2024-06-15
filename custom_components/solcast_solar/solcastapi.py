@@ -588,7 +588,8 @@ class SolcastApi:
         for site in self._sites:
             _LOGGER.debug(f"SOLCAST - API polling for rooftop {site['resource_id']}")
             #site=site['resource_id'], apikey=site['apikey'],
-            await self.http_data_call(site['resource_id'], site['apikey'], dopast)
+            result = await self.http_data_call(site['resource_id'], site['apikey'], dopast)
+            if not result: return
 
         self._data["last_updated"] = dt.now(timezone.utc).isoformat()
         #await self.sites_usage()
@@ -609,13 +610,17 @@ class SolcastApi:
         _data = []
         _data2 = []
 
-        #this is one run once, for a new install or if the solcasft.json file is deleted
-        #this does use up an api call count too
+        # This is run once, for a new install or if the solcast.json file is deleted
+        # This does use up an api call count too
         if dopast:
             ae = None
             resp_dict = await self.fetch_data("estimated_actuals", 168, site=r_id, apikey=api, cachedname="actuals")
             if not isinstance(resp_dict, dict):
-                _LOGGER.warning("SOLCAST - No data was returned so this WILL cause errors.. either your limit is up, internet down.. what ever the case is it is NOT a problem with the integration, and all other problems of sensor values being wrong will be a seen")
+                _LOGGER.warning(
+                    f"SOLCAST - No data was returned for estimated_actuals so this WILL cause errors... "
+                    f"Either your limit is exhaused, internet down, what ever the case is it is "
+                    f"NOT a problem with the integration, and all other problems of sensor values being wrong will be seen"
+                )
                 raise TypeError(f"Solcast API did not return a json object. Returned {resp_dict}")
 
             ae = resp_dict.get("estimated_actuals", None)
@@ -644,6 +649,9 @@ class SolcastApi:
                     )
 
         resp_dict = await self.fetch_data("forecasts", 168, site=r_id, apikey=api, cachedname="forecasts")
+        if resp_dict is None:
+            return False
+
         if not isinstance(resp_dict, dict):
             raise TypeError(f"Solcast API did not return a json object. Returned {resp_dict}")
 
@@ -703,6 +711,8 @@ class SolcastApi:
 
         self._data['siteinfo'].update({r_id:{'forecasts': copy.deepcopy(_forecasts)}})
 
+        return True
+
 
     async def fetch_data(self, path= "error", hours=168, site="", apikey="", cachedname="forcasts") -> dict[str, Any]:
         """fetch data via the Solcast API."""
@@ -753,7 +763,8 @@ class SolcastApi:
                             async with aiofiles.open(apiCacheFileName, 'w') as f:
                                 await f.write(json.dumps(resp_json, ensure_ascii=False))
                     else:
-                        status = 429
+                        _LOGGER.warning(f"SOLCAST - API limit exceeded, not getting forecast")
+                        return None
 
                 _LOGGER.debug(f"SOLCAST - fetch_data code http_session returned data type is {type(resp_json)}")
                 _LOGGER.debug(f"SOLCAST - fetch_data code http_session status is {status}")
