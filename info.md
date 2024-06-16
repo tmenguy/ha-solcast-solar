@@ -1,5 +1,12 @@
 ### Changes
 
+v4.0.29
+- Bug fix: Write API usage cache on every successful poll by @autoSteve in https://github.com/BJReplay/ha-solcast-solar/pull/29
+- Bug fix: Default API limit to 10 to cope with initial call fail by @autoSteve
+- Increase sites GET retries from two to three by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.28...v4.0.29
+
 v4.0.28
 - Add retry for rooftop sites collection #12 by @autoSteve in https://github.com/BJReplay/ha-solcast-solar/pull/26
 - Full info.md changes since v4.0.25
