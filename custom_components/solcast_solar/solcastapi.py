@@ -8,6 +8,7 @@ import json
 import logging
 import math
 import os
+import sys
 import time
 import traceback
 import random
@@ -22,6 +23,11 @@ import async_timeout
 from aiohttp import ClientConnectionError, ClientSession
 from aiohttp.client_reqrep import ClientResponse
 from isodate import parse_datetime
+
+# for current func name, specify 0 or no argument.
+# for name of caller of current func, specify 1.
+# for name of caller of caller of current func, specify 2. etc.
+currentFuncName = lambda n=0: sys._getframe(n + 1).f_code.co_name
 
 _JSON_VERSION = 4
 _LOGGER = logging.getLogger(__name__)
@@ -127,7 +133,7 @@ class SolcastApi:
                         retries = 3
                         retry = retries
                         success = False
-                        while retry >= 0:
+                        while retry > 0:
                             resp: ClientResponse = await self.aiohttp_session.get(
                                 url=f"{self.options.host}/rooftop_sites", params=params, ssl=False
                             )
@@ -163,7 +169,7 @@ class SolcastApi:
                                     resp_json = json.loads(await f.read())
                                     status = 200
                             else:
-                                LOGGER.error(f"SOLCAST - cached sites data is not yet available to cope with Solcast API being too busy - at least one successful API call is needed")
+                                _LOGGER.error(f"SOLCAST - cached sites data is not yet available to cope with Solcast API being too busy - at least one successful API call is needed")
 
                 if status == 200:
                     d = cast(dict, resp_json)
@@ -560,6 +566,7 @@ class SolcastApi:
                           st_i, end_i, round(res,3))
             return res
         except Exception as ex:
+            _LOGGER.error(f"SOLCAST - get_forecast_pv_estimates: {ex}")
             return 0
 
     def get_max_forecast_pv_estimate(self, start_utc, end_utc):
@@ -577,6 +584,7 @@ class SolcastApi:
                           st_i, end_i, res)
             return res
         except Exception as ex:
+            _LOGGER.error(f"SOLCAST - get_max_forecast_pv_estimate: {ex}")
             return None
 
     def get_energy_data(self) -> dict[str, Any]:
