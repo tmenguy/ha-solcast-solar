@@ -724,6 +724,7 @@ class SolcastApi:
 
             async with async_timeout.timeout(480):
                 apiCacheFileName = cachedname + "_" + site + ".json"
+                usageCacheFileName = "solcast-usage.json"
                 if self.apiCacheEnabled and file_exists(apiCacheFileName):
                     _LOGGER.debug(f"SOLCAST - Getting cached testing data for site {site}")
                     status = 404
@@ -753,6 +754,9 @@ class SolcastApi:
                         if status == 200:
                             _LOGGER.debug(f"SOLCAST - API returned data. API Counter incremented from {self._api_used} to {self._api_used + 1}")
                             self._api_used = self._api_used + 1
+                            _LOGGER.debug(f"SOLCAST - writing usage cache")
+                            async with aiofiles.open(usageCacheFileName, 'w') as f:
+                                await f.write(json.dumps({"daily_limit": self._api_limit, "daily_limit_consumed": self._api_used}, ensure_ascii=False))
                         else:
                             _LOGGER.warning(f"SOLCAST - API returned status {status}. API used {self._api_used} to {self._api_used + 1}")
                             _LOGGER.warning("This is an error with the data returned from Solcast, not the integration")
