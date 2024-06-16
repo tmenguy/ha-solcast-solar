@@ -2,7 +2,7 @@
 # HA Solcast PV Solar Forecast Integration
 
 > [!WARNING]  
-> This repository is **Not** currently in HACS, so can't yet be installed via HACS.  While [this PR](https://github.com/hacs/default/pull/2535) remains open, you must install manually using the [Manually in HACS](#manually-in-hacs) instructions below: 
+> This repository is **not** currently in HACS, so cannot yet be searched for there.  While [this PR](https://github.com/hacs/default/pull/2535) remains open, you must install manually using the [Manually in HACS](#manually-in-hacs) instructions below: 
 
 > [!IMPORTANT]  
 > This repository is only sporadically maintained.  Breaking API changes from Solcast will be maintained on a best efforts basis.
@@ -45,22 +45,24 @@ Using HACS. More info [here](https://hacs.xyz/)
 
 #### Manually in HACS  
 
-Manually, in HACS. More info [here](https://hacs.xyz/docs/faq/custom_repositories/)  
-Use the custom repo link `https://github.com/BJReplay/ha-solcast-solar`  
-Select the category type `integration`  
-Then once it's there (still in HACS) click the INSTALL button  
-Then go to the HA Devices and Services and add a new Solcast Integration  
+More info [here](https://hacs.xyz/docs/faq/custom_repositories/)
 
+1. (If using it, remove oziee/ha-solcast-solar in HACS)
+1. Add custom repository (three verical dots menu, top right) ```https://github.com/BJReplay/ha-solcast-solar``` as an ```integration```
+1. Search for 'Solcast' in HACS, open it and click the ```Download``` button
+1. See [Configuration](#configuration) below
+
+If previously using oziee's ha-solcast-solar then all history and config should remain.
 
 
 <summary><h3>Manually</summary></h3>
 
 You probably **do not** want to do this! Use the HACS method above unless you know what you are doing and have a good reason as to why you are installing manually
 
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`)
-1. If you do not have a `custom_components` directory there, you need to create it
-1. In the `custom_components` directory create a new folder called `solcast_solar`
-1. Download _all_ the files from the `custom_components/solcast_solar/` directory in this repository
+1. Using the tool of choice open the directory (folder) for your HA configuration (where you find ```configuration.yaml```)
+1. If you do not have a ```custom_components``` directory there, you need to create it
+1. In the ```custom_components``` directory create a new folder called ```solcast_solar```
+1. Download _all_ the files from the ```custom_components/solcast_solar/``` directory in this repository
 1. Place the files you downloaded in the new directory you created
 1. *Restart HA to load the new integration*
 1. See [Configuration](#configuration) below
@@ -194,8 +196,8 @@ action:
 mode: single
 ```
 
-> **Note**
-> _If you have two arrays on your roof then 2 api calls will be made for each update, effectively reducing the number of updates to 5 per day. For this case, change to: `api_request_limit = 5`_
+> [!NOTE]  
+> If you have two arrays on your roof then 2 api calls will be made for each update, effectively reducing the number of updates to 5 per day. For this case, change to: `api_request_limit = 5`
 
 
 <summary><h3>Set up HA Energy Dashboard settings</summary></h3>
@@ -205,8 +207,8 @@ Go to the `HA>Settings>Dashboards>Energy`
 Click the 'edit the Solar Production' item you have previously created in the Energy dashboard. 
 
 
-> **Note**
-> _If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor setup_
+> [!NOTE]  
+> If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor setup
 
 [<img src="https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png" width="200">](https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png)
 
