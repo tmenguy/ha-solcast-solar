@@ -147,12 +147,13 @@ class SolcastApi:
                                 retry = 0
                                 success = True
                             else:
-                                _LOGGER.debug(f"SOLCAST - will retry GET rooftop_sites, retry {(retries - retry) + 1}")
-                                await asyncio.sleep(5)
+                                if retry > 1:
+                                    _LOGGER.debug(f"SOLCAST - will retry GET rooftop_sites, retry {(retries - retry) + 1}")
+                                    await asyncio.sleep(5)
                                 retry -= 1
                         if not success:
                             if statusTranslate.get(status): status = str(status) + statusTranslate[status]
-                            _LOGGER.warning(f"SOLCAST - Timeout gathering rooftop sites data, last call result: {status}, using cached data if it exists")
+                            _LOGGER.warning(f"SOLCAST - Retries exhausted gathering rooftop sites data, last call result: {status}, using cached data if it exists")
                             status = 404
                             if file_exists(apiCacheFileName):
                                 _LOGGER.debug(f"SOLCAST - loading cached sites data")
