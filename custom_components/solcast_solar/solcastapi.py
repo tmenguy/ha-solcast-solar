@@ -125,7 +125,7 @@ class SolcastApi:
                         retries = 3
                         retry = retries
                         success = False
-                        while retry > 0:
+                        while retry >= 0:
                             resp: ClientResponse = await self.aiohttp_session.get(
                                 url=f"{self.options.host}/rooftop_sites", params=params, ssl=False
                             )
@@ -147,7 +147,7 @@ class SolcastApi:
                                 retry = 0
                                 success = True
                             else:
-                                if retry > 1:
+                                if retry > 0:
                                     _LOGGER.debug(f"SOLCAST - will retry GET rooftop_sites, retry {(retries - retry) + 1}")
                                     await asyncio.sleep(5)
                                 retry -= 1
