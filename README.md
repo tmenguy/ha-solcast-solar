@@ -61,7 +61,7 @@ If previously using oziee's ha-solcast-solar then all history and config should 
 
 <summary><h3>Manually</summary></h3>
 
-You probably **do not** want to do this! Use the HACS method above unless you know what you are doing and have a good reason as to why you are installing manually
+You probably **do not** want to do this! Use the HACS method above unless you know what you are doing and have a good reason as to why you are installing manually.
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find ```configuration.yaml```)
 1. If you do not have a ```custom_components``` directory there, you need to create it
@@ -79,11 +79,11 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 1. Enter your `Solcast API Key`
 1. Click `Submit`
 
-* Create your own [automation](#services) to call the service `solcast_solar.update_forecasts` when you like it to call
+* Create your own [automation](#services) to call the service `solcast_solar.update_forecasts` when you would like.
 
-* Change the configuration options for an existing `Solcast PV Forecast` integration in the Home Assistant Integrations by selecting Solcast then `Configure` (cog wheel)
+* Change the configuration options for an existing `Solcast PV Forecast` integration in the Home Assistant Integrations by selecting Solcast then `Configure` (cog wheel).
 
-* If you have more than one Solcast account because you have more than 2 rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (Do not use any space characters. NB: this goes against Solcast T&C's by having more than one account)
+* If you have more than one Solcast account because you have more than 2 rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (do not use any space characters. _NB: this goes against Solcast T&C's by having more than one account_).
 
 * Make sure you enter your `API Key` not your rooftop id created in Solcast. You can find your API key here [api key](https://toolkit.solcast.com.au/account).
 
@@ -98,7 +98,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 
 ## Dampening Configuration
 
-New in v4.0.8 is the option to configure hourly dampening values
+New in v4.0.8 is the option to configure hourly dampening values.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/reconfig.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/reconfig.png)
 
