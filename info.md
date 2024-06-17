@@ -1,5 +1,11 @@
 ### Changes
 
+v4.0.30
+- Bug fix: Support multiple Solcast account sites caching
+- Bug fix: Retry mechanism when rooftop sites gather is actually successful was broken
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.29...v4.0.30
+
 v4.0.29
 - Bug fix: Write API usage cache on every successful poll by @autoSteve in https://github.com/BJReplay/ha-solcast-solar/pull/29
 - Bug fix: Default API limit to 10 to cope with initial call fail by @autoSteve
