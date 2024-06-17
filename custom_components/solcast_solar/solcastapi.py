@@ -145,7 +145,7 @@ class SolcastApi:
                         retries = 3
                         retry = retries
                         success = False
-                        while retry > 0:
+                        while retry >= 0:
                             resp: ClientResponse = await self.aiohttp_session.get(
                                 url=f"{self.options.host}/rooftop_sites", params=params, ssl=False
                             )
