@@ -16,7 +16,7 @@
 >
 > Bug reports unrelated to API changes may not get the attention you want, as the the maintainer is largely retired for medical reasons, but knows the Solcast API as a former / user in this and other projects.
 
-Version Change Notes: See [below](changes)
+Version Change Notes: See [below](#changes)
 
 Home Assistant(https://www.home-assistant.io) Integration Component
 
