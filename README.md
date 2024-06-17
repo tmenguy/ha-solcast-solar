@@ -122,46 +122,11 @@ These are the services for this integration ([Configuration](#configuration))
 Create a new HA automation and setup your prefered trigger times to manually poll for new Solcast forecast data.  
 These are examples.. alter these or create your own to fit your own needs
 
+**Recommended**
 
-```yaml
-alias: Solcast_update
-description: New API call Solcast
-trigger:
- - platform: time_pattern
-   hours: /4
-condition:
- - condition: sun
-   before: sunset
-   after: sunrise
-action:
- - delay:
-     seconds: "{{ range(30, 360)|random|int }}"
- - service: solcast_solar.update_forecasts
-   data: {}
-mode: single
-```
+To make the most of the available API calls, you can call the API in an interval calculated by the number of daytime hours divided by the number of total API calls a day you can make.
 
-or
-
-```yaml
-alias: Solcast update
-description: ""
-trigger:
-  - platform: time
-    at: "4:00:00"
-  - platform: time
-    at: "10:00:00"
-  - platform: time
-    at: "16:00:00"
-condition: []
-action:
-  - delay:
-      seconds: "{{ range(30, 360)|random|int }}"
-  - service: solcast_solar.update_forecasts
-    data: {}
-mode: single
-```
-To make the most of the available API calls, you can call the API in an interval calculated by the number of daytime hours divided by the number of total API calls a day you can make:
+This automation includesa rendomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time:
 
 ```yaml
 alias: Solcast update
@@ -196,6 +161,48 @@ action:
     data: {}
 mode: single
 ```
+
+This automation also includes a rendomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time, but runs every four hours between sunrise and sunset:
+
+```yaml
+alias: Solcast_update
+description: New API call Solcast
+trigger:
+ - platform: time_pattern
+   hours: /4
+condition:
+ - condition: sun
+   before: sunset
+   after: sunrise
+action:
+ - delay:
+     seconds: "{{ range(30, 360)|random|int }}"
+ - service: solcast_solar.update_forecasts
+   data: {}
+mode: single
+```
+
+This automation runs at 4am, 10am and 4pm, with a random delay.
+
+```yaml
+alias: Solcast update
+description: ""
+trigger:
+  - platform: time
+    at: "4:00:00"
+  - platform: time
+    at: "10:00:00"
+  - platform: time
+    at: "16:00:00"
+condition: []
+action:
+  - delay:
+      seconds: "{{ range(30, 360)|random|int }}"
+  - service: solcast_solar.update_forecasts
+    data: {}
+mode: single
+```
+
 
 > [!NOTE]  
 > If you have two arrays on your roof then 2 api calls will be made for each update, effectively reducing the number of updates to 5 per day. For this case, change to: `api_request_limit = 5`
