@@ -4,6 +4,7 @@
 <!--[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)-->
 ![GitHub Release](https://img.shields.io/github/v/release/BJReplay/ha-solcast-solar?style=for-the-badge)
 ![GitHub License](https://img.shields.io/github/license/BJReplay/ha-solcast-solar?style=for-the-badge)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/y/BJReplay/ha-solcast-solar?style=for-the-badge)
 ![Maintenance](https://img.shields.io/maintenance/yes/2024?style=for-the-badge)
 
 > [!WARNING]  
@@ -16,7 +17,7 @@
 >
 > Bug reports unrelated to API changes may not get the attention you want, as the the maintainer is largely retired for medical reasons, but knows the Solcast API as a former / user in this and other projects.
 
-Version Change Notes: See [below](#changes)
+Version Change Notes: See [below](#changes).
 
 Home Assistant (https://www.home-assistant.io) Integration Component
 
