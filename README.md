@@ -18,7 +18,7 @@
 
 Version Change Notes: See [below](#changes)
 
-Home Assistant(https://www.home-assistant.io) Integration Component
+Home Assistant (https://www.home-assistant.io) Integration Component
 
 This custom component integrates the Solcast Hobby PV Forecast API into Home Assistant.
 
@@ -75,23 +75,24 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 1. [Click Here](https://my.home-assistant.io/redirect/config_flow_start/?domain=solcast_solar) to directly add a `Solcast Solar` integration **or**<br/>
  a. In Home Assistant, go to Settings -> [Integrations](https://my.home-assistant.io/redirect/integrations/)<br/>
  b. Click `+ Add Integrations` and select `Solcast PV Forecast`<br/>
-1. Enter you `Solcast API Key`
+1. Enter your `Solcast API Key`
 1. Click `Submit`
 
 * Create your own [automation](#services) to call the service `solcast_solar.update_forecasts` when you like it to call
 
 * Change the configuration options for an existing `Solcast PV Forecast` integration in the Home Assistant Integrations by selecting Solcast then `Configure` (cog wheel)
 
-* If you have more than one Solcast account because you have more than 2 rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (NB: this goes against Solcast T&C's by having more than one account)
+* If you have more than one Solcast account because you have more than 2 rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (Do not use any space characters. NB: this goes against Solcast T&C's by having more than one account)
 
-* Make sure you enter your `API Key` not your rooftop id created in Solcast. You can find your API key here [api key](https://toolkit.solcast.com.au/account)
+* Make sure you enter your `API Key` not your rooftop id created in Solcast. You can find your API key here [api key](https://toolkit.solcast.com.au/account).
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/install.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/install.png)
 
 > [!IMPORTANT]
 > After the integration is started, review the Home Assistant log.
 > 
-> Should an error that gathering rooftop sites data has failed occur then this is not an integration issue, rather a Solcast API issue. The best course of action is to restart the integration, or Home Assistant entirely, and monitor until the sites data can be acquired. Until rooftop sites data is acquired the integration cannot function. 
+> Should an error that gathering rooftop sites data has failed occur then this is not an integration issue, rather a Solcast API issue. The best course of action is to restart the integration, or Home Assistant entirely, and monitor until the sites data can be acquired. Until rooftop sites data is acquired the integration cannot function.
+>
 > The integration does attempt retries when the Solcast API is busy, but sometimes even this does not help.
 
 ## Dampening Configuration
@@ -102,12 +103,12 @@ New in v4.0.8 is the option to configure hourly dampening values
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/damp.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/damp.png)
 
-Here you can change the dampening factor value for any hour. Values from 0.0 - 1.0 are valid. Setting 0.95 will dampen each Solcast forecast data value by 5%. This is reflected in the sensor values and attributes and also in the graphical Home Assistant Energy dashboard.
+Here you can change the dampening factor value for any hour. Values from 0.0 - 1.0 are valid. Setting 0.95 will dampen each Solcast forecast data value by 5%. This is reflected in the sensor values and attributes and also in the Home Assistant Energy dashboard.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png)
 
 ## Services
-These are the services for this integration ([Configuration](#configuration))
+These are the services for this integration: ([Configuration](#configuration))
 
 | Service | Action |
 | --- | --- |
@@ -118,15 +119,15 @@ These are the services for this integration ([Configuration](#configuration))
 | `solcast_solar.set_hard_limit` | Set inverter forecast hard limit |
 | `solcast_solar.remove_hard_limit` | Remove inverter forecast hard limit |
 
-### Basic HA Automation to manual poll Solcast API data
-Create a new HA automation and setup your prefered trigger times to manually poll for new Solcast forecast data.  
-These are examples.. alter these or create your own to fit your own needs
+### Basic HA Automation to poll Solcast API data
+Create a new automation and setup your prefered trigger times to poll for new Solcast forecast data.  
+These are examples, so alter these or create your own to fit your own needs.
 
 **Recommended**
 
-To make the most of the available API calls, you can call the API in an interval calculated by the number of daytime hours divided by the number of total API calls a day you can make.
+To make the most of the available API calls, you can have the automation call the API using an interval calculated by the number of daytime hours divided by the number of total API calls a day you can make.
 
-This automation includesa rendomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time:
+This automation bases execution times on sunrise and sunset, which differ around the globe, so inherently spreads the load on Solcast. It also incorporates a randomised time offset. This will hopefully avoid the likelihood that the Solcast servers get inundated by multiple callers at the same time.
 
 ```yaml
 alias: Solcast update
@@ -162,7 +163,10 @@ action:
 mode: single
 ```
 
-This automation also includes a rendomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time, but runs every four hours between sunrise and sunset:
+> [!NOTE]  
+> If you have two arrays on your roof then 2 api calls will be made for each update, effectively reducing the number of updates to 5 per day. For this case, change to: `api_request_limit = 5`
+
+The next automation also includes a rendomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time, but it triggers every four hours between sunrise and sunset:
 
 ```yaml
 alias: Solcast_update
@@ -182,7 +186,7 @@ action:
 mode: single
 ```
 
-This automation runs at 4am, 10am and 4pm, with a random delay.
+The next automation triggers at 4am, 10am and 4pm, with a random delay.
 
 ```yaml
 alias: Solcast update
@@ -204,10 +208,6 @@ mode: single
 ```
 
 
-> [!NOTE]  
-> If you have two arrays on your roof then 2 api calls will be made for each update, effectively reducing the number of updates to 5 per day. For this case, change to: `api_request_limit = 5`
-
-
 <summary><h3>Set up HA Energy Dashboard settings</summary></h3>
 
 Go to the `HA>Settings>Dashboards>Energy`
@@ -215,7 +215,7 @@ Go to the `HA>Settings>Dashboards>Energy`
 Click the 'edit the Solar Production' item you have previously created in the Energy dashboard. 
 
 
-> [!NOTE]  
+> [!IMPORTANT]  
 > If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor setup
 
 [<img src="https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png" width="200">](https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png)
@@ -258,7 +258,7 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 
 | Name | Type | Attributes | Unit | Description |
 | ------------------------------ | ----------- | ----------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | 
-| `Forecast Field` | selector | N |  | selector to select the Solcast value field for calculations either 'estimate', 'estimate10' or 'estimate90' |
+| `Forecast Field` | selector | N |  | Selector to select the Solcast value field for calculations either 'estimate', 'estimate10' or 'estimate90' |
 
 ### Diagnostic
 
