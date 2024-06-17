@@ -54,8 +54,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     async def update_integration_listeners(self, *args):
         try:
             crtDay = dt.now(self.solcast._tz).day
-            # trigger an update of daily values if we have new data
-            self._dateChanged = crtDay != self._lastDay or self._dataUpdated
+            self._dateChanged = (crtDay != self._lastDay)
             if self._dateChanged:
                 self._lastDay = crtDay
 
@@ -66,10 +65,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
     async def update_utcmidnight_usage_sensor_data(self, *args):
         try:
-            self.solcast._api_used = 0
-            # TODO: Check if called by the other async_track
-            # How to update/reset tally?
-            # self.async_update_listeners()
+            await self.solcast.reset_api_used()
         except Exception:
             #_LOGGER.error("SOLCAST - update_utcmidnight_usage_sensor_data: %s", traceback.format_exc())
             pass

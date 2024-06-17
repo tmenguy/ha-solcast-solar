@@ -40,7 +40,7 @@ class UpdateType(Enum):
     DATE_CHANGE = 2
 
 SENSORS: dict[str, SensorEntityDescription] = {
-    "total_kwh_forecast_today": ( SensorEntityDescription(
+    "total_kwh_forecast_today": SensorEntityDescription(
         key="total_kwh_forecast_today",
         translation_key="total_kwh_forecast_today",
         device_class=SensorDeviceClass.ENERGY,
@@ -49,8 +49,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         icon="mdi:solar-power",
         suggested_display_precision=2,
         state_class= SensorStateClass.TOTAL,
-    ), UpdateType.DATE_CHANGE ),
-    "peak_w_today": ( SensorEntityDescription(
+    ),
+    "peak_w_today": SensorEntityDescription(
         key="peak_w_today",
         translation_key="peak_w_today",
         device_class=SensorDeviceClass.POWER,
@@ -59,16 +59,16 @@ SENSORS: dict[str, SensorEntityDescription] = {
         icon="mdi:solar-power",
         suggested_display_precision=0,
         state_class= SensorStateClass.MEASUREMENT,
-    ), UpdateType.DATE_CHANGE ),
-    "peak_w_time_today": ( SensorEntityDescription(
+    ),
+    "peak_w_time_today": SensorEntityDescription(
         key="peak_w_time_today",
         translation_key="peak_w_time_today",
         name="Peak Time Today",
         icon="mdi:clock",
         device_class=SensorDeviceClass.TIMESTAMP,
         #suggested_display_precision=0,
-    ), UpdateType.DATE_CHANGE ),
-    "forecast_this_hour": ( SensorEntityDescription(
+    ),
+    "forecast_this_hour": SensorEntityDescription(
         key="forecast_this_hour",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
@@ -76,8 +76,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast This Hour",
         icon="mdi:solar-power",
         suggested_display_precision=0,
-    ), UpdateType.TIME_CHANGE ),
-    "forecast_remaining_today": ( SensorEntityDescription(
+    ),
+    "forecast_remaining_today": SensorEntityDescription(
         key="get_remaining_today",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -85,8 +85,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast Remaining Today",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-    ), UpdateType.TIME_CHANGE ),
-    "forecast_next_hour": ( SensorEntityDescription(
+    ),
+    "forecast_next_hour": SensorEntityDescription(
         key="forecast_next_hour",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
@@ -94,8 +94,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast Next Hour",
         icon="mdi:solar-power",
         suggested_display_precision=0,
-    ), UpdateType.TIME_CHANGE ),
-    "forecast_custom_hour": ( SensorEntityDescription(
+    ),
+    "forecast_custom_hour": SensorEntityDescription(
         key="forecast_custom_hour",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
@@ -103,8 +103,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast Custom Hours",
         icon="mdi:solar-power",
         suggested_display_precision=0,
-    ), UpdateType.TIME_CHANGE ),
-    "total_kwh_forecast_tomorrow": ( SensorEntityDescription(
+    ),
+    "total_kwh_forecast_tomorrow": SensorEntityDescription(
         key="total_kwh_forecast_tomorrow",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -112,8 +112,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast Tomorrow",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-    ), UpdateType.DATE_CHANGE ),
-    "peak_w_tomorrow": ( SensorEntityDescription(
+    ),
+    "peak_w_tomorrow": SensorEntityDescription(
         key="peak_w_tomorrow",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -121,45 +121,45 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Peak Forecast Tomorrow",
         icon="mdi:solar-power",
         suggested_display_precision=0,
-    ), UpdateType.DATE_CHANGE ),
-    "peak_w_time_tomorrow": ( SensorEntityDescription(
+    ),
+    "peak_w_time_tomorrow": SensorEntityDescription(
         key="peak_w_time_tomorrow",
         translation_key="peak_w_time_tomorrow",
         name="Peak Time Tomorrow",
         icon="mdi:clock",
         device_class=SensorDeviceClass.TIMESTAMP,
         # suggested_display_precision=0,
-    ), UpdateType.DATE_CHANGE ),
-    "api_counter": ( SensorEntityDescription(
+    ),
+    "api_counter": SensorEntityDescription(
         key="api_counter",
         translation_key="api_counter",
         name="API Used",
         icon="mdi:web-check",
         entity_category=EntityCategory.DIAGNOSTIC,
-    ), UpdateType.DATE_CHANGE ),
-    "api_limit": ( SensorEntityDescription(
+    ),
+    "api_limit": SensorEntityDescription(
         key="api_limit",
         translation_key="api_limit",
         name="API Limit",
         icon="mdi:web-check",
         entity_category=EntityCategory.DIAGNOSTIC,
-    ), UpdateType.DATE_CHANGE ),
-    "lastupdated": ( SensorEntityDescription(
+    ),
+    "lastupdated": SensorEntityDescription(
         key="lastupdated",
         device_class=SensorDeviceClass.TIMESTAMP,
         translation_key="lastupdated",
         name="API Last Polled",
         icon="mdi:clock",
         entity_category=EntityCategory.DIAGNOSTIC,
-    ), UpdateType.DATE_CHANGE ),
-    "hard_limit": ( SensorEntityDescription(
+    ),
+    "hard_limit": SensorEntityDescription(
         key="hard_limit",
         translation_key="hard_limit",
         name="Hard Limit Set",
         icon="mdi:speedometer",
         entity_category=EntityCategory.DIAGNOSTIC,
-    ), UpdateType.DATE_CHANGE ),
-    "total_kwh_forecast_d3": ( SensorEntityDescription(
+    ),
+    "total_kwh_forecast_d3": SensorEntityDescription(
         key="total_kwh_forecast_d3",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -167,8 +167,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast D3",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-    ), UpdateType.DATE_CHANGE ),
-    "total_kwh_forecast_d4": ( SensorEntityDescription(
+    ),
+    "total_kwh_forecast_d4": SensorEntityDescription(
         key="total_kwh_forecast_d4",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -176,8 +176,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast D4",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-    ), UpdateType.DATE_CHANGE ),
-    "total_kwh_forecast_d5": ( SensorEntityDescription(
+    ),
+    "total_kwh_forecast_d5": SensorEntityDescription(
         key="total_kwh_forecast_d5",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -185,8 +185,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast D5",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-    ), UpdateType.DATE_CHANGE ),
-    "total_kwh_forecast_d6": ( SensorEntityDescription(
+    ),
+    "total_kwh_forecast_d6": SensorEntityDescription(
         key="total_kwh_forecast_d6",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -194,8 +194,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast D6",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-    ), UpdateType.DATE_CHANGE ),
-    "total_kwh_forecast_d7": ( SensorEntityDescription(
+    ),
+    "total_kwh_forecast_d7": SensorEntityDescription(
         key="total_kwh_forecast_d7",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -203,8 +203,8 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast D7",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-    ), UpdateType.DATE_CHANGE ),
-    "power_now": ( SensorEntityDescription(
+    ),
+    "power_now": SensorEntityDescription(
         key="power_now",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -212,30 +212,49 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Power Now",
         suggested_display_precision=0,
         state_class= SensorStateClass.MEASUREMENT,
-    ), UpdateType.TIME_CHANGE ),
-    "power_now_30m": ( SensorEntityDescription(
+    ),
+    "power_now_30m": SensorEntityDescription(
         key="power_now_30m",
         translation_key="power_now_30m",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         #name="Power Next 30 Mins",
         suggested_display_precision=0,
-    ), UpdateType.TIME_CHANGE ),
-    "power_now_1hr": ( SensorEntityDescription(
+    ),
+    "power_now_1hr": SensorEntityDescription(
         key="power_now_1hr",
         translation_key="power_now_1hr",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         #name="Power Next Hour",
         suggested_display_precision=0,
-    ), UpdateType.TIME_CHANGE ),
-    # "weather_description": ( SensorEntityDescription(
-    #     key="weather_description",
-    #     translation_key="weather_description",
-    #     icon="mdi:weather-partly-snowy-rainy",
-    # ), UpdateType.DATE_CHANGE ),
+    ),
+    #"weather_description": SensorEntityDescription(
+        #key="weather_description",
+        #translation_key="weather_description",
+        #icon="mdi:weather-partly-snowy-rainy",
+    #),
 }
 
+class SensorUpdatePolicy(Enum):
+    DEFAULT = 0
+    EVERY_TIME_INTERVAL = 1
+
+def getSensorUpdatePolicy(key) -> SensorUpdatePolicy:
+    match key:
+        case (
+            "forecast_this_hour" |
+            "forecast_next_hour" |
+            "forecast_custom_hour" |
+            "forecast_remaining_today" |
+            "get_remaining_today" |
+            "power_now" |
+            "power_now_30m" |
+            "power_now_1hr"
+            ):
+            return SensorUpdatePolicy.EVERY_TIME_INTERVAL
+        case _:
+            return SensorUpdatePolicy.DEFAULT
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -248,7 +267,7 @@ async def async_setup_entry(
     entities = []
 
     for sensor_types in SENSORS:
-        sen = SolcastSensor(coordinator, SENSORS[sensor_types][0], SENSORS[sensor_types][1], entry)
+        sen = SolcastSensor(coordinator, SENSORS[sensor_types], entry)
         entities.append(sen)
 
     for site in coordinator.solcast._sites:
@@ -282,7 +301,6 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
         self,
         coordinator: SolcastUpdateCoordinator,
         entity_description: SensorEntityDescription,
-        update_type: UpdateType,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the sensor."""
@@ -294,7 +312,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
 
         self.entity_description = entity_description
         self.coordinator = coordinator
-        self.update_type = update_type
+        self.update_policy = getSensorUpdatePolicy(entity_description.key)
         self._attr_unique_id = f"{entity_description.key}"
 
         self._attributes = {}
@@ -351,11 +369,12 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
 
-        # these sensors update every 5mins so they'll pick-up the new data on the next update
-        if self.update_type == UpdateType.TIME_CHANGE and self.coordinator._dataUpdated:
+        # these sensors will pick-up the change on the next interval update (5mins)
+        if self.update_policy == SensorUpdatePolicy.EVERY_TIME_INTERVAL and self.coordinator._dataUpdated:
             return
 
-        if self.update_type == UpdateType.DATE_CHANGE and not self.coordinator._dateChanged:
+        # these sensors update when the date changed or when there is new data
+        if self.update_policy == SensorUpdatePolicy.DEFAULT and not (self.coordinator._dateChanged or self.coordinator._dataUpdated) :
            return
 
         try:
