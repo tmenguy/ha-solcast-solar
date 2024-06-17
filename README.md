@@ -11,11 +11,11 @@
 > This repository is **not** currently in HACS, so cannot yet be searched for there.  While [this PR](https://github.com/hacs/default/pull/2535) remains open, you must install manually using the [Manually in HACS](#manually-in-hacs) instructions below: 
 
 > [!IMPORTANT]  
-> This repository is only sporadically maintained.  Breaking API changes from Solcast will be maintained on a best efforts basis.
+> This repository may only be sporadically maintained.  Breaking API changes from Solcast will be maintained on a best efforts basis.
 >
 > Collaborators are welcome, as are PRs for enhancements.
 >
-> Bug reports unrelated to API changes may not get the attention you want, as the the maintainer is largely retired for medical reasons, but knows the Solcast API as a former / user in this and other projects.
+> Bug reports unrelated to API changes may not get the attention you want, as the the repository owner is largely retired for medical reasons, but knows the Solcast API as a former / user in this and other projects.
 
 Version Change Notes: See [below](#changes).
 
@@ -29,14 +29,14 @@ This custom component integrates the Solcast Hobby PV Forecast API into Home Ass
 > Solcast have altered their API limits for new account creators
 >
 > Solcast now only offer new account creators 10 API calls per day (used to be 50). 
-> Old account users still have 50 API calls
+> Old account users still have 50 API calls.
 > 
 > The integration currently no longer includes auto API polling. Users now need to create their own automations to call the update solcast service to poll for new data. Keep in mind your API poll limit.
 
 ## Solcast Requirements:
-Sign up for an API key (https://solcast.com/)
+Sign up for an API key (https://solcast.com/).
 
-> Solcast may take up to 24hrs to create the account
+> Solcast may take up to 24hrs to create the account.
 
 Copy the API Key for use with this integration (See [Configuration](#Configuration) below).
 
@@ -208,6 +208,28 @@ action:
 mode: single
 ```
 
+> [!TIP]
+> The Solcast Servers seem to occasionally be under some strain, and the servers return 429 return codes when they are busy.
+> Changing your API Key is not a solution, nor is uninstalling and re-installing the Solcast PV Solar Integration.
+> These "tricks" might appear to work, but all that has actually happened is that you have tried again later, and the integration has worked.
+> 
+> If you think that have problems in the integration, make sure that you have logging turned on, and capture logs to find out if you are getting messages indicating that the Solcast API is busy - these indicate that the Solcast API is under stress.
+> Log capture instructions are in the Bug Issue Template - you will see them if you start creating a new issue - make sure you include logs if you want the assistance of the repository constributors.
+> An example of busy messages and a retry are shown below.
+
+```
+homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - API polling for rooftop 1234-5678-9012-3456
+homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Polling API for rooftop_id 1234-5678-9012-3456
+homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - fetch_data code url - https://api.solcast.com.au/rooftop_sites/1234-5678-9012-3456/forecasts
+homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Fetching forecast
+homeassistant  | 2024-06-17 09:34:22.549 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Solcast API is busy, pausing 55 seconds before retry
+homeassistant  | 2024-06-17 09:35:17.552 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Fetching forecast
+homeassistant  | 2024-06-17 09:35:18.065 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - API returned data. API Counter incremented from 35 to 36
+homeassistant  | 2024-06-17 09:35:18.065 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - writing usage cache
+homeassistant  | 2024-06-17 09:35:18.089 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - fetch_data code http_session returned data type is <class 'dict'>
+homeassistant  | 2024-06-17 09:35:18.090 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - fetch_data code http_session status is 200
+```
+
 
 <summary><h3>Set up HA Energy Dashboard settings</summary></h3>
 
@@ -217,11 +239,11 @@ Click the 'edit the Solar Production' item you have previously created in the En
 
 
 > [!IMPORTANT]  
-> If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor setup
+> If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor setup.
 
 [<img src="https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png" width="200">](https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png)
 
-Click the Forecast option button and select the Solcast Solar option.. Click SAVE.. HA will do all the rest for you
+Click the Forecast option button and select the Solcast Solar option.. Click SAVE.. HA will do all the rest for you.
 
 [<img src="https://user-images.githubusercontent.com/1471841/174471543-0833b141-0c97-4b90-a058-cf986e89bbce.png" width="200">](https://user-images.githubusercontent.com/1471841/174471543-0833b141-0c97-4b90-a058-cf986e89bbce.png)
 
@@ -283,7 +305,15 @@ Modified from the great works of
 * cjtapper/solcast-py
 * home-assistant-libs/forecast_solar
 
-### Changes
+## Changes
+
+v4.0.31
+- docs: Changes to README.md
+- docs: Add troubleshooting notes.
+- docs: Combine Changes Notes from info.md into README.md
+- docs: Set up so that HACS displays README.md
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.30...v4.0.31
 
 v4.0.30
 - Bug fix: Support multiple Solcast account sites caching
@@ -450,7 +480,7 @@ v4.0.1
 - greater in depth diagnostic data to share when needed to help debug any issues
 - some of @rany2 work has been now integrated
 
-# Removed 3.1.x
+Removed 3.1.x
 - too many users could not handle the power of this release
 - v4.x.x replaces 3.0.55 - 3.1.x with new changes
 
@@ -465,7 +495,6 @@ v3.0.47
 {{ state_attr('sensor.solcast_forecast_D5', 'dayname') }}
 {{ state_attr('sensor.solcast_forecast_D6', 'dayname') }}
 {{ state_attr('sensor.solcast_forecast_D7', 'dayname') }}
-
 
 v3.0.46
 - possile Maria DB problem - possible fix
