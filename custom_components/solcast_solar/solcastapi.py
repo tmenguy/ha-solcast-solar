@@ -113,9 +113,9 @@ class SolcastApi:
                 params = {"format": "json", "api_key": spl.strip()}
                 async with async_timeout.timeout(60):
                     if len(sp) == 1:
-                        apiCacheFileName = "solcast-sites.json"
+                        apiCacheFileName = "/config/solcast-sites.json"
                     else:
-                        apiCacheFileName = "solcast-sites-%s.json" % (spl,)
+                        apiCacheFileName = "/config/solcast-sites-%s.json" % (spl,)
                     _LOGGER.debug(f"SOLCAST apiCacheEnabled={str(self.apiCacheEnabled)}, {apiCacheFileName}={str(file_exists(apiCacheFileName))}")
                     if self.apiCacheEnabled and file_exists(apiCacheFileName):
                         _LOGGER.debug(f"SOLCAST - loading cached sites data")
@@ -204,9 +204,9 @@ class SolcastApi:
                 _LOGGER.debug(f"SOLCAST - getting API limit and usage from solcast for {sitekey}")
                 async with async_timeout.timeout(60):
                     if len(sp) == 1:
-                        apiCacheFileName = "solcast-usage.json"
+                        apiCacheFileName = "/config/solcast-usage.json"
                     else:
-                        apiCacheFileName = "solcast-usage-%s.json" % (spl,)
+                        apiCacheFileName = "/config/solcast-usage-%s.json" % (spl,)
                     resp: ClientResponse = await self.aiohttp_session.get(
                         url=f"https://api.solcast.com.au/json/reply/GetUserUsageAllowance", params=params, ssl=False
                     )
@@ -610,9 +610,9 @@ class SolcastApi:
             _LOGGER.debug(f"SOLCAST - API polling for rooftop {site['resource_id']}")
             #site=site['resource_id'], apikey=site['apikey'],
             if len(self._sites) == 1:
-                usageCacheFileName = "solcast-usage.json"
+                usageCacheFileName = "/config/solcast-usage.json"
             else:
-                usageCacheFileName = "solcast-usage-%s.json" % (site['apikey'],)
+                usageCacheFileName = "/config/solcast-usage-%s.json" % (site['apikey'],)
             result = await self.http_data_call(usageCacheFileName, site['resource_id'], site['apikey'], dopast)
             if not result:
                 failure = True
@@ -750,7 +750,7 @@ class SolcastApi:
             _LOGGER.debug(f"SOLCAST - fetch_data code url - {url}")
 
             async with async_timeout.timeout(480):
-                apiCacheFileName = cachedname + "_" + site + ".json"
+                apiCacheFileName = '/config/' + cachedname + "_" + site + ".json"
                 if self.apiCacheEnabled and file_exists(apiCacheFileName):
                     _LOGGER.debug(f"SOLCAST - Getting cached testing data for site {site}")
                     status = 404
