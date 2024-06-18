@@ -35,10 +35,6 @@ from .coordinator import SolcastUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-class UpdateType(Enum):
-    TIME_CHANGE = 1
-    DATE_CHANGE = 2
-
 SENSORS: dict[str, SensorEntityDescription] = {
     "total_kwh_forecast_today": SensorEntityDescription(
         key="total_kwh_forecast_today",
