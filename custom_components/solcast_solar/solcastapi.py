@@ -598,7 +598,7 @@ class SolcastApi:
 
     async def http_data(self, dopast = False):
         """Request forecast data via the Solcast API."""
-        if self.get_last_updated_datetime() + timedelta(minutes=15) < dt.now(timezone.utc):
+        if self.get_last_updated_datetime() + timedelta(minutes=15) > dt.now(timezone.utc):
             _LOGGER.warning(f"SOLCAST - not requesting forecast because time is within fifteen minutes of last update ({self.get_last_updated_datetime().astimezone(self._tz)})")
             return
 
@@ -609,7 +609,11 @@ class SolcastApi:
         for site in self._sites:
             _LOGGER.debug(f"SOLCAST - API polling for rooftop {site['resource_id']}")
             #site=site['resource_id'], apikey=site['apikey'],
-            result = await self.http_data_call(site['resource_id'], site['apikey'], dopast)
+            if len(self._sites) == 1:
+                usageCacheFileName = "solcast-usage.json"
+            else:
+                usageCacheFileName = "solcast-usage-%s.json" % (site['apikey'],)
+            result = await self.http_data_call(usageCacheFileName, site['resource_id'], site['apikey'], dopast)
             if not result:
                 failure = True
 
@@ -622,6 +626,7 @@ class SolcastApi:
 
         await self.buildforcastdata()
         await self.serialize_data()
+
     async def http_data_call(self, usageCacheFileName, r_id = None, api = None, dopast = False):
         """Request forecast data via the Solcast API."""
         lastday = dt.now(self._tz) + timedelta(days=7)
