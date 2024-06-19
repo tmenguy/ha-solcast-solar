@@ -330,7 +330,7 @@ class SolcastApi:
                                 del jsonData['siteinfo'][ll]
 
                             #create an up to date forecast and make sure the TZ fits just in case its changed
-                            await self.buildforcastdata()
+                            await self.buildforecastdata()
 
                 if not self._loaded_data:
                     #no file to load
@@ -624,7 +624,7 @@ class SolcastApi:
             #self._data["weather"] = self._weather
             self._loaded_data = True
 
-        await self.buildforcastdata()
+        await self.buildforecastdata()
         await self.serialize_data()
 
     async def http_data_call(self, usageCacheFileName, r_id = None, api = None, dopast = False):
@@ -851,7 +851,7 @@ class SolcastApi:
 
         return wh_hours
 
-    async def buildforcastdata(self):
+    async def buildforecastdata(self):
         """build the data needed and convert where needed"""
         try:
             today = dt.now(self._tz).date()
