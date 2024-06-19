@@ -764,7 +764,7 @@ class SolcastApi:
                         counter = 1
                         backoff = 30
                         while counter <= 5:
-                            _LOGGER.debug(f"SOLCAST - Fetching forecast")
+                            _LOGGER.info(f"SOLCAST - Fetching forecast")
                             resp: ClientResponse = await self.aiohttp_session.get(
                                 url=url, params=params, ssl=False
                             )
@@ -773,7 +773,7 @@ class SolcastApi:
                             if status == 429:
                                 # Solcast is busy, so delay (30 seconds * counter), plus a random number of seconds between zero and 30
                                 delay = (counter * backoff) + random.randrange(0,30)
-                                _LOGGER.debug(f"SOLCAST - Solcast API is busy, pausing {delay} seconds before retry")
+                                _LOGGER.warning(f"SOLCAST - Solcast API is busy, pausing {delay} seconds before retry")
                                 await asyncio.sleep(delay)
                                 counter += 1
 
@@ -783,6 +783,7 @@ class SolcastApi:
                             _LOGGER.debug(f"SOLCAST - writing usage cache")
                             async with aiofiles.open(usageCacheFileName, 'w') as f:
                                 await f.write(json.dumps({"daily_limit": self._api_limit[apikey], "daily_limit_consumed": self._api_used[apikey]}, ensure_ascii=False))
+                            _LOGGER.info(f"SOLCAST - Fetch successful")
                         else:
                             _LOGGER.warning(f"SOLCAST - API returned status {status}. API used {self._api_used[apikey]} to {self._api_used[apikey] + 1}")
                             _LOGGER.warning("This is an error with the data returned from Solcast, not the integration")
