@@ -643,7 +643,7 @@ class SolcastApi:
             ae = None
             resp_dict = await self.fetch_data(usageCacheFileName, "estimated_actuals", 168, site=r_id, apikey=api, cachedname="actuals")
             if not isinstance(resp_dict, dict):
-                _LOGGER.warning(
+                _LOGGER.error(
                     f"SOLCAST - No data was returned for estimated_actuals so this WILL cause errors... "
                     f"Either your limit is exhaused, internet down, what ever the case is it is "
                     f"NOT a problem with the integration, and all other problems of sensor values being wrong will be seen"
@@ -784,15 +784,15 @@ class SolcastApi:
                             async with aiofiles.open(usageCacheFileName, 'w') as f:
                                 await f.write(json.dumps({"daily_limit": self._api_limit[apikey], "daily_limit_consumed": self._api_used[apikey]}, ensure_ascii=False))
                             _LOGGER.info(f"SOLCAST - Fetch successful")
+
+                            resp_json = await resp.json(content_type=None)
+
+                            if self.apiCacheEnabled:
+                                async with aiofiles.open(apiCacheFileName, 'w') as f:
+                                    await f.write(json.dumps(resp_json, ensure_ascii=False))
                         else:
                             _LOGGER.warning(f"SOLCAST - API returned status {status}. API used {self._api_used[apikey]} to {self._api_used[apikey] + 1}")
                             _LOGGER.warning("This is an error with the data returned from Solcast, not the integration")
-
-                        resp_json = await resp.json(content_type=None)
-
-                        if self.apiCacheEnabled:
-                            async with aiofiles.open(apiCacheFileName, 'w') as f:
-                                await f.write(json.dumps(resp_json, ensure_ascii=False))
                     else:
                         _LOGGER.warning(f"SOLCAST - API limit exceeded, not getting forecast")
                         return None
