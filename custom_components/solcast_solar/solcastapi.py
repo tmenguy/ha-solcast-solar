@@ -396,7 +396,8 @@ class SolcastApi:
 
     def get_rooftop_site_total_today(self, rooftopid) -> float:
         """Return a rooftop sites total kw for today"""
-        return self._data["siteinfo"][rooftopid]["tally"]
+        if self._data["siteinfo"][rooftopid].get("tally") == None: _LOGGER.warning(f"SOLCAST - 'Tally' is currently unavailable for rooftop {rooftopid}")
+        return self._data["siteinfo"][rooftopid].get("tally")
 
     def get_rooftop_site_extra_data(self, rooftopid = ""):
         """Return a rooftop sites information"""
