@@ -117,7 +117,7 @@ class SolcastApi:
             await f.write(json.dumps(json_content, ensure_ascii=False))
 
     def get_api_usage_cache_filename(self, num_entries, entry_name):
-        return "/config/solcast-usage%s.json" % ("" if num_entries == 1 else "-" + entry_name)
+        return "/config/solcast-usage%s.json" % ("" if num_entries <= 1 else "-" + entry_name)
 
     async def reset_api_usage(self):
         for k in self._api_used.keys():
@@ -459,12 +459,11 @@ class SolcastApi:
         st_i, end_i = self.get_forecast_list_slice(start_utc, end_utc)
         h = self._data_forecasts[st_i:end_i]
 
-        _LOGGER.debug("SOLCAST get_forecast_day %d st %s end %s st_i %d end_i %d h[0] %s h.len %d",
+        _LOGGER.debug("SOLCAST get_forecast_day %d st %s end %s st_i %d end_i %d h.len %d",
                         futureday,
                         start_utc.strftime('%Y-%m-%d %H:%M:%S'),
                         end_utc.strftime('%Y-%m-%d %H:%M:%S'),
-                        st_i, end_i,
-                        h[0] if len(h) > 0 else "n/a", len(h))
+                        st_i, end_i, len(h))
 
         tup = tuple(
                 {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h
@@ -758,7 +757,7 @@ class SolcastApi:
 
         self._data['siteinfo'].update({r_id:{'forecasts': copy.deepcopy(_forecasts)}})
 
-        _LOGGER.info(f"SOLCAST http_data_call processing took {round(time.time()-st_time,6)}s")
+        _LOGGER.info(f"SOLCAST - http_data_call processing took {round(time.time()-st_time,4)}s")
         return True
 
 
@@ -799,10 +798,11 @@ class SolcastApi:
                                 counter += 1
 
                         if status == 200:
+                            _LOGGER.info(f"SOLCAST - Fetch successful")
+
                             _LOGGER.debug(f"SOLCAST - API returned data. API Counter incremented from {self._api_used[apikey]} to {self._api_used[apikey] + 1}")
                             self._api_used[apikey] = self._api_used[apikey] + 1
                             await self.write_api_usage_cache_file(usageCacheFileName, {"daily_limit": self._api_limit[apikey], "daily_limit_consumed": self._api_used[apikey]})
-                            _LOGGER.info(f"SOLCAST - Fetch successful")
 
                             resp_json = await resp.json(content_type=None)
 
@@ -916,17 +916,17 @@ class SolcastApi:
 
             await self.checkDataRecords()
 
-            _LOGGER.info(f"SOLCAST buildforcastdata processing took {round(time.time()-st_time,6)}s")
+            _LOGGER.info(f"SOLCAST - buildforecastdata processing took {round(time.time()-st_time,4)}s")
 
         except Exception as e:
             _LOGGER.error("SOLCAST - http_data error: %s", traceback.format_exc())
         
 
     async def removePastForecastData(self):
-        _LOGGER.debug("SOLCAST removePastForecastData forecasts len in %s", len(self._data_forecasts))
+        _LOGGER.debug("SOLCAST - removePastForecastData forecasts len in %s", len(self._data_forecasts))
         midnight_utc = dt.now(self._tz).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
         self._data_forecasts = list(filter(lambda x: x["period_start"] >= midnight_utc, self._data_forecasts))
-        _LOGGER.debug("SOLCAST removePastForecastData midnight_utc %s, forecasts len out %s", midnight_utc, len(self._data_forecasts))
+        _LOGGER.debug("SOLCAST - removePastForecastData midnight_utc %s, forecasts len out %s", midnight_utc, len(self._data_forecasts))
 
 
     async def checkDataRecords(self):
