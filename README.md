@@ -313,6 +313,7 @@ v4.0.32
 - Improve forecast fetch/retry logging debug, info, warning choice by @autoSteve
 - Suppression of consecutive forecast fetches within fifteen minutes (fixes strange mutliple fetches should a restart occur exactly when automation for fetch is triggered) by @autoSteve
 - Work-around: Prevent error when 'tally' is unavailable during retry by #autoSteve
+- Fix for earlier HA versions not recognising version= for async_update_entry() #40 by autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.31...v4.0.32
 
