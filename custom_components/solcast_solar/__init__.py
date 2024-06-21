@@ -101,7 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     options = ConnectionOptions(
         entry.options[CONF_API_KEY],
         SOLCAST_URL,
-        hass.config.path('solcast.json'),
+        hass.config.path('/config/solcast.json'),
         tz,
         optdamp,
         entry.options[CUSTOM_HOUR_SENSOR],
