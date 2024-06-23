@@ -44,7 +44,7 @@ SENSORS: dict[str, SensorEntityDescription] = {
         name="Forecast Today",
         icon="mdi:solar-power",
         suggested_display_precision=2,
-        state_class= SensorStateClass.TOTAL,
+        #state_class= SensorStateClass.TOTAL,
     ),
     "peak_w_today": SensorEntityDescription(
         key="peak_w_today",
