@@ -111,8 +111,14 @@ class SolcastApi:
             async with aiofiles.open(self._filename, "w") as f:
                  await f.write(json.dumps(self._data, ensure_ascii=False, cls=DateTimeEncoder))
 
-    async def write_api_usage_cache_file(self, json_file, json_content):
-        _LOGGER.debug(f"SOLCAST - writing API usage cache file: {json_file}")
+    def redact_api_key(self, api_key):
+        return '*'*6 + api_key[-6:]
+
+    def redact_msg_api_key(self, msg, api_key):
+        return msg.replace(api_key, self.redact_api_key(api_key))
+
+    async def write_api_usage_cache_file(self, json_file, json_content, api_key):
+        _LOGGER.debug(f"SOLCAST - writing API usage cache file: {self.redact_msg_api_key(json_file, api_key)}")
         async with aiofiles.open(json_file, 'w') as f:
             await f.write(json.dumps(json_content, ensure_ascii=False))
 
@@ -120,11 +126,12 @@ class SolcastApi:
         return "/config/solcast-usage%s.json" % ("" if num_entries <= 1 else "-" + entry_name)
 
     async def reset_api_usage(self):
-        for k in self._api_used.keys():
-            self._api_used[k] = 0
+        for api_key in self._api_used.keys():
+            self._api_used[api_key] = 0
             await self.write_api_usage_cache_file(
-                self.get_api_usage_cache_filename(len(self._api_used), k),
-                {"daily_limit": self._api_limit[k], "daily_limit_consumed": self._api_used[k]})
+                self.get_api_usage_cache_filename(len(self._api_used), api_key),
+                {"daily_limit": self._api_limit[api_key], "daily_limit_consumed": self._api_used[api_key]},
+                api_key)
 
     async def sites_data(self):
         """Request data via the Solcast API."""
@@ -147,7 +154,7 @@ class SolcastApi:
                             resp_json = json.loads(await f.read())
                             status = 200
                     else:
-                        _LOGGER.debug(f"SOLCAST - connecting to - {self.options.host}/rooftop_sites?format=json&api_key=REDACTED")
+                        _LOGGER.debug(f"SOLCAST - connecting to - {self.options.host}/rooftop_sites?format=json&api_key={self.redact_api_key(spl)}")
                         retries = 3
                         retry = retries
                         success = False
@@ -224,7 +231,7 @@ class SolcastApi:
                 sitekey = spl.strip()
                 #params = {"format": "json", "api_key": self.options.api_key}
                 params = {"api_key": sitekey}
-                _LOGGER.debug(f"SOLCAST - getting API limit and usage from solcast for {sitekey}")
+                _LOGGER.debug(f"SOLCAST - getting API limit and usage from solcast for {self.redact_api_key(sitekey)}")
                 async with async_timeout.timeout(60):
                     apiCacheFileName = self.get_api_usage_cache_filename(len(sp), sitekey)
                     resp: ClientResponse = await self.aiohttp_session.get(
@@ -237,7 +244,7 @@ class SolcastApi:
                         resp_json = await resp.json(content_type=None)
                         status = resp.status
                         if status == 200:
-                            await self.write_api_usage_cache_file(apiCacheFileName, resp_json)
+                            await self.write_api_usage_cache_file(apiCacheFileName, resp_json, sitekey)
                             retry = 0
                             success = True
                         else:
@@ -258,7 +265,7 @@ class SolcastApi:
                     d = cast(dict, resp_json)
                     self._api_limit[sitekey] = d.get("daily_limit", None)
                     self._api_used[sitekey] = d.get("daily_limit_consumed", None)
-                    _LOGGER.debug(f"SOLCAST - API counter for {sitekey} is {self._api_used[sitekey]}/{self._api_limit[sitekey]}")
+                    _LOGGER.debug(f"SOLCAST - API counter for {self.redact_api_key(sitekey)} is {self._api_used[sitekey]}/{self._api_limit[sitekey]}")
                 else:
                     self._api_limit[sitekey] = 10
                     self._api_used[sitekey] = 0
@@ -802,7 +809,9 @@ class SolcastApi:
 
                             _LOGGER.debug(f"SOLCAST - API returned data. API Counter incremented from {self._api_used[apikey]} to {self._api_used[apikey] + 1}")
                             self._api_used[apikey] = self._api_used[apikey] + 1
-                            await self.write_api_usage_cache_file(usageCacheFileName, {"daily_limit": self._api_limit[apikey], "daily_limit_consumed": self._api_used[apikey]})
+                            await self.write_api_usage_cache_file(usageCacheFileName,
+                                {"daily_limit": self._api_limit[apikey], "daily_limit_consumed": self._api_used[apikey]},
+                                apikey)
 
                             resp_json = await resp.json(content_type=None)
 
