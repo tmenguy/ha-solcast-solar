@@ -305,7 +305,16 @@ Modified from the great works of
 * cjtapper/solcast-py
 * home-assistant-libs/forecast_solar
 
+## Known issues
+
+- The variable 'tally' should never be unavailable during a forecast fetch retry sequence, but it can be for some reason. This causes site 'forecast today' sensor to show as 'Unknown' until the retries are exhausted, or a successful fetch occurs.
+
 ## Changes
+
+v4.0.33
+- Revert Ozzie state_class for sensor total kwh forecast by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.32...v4.0.33
 
 v4.0.32
 - Bug fix: Independent API use counter for each Solcast account by @autoSteve
@@ -316,9 +325,6 @@ v4.0.32
 - Fix for earlier HA versions not recognising version= for async_update_entry() #40 by autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.31...v4.0.32
-
-Known issues
-- The variable 'tally' should never be unavailable during a forecast fetch retry sequence, but it can be for some reason. This causes site 'forecast today' sensor to show as 'Unknown' until the retries are exhausted, or a successful fetch occurs.
 
 v4.0.31
 - docs: Changes to README.md
