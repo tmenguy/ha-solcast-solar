@@ -293,16 +293,8 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
     return True
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
-    """Handle options update. Only reload if any item was changed"""
-    if any(
-        entry.data.get(attrib) != entry.options.get(attrib)
-        for attrib in (DAMP_FACTOR, HARD_LIMIT,KEY_ESTIMATE, CUSTOM_HOUR_SENSOR, CONF_API_KEY)
-    ):
-        # update entry replacing data with new options
-        hass.config_entries.async_update_entry(
-            entry, data={**entry.data, **entry.options}
-        )
-        await hass.config_entries.async_reload(entry.entry_id)
+    """Reload..."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
