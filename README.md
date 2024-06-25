@@ -311,11 +311,6 @@ Modified from the great works of
 
 ## Changes
 
-v4.0.33
-- Revert Ozzie state_class for sensor total kwh forecast by @autoSteve
-
-Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.32...v4.0.33
-
 v4.0.32
 - Bug fix: Independent API use counter for each Solcast account by @autoSteve
 - Bug fix: Force all caches to /config/ for all platforms (fixes Docker deployments) #43 by @autoSteve
