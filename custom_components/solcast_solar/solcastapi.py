@@ -163,7 +163,7 @@ class SolcastApi:
                         apiCacheFileName = "/config/solcast-sites.json"
                     else:
                         apiCacheFileName = "/config/solcast-sites-%s.json" % (spl,)
-                    _LOGGER.debug(f"SOLCAST apiCacheEnabled={str(self.apiCacheEnabled)}, {apiCacheFileName}={str(file_exists(apiCacheFileName))}")
+                    _LOGGER.debug(f"SOLCAST - {'Sites cache ' + ('exists' if file_exists(apiCacheFileName) else 'does not yet exist')}")
                     if self.apiCacheEnabled and file_exists(apiCacheFileName):
                         _LOGGER.debug(f"SOLCAST - loading cached sites data")
                         status = 404
@@ -254,6 +254,7 @@ class SolcastApi:
                 _LOGGER.debug(f"SOLCAST - getting API limit and usage from solcast for {self.redact_api_key(sitekey)}")
                 async with async_timeout.timeout(60):
                     apiCacheFileName = self.get_api_usage_cache_filename(len(sp), sitekey)
+                    _LOGGER.debug(f"SOLCAST - {'API usage cache ' + ('exists' if file_exists(apiCacheFileName) else 'does not yet exist')}")
                     retries = 3
                     retry = retries
                     success = False
@@ -378,7 +379,7 @@ class SolcastApi:
                             l = []
                             for s in jsonData['siteinfo']:
                                 if not any(d.get('resource_id', '') == s for d in self._sites):
-                                    _LOGGER.info(f"Solcast rooftop resource id {s} no longer part of your system, removing saved data from cached file")
+                                    _LOGGER.info(f"SOLCAST - Rooftop resource id {s} no longer part of your system, removing saved data from cached file")
                                     l.append(s)
 
                             for ll in l:
@@ -451,7 +452,7 @@ class SolcastApi:
 
     def get_rooftop_site_total_today(self, rooftopid) -> float:
         """Return a rooftop sites total kw for today"""
-        if self._data["siteinfo"][rooftopid].get("tally") == None: _LOGGER.warning(f"SOLCAST - 'Tally' is currently unavailable for rooftop {rooftopid}")
+        if self._data["siteinfo"][rooftopid].get("tally") == None: _LOGGER.warning(f"SOLCAST - Class member 'tally' is currently unavailable for rooftop {rooftopid}")
         return self._data["siteinfo"][rooftopid].get("tally")
 
     def get_rooftop_site_extra_data(self, rooftopid = ""):
@@ -849,8 +850,8 @@ class SolcastApi:
                                 async with aiofiles.open(apiCacheFileName, 'w') as f:
                                     await f.write(json.dumps(resp_json, ensure_ascii=False))
                         else:
-                            _LOGGER.warning(f"SOLCAST - API returned status {translate(status)}. API used {self._api_used[apikey]} to {self._api_used[apikey] + 1}")
-                            _LOGGER.warning("This is an error with the data returned from Solcast, not the integration")
+                            _LOGGER.error(f"SOLCAST - API returned status {translate(status)}. API used is {self._api_used[apikey]}/{self._api_limit[apikey]}")
+                            _LOGGER.warning("SOLCAST - Last call was an error calling Solcast, and not an integration issue")
                     else:
                         _LOGGER.warning(f"SOLCAST - API limit exceeded, not getting forecast")
                         return None
