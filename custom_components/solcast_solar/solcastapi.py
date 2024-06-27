@@ -85,7 +85,7 @@ class ConnectionOptions:
 
 
 class SolcastApi:
-    """Solcast API rooftop."""
+    """Solcast API"""
 
     def __init__(
         self,
@@ -192,7 +192,7 @@ class SolcastApi:
                             except: raise
 
                             if status == 200:
-                                _LOGGER.debug(f"SOLCAST - writing sites data cache")
+                                _LOGGER.debug(f"SOLCAST - writing sites cache")
                                 async with aiofiles.open(apiCacheFileName, 'w') as f:
                                     await f.write(json.dumps(resp_json, ensure_ascii=False))
                                 success = True
@@ -202,20 +202,20 @@ class SolcastApi:
                                     useCacheImmediate = True
                                     break
                                 if retry > 0:
-                                    _LOGGER.debug(f"SOLCAST - will retry get rooftop_sites, retry {(retries - retry) + 1}")
+                                    _LOGGER.debug(f"SOLCAST - will retry get sites, retry {(retries - retry) + 1}")
                                     await asyncio.sleep(5)
                                 retry -= 1
                         if not success:
                             if not useCacheImmediate:
-                                _LOGGER.warning(f"SOLCAST - Retries exhausted gathering rooftop sites data, last call result: {translate(status)}, using cached data if it exists")
+                                _LOGGER.warning(f"SOLCAST - Retries exhausted gathering sites, last call result: {translate(status)}, using cached data if it exists")
                             status = 404
                             if cacheExists:
-                                _LOGGER.debug(f"SOLCAST - loading cached sites data")
+                                _LOGGER.debug(f"SOLCAST - loading cached sites")
                                 async with aiofiles.open(apiCacheFileName) as f:
                                     resp_json = json.loads(await f.read())
                                     status = 200
                             else:
-                                _LOGGER.error(f"SOLCAST - cached sites data is not yet available to cope with Solcast API being too busy - at least one successful API call is needed")
+                                _LOGGER.error(f"SOLCAST - cached sites are not yet available to cope with Solcast API being too busy - at least one successful API call is needed")
 
                 if status == 200:
                     d = cast(dict, resp_json)
@@ -228,23 +228,23 @@ class SolcastApi:
                     self._sites = self._sites + d['sites']
                 else:
                     _LOGGER.error(
-                        f"SOLCAST - sites_data Solcast.com http status Error {translate(status)} - Gathering rooftop sites data"
+                        f"SOLCAST - sites_data Solcast.com http status Error {translate(status)} - Gathering sites"
                     )
-                    _LOGGER.error(f"SOLCAST - Solcast integration did not start correctly, as rooftop sites data is needed. Suggestion: Restart the integration")
-                    raise Exception(f"SOLCAST - HTTP sites_data error: Solcast Error gathering rooftop sites data")
+                    _LOGGER.error(f"SOLCAST - Solcast integration did not start correctly, as site(s) are needed. Suggestion: Restart the integration")
+                    raise Exception(f"SOLCAST - HTTP sites_data error: Solcast Error gathering sites")
         except ConnectionRefusedError as err:
             _LOGGER.error("SOLCAST - sites_data ConnectionRefusedError Error: %s",err)
         except ClientConnectionError as e:
             _LOGGER.error('SOLCAST - sites_data Connection Error', str(e))
         except asyncio.TimeoutError:
             try:
-                _LOGGER.warning("SOLCAST - sites_data get rooftop sites timed out, attempting to continue")
+                _LOGGER.warning("SOLCAST - sites_data get sites timed out, attempting to continue")
                 error = False
                 for spl in sp:
                     apiCacheFileName = self.get_api_sites_cache_filename(spl)
                     cacheExists = file_exists(apiCacheFileName)
                     if cacheExists:
-                        _LOGGER.info("SOLCAST - Loading cached sites data for {self.redact_api_key(spl)}")
+                        _LOGGER.info("SOLCAST - Loading cached sites for {self.redact_api_key(spl)}")
                         async with aiofiles.open(apiCacheFileName) as f:
                             resp_json = json.loads(await f.read())
                             d = cast(dict, resp_json)
@@ -258,9 +258,9 @@ class SolcastApi:
                             _LOGGER.info("SOLCAST - Good sites load for {self.redact_api_key(spl)}")
                     else:
                         error = True
-                        _LOGGER.error(f"SOLCAST - No cached sites data is available for {self.redact_api_key(spl)} to cope with Solcast API timeout")
+                        _LOGGER.error(f"SOLCAST - No cached site(s) are available for {self.redact_api_key(spl)} to cope with Solcast API timeout")
                 if error:
-                    _LOGGER.error("SOLCAST - sites_data Timed out async wait for connection to solcast server, and one or more sites data caches failed to load. This is critical, and the integration cannot function reliably. Attempt reload.")
+                    _LOGGER.error("SOLCAST - sites_data Timed out async wait for connection to solcast server, and one or more site caches failed to load. This is critical, and the integration cannot function reliably. Suggestion: Attempt integration reload.")
             except Exception as e:
                 pass
         except Exception as e:
@@ -312,7 +312,7 @@ class SolcastApi:
                             _LOGGER.warning(f"SOLCAST - Timeout getting usage allowance, last call result: {translate(status)}, using cached data if it exists")
                         status = 404
                         if cacheExists:
-                            _LOGGER.debug(f"SOLCAST - loading cached usage")
+                            _LOGGER.debug(f"SOLCAST - loading cached usage data")
                             async with aiofiles.open(apiCacheFileName) as f:
                                 resp_json = json.loads(await f.read())
                                 status = 200
@@ -339,7 +339,7 @@ class SolcastApi:
             _LOGGER.error("SOLCAST - sites_usage error: %s", traceback.format_exc())
 
     # async def sites_weather(self):
-    #     """Request rooftop site weather byline via the Solcast API."""
+    #     """Request site weather byline via the Solcast API."""
 
     #     try:
     #         if len(self._sites) > 0:
@@ -347,7 +347,7 @@ class SolcastApi:
     #             rid = self._sites[0].get("resource_id", None)
 
     #             params = {"resourceId": rid, "api_key": sp[0]}
-    #             _LOGGER.debug(f"SOLCAST - get rooftop weather byline from solcast")
+    #             _LOGGER.debug(f"SOLCAST - get weather byline from solcast")
     #             async with async_timeout.timeout(60):
     #                 resp: ClientResponse = await self.aiohttp_session.get(
     #                     url=f"https://api.solcast.com.au/json/reply/GetRooftopSiteSparklines", params=params, ssl=False
@@ -359,9 +359,9 @@ class SolcastApi:
     #                 d = cast(dict, resp_json)
     #                 _LOGGER.debug(f"SOLCAST - sites_weather returned data: {d}")
     #                 self._weather = d.get("forecast_descriptor", None).get("description", None)
-    #                 _LOGGER.debug(f"SOLCAST - rooftop weather description: {self._weather}")
+    #                 _LOGGER.debug(f"SOLCAST - weather description: {self._weather}")
     #             else:
-    #                 raise Exception(f"SOLCAST - sites_weather: gathering rooftop weather description failed. request returned Status code: {translate(status)} - Response: {resp_json}.")
+    #                 raise Exception(f"SOLCAST - sites_weather: gathering weather description failed. request returned Status code: {translate(status)} - Response: {resp_json}.")
 
     #     except json.decoder.JSONDecodeError:
     #         _LOGGER.error("SOLCAST - sites_weather JSONDecodeError: Solcast site could be having problems")
@@ -394,8 +394,8 @@ class SolcastApi:
                                     ks[d.get('resource_id')] = d.get('apikey')
 
                             if len(ks.keys()) > 0:
-                                #some api keys rooftop data does not exist yet so go and get it
-                                _LOGGER.debug("SOLCAST - Must be new API key added so go and get the data for it")
+                                #some site data does not exist yet so go and get it
+                                _LOGGER.debug("SOLCAST - Likely a new API key added, getting the data for it")
                                 for a in ks:
                                     await self.http_data_call(self.get_api_usage_cache_filename(ks[a]), r_id=a, api=ks[a], dopast=True)
                                 await self.serialize_data()
@@ -404,7 +404,7 @@ class SolcastApi:
                             l = []
                             for s in jsonData['siteinfo']:
                                 if not any(d.get('resource_id', '') == s for d in self._sites):
-                                    _LOGGER.info(f"SOLCAST - Rooftop resource id {s} no longer part of your system, removing saved data from cached file")
+                                    _LOGGER.info(f"SOLCAST - Site resource id {s} no longer part of your system, removing saved data from cached file")
                                     l.append(s)
 
                             for ll in l:
@@ -419,7 +419,7 @@ class SolcastApi:
                     #could be a brand new install of the integation so this is poll once now automatically
                     await self.http_data(dopast=True)
             else:
-                _LOGGER.error(f"SOLCAST - load_saved_data site count is zero. The get rooftop sites must have failed.")
+                _LOGGER.error(f"SOLCAST - load_saved_data site count is zero. The get sites must have failed.")
         except json.decoder.JSONDecodeError:
             _LOGGER.error("SOLCAST - load_saved_data error: The cached data is corrupt")
         except Exception as e:
@@ -479,15 +479,15 @@ class SolcastApi:
         return dt.fromisoformat(self._data["last_updated"])
 
     def get_rooftop_site_total_today(self, site) -> float:
-        """Return a rooftop sites total kW for today"""
-        if self._tally.get(site) == None: _LOGGER.warning(f"SOLCAST - Site total kW today is currently unavailable for rooftop {site}")
+        """Return a site total kW for today"""
+        if self._tally.get(site) == None: _LOGGER.warning(f"SOLCAST - Site total kW today is currently unavailable for {site}")
         return self._tally.get(site)
 
     def get_rooftop_site_extra_data(self, site = ""):
-        """Return a rooftop sites information"""
+        """Return a site information"""
         g = tuple(d for d in self._sites if d["resource_id"] == site)
         if len(g) != 1:
-            raise ValueError(f"Unable to find rooftop site {site}")
+            raise ValueError(f"Unable to find site {site}")
         site: Dict[str, Any] = g[0]
         ret = {}
 
@@ -583,14 +583,14 @@ class SolcastApi:
         return res
 
     def get_peak_w_day(self, n_day) -> int:
-        """Return max kw for rooftop site N days ahead"""
+        """Return max kW for site N days ahead"""
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
         res = self.get_max_forecast_pv_estimate(start_utc, end_utc)
         return 0 if res is None else round(1000 * res[self._use_data_field])
 
     def get_peak_w_time_day(self, n_day) -> dt:
-        """Return hour of max kw for rooftop site N days ahead"""
+        """Return hour of max kW for site N days ahead"""
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
         res = self.get_max_forecast_pv_estimate(start_utc, end_utc)
@@ -605,7 +605,7 @@ class SolcastApi:
         return res
 
     def get_total_kwh_forecast_day(self, n_day) -> float:
-        """Return total kwh total for rooftop site N days ahead"""
+        """Return total kWh total for site N days ahead"""
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
         res = 0.5 * self.get_forecast_pv_estimates(start_utc, end_utc)
@@ -693,7 +693,7 @@ class SolcastApi:
 
         failure = False
         for site in self._sites:
-            _LOGGER.debug(f"SOLCAST - API polling for rooftop {site['resource_id']}")
+            _LOGGER.debug(f"SOLCAST - API polling for site {site['resource_id']}")
             #site=site['resource_id'], apikey=site['apikey'],
             result = await self.http_data_call(self.get_api_usage_cache_filename(site['apikey']), site['resource_id'], site['apikey'], dopast)
             if not result:
@@ -713,7 +713,7 @@ class SolcastApi:
         """Request forecast data via the Solcast API."""
         lastday = self.get_day_start_utc() + timedelta(days=8)
         numhours = math.ceil((lastday - self.get_now_utc()).total_seconds() / 3600)
-        _LOGGER.debug(f"SOLCAST - Polling API for rooftop_id {r_id} lastday {lastday} numhours {numhours}")
+        _LOGGER.debug(f"SOLCAST - Polling API for site {r_id} lastday {lastday} numhours {numhours}")
 
         _data = []
         _data2 = []
@@ -799,7 +799,7 @@ class SolcastApi:
         _LOGGER.debug("SOLCAST http_data_call _fcasts_dict len %s", len(_fcasts_dict))
 
         for x in _data:
-            #loop each rooftop site and its forecasts
+            #loop each site and its forecasts
 
             itm = _fcasts_dict.get(x["period_start"])
             if itm:
@@ -813,7 +813,7 @@ class SolcastApi:
                                                         "pv_estimate10": x["pv_estimate10"],
                                                         "pv_estimate90": x["pv_estimate90"]}
 
-        #_fcasts_dict now contains all data for the rooftop site up to 730 days worth
+        #_fcasts_dict now contains all data for the site up to 730 days worth
         #this deletes data that is older than 730 days (2 years)
         pastdays = dt.now(timezone.utc).date() + timedelta(days=-730)
         _forecasts = list(filter(lambda x: x["period_start"].date() >= pastdays, _fcasts_dict.values()))
@@ -890,10 +890,10 @@ class SolcastApi:
                 _LOGGER.warning("SOLCAST - Solcast is too busy or exceeded API allowed polling limit - API used is {self._api_used[apikey]}/{self._api_limit[apikey]}")
             elif status == 400:
                 _LOGGER.warning(
-                    "SOLCAST - Status {translate(status)}: The rooftop site is likely missing capacity, please specify capacity or provide historic data for tuning."
+                    "SOLCAST - Status {translate(status)}: The site is likely missing capacity, please specify capacity or provide historic data for tuning."
                 )
             elif status == 404:
-                _LOGGER.error(f"SOLCAST - Error {translate(status)}. The rooftop site cannot be found.")
+                _LOGGER.error(f"SOLCAST - Error {translate(status)}. The site cannot be found.")
             elif status == 200:
                 d = cast(dict, resp_json)
                 _LOGGER.debug(f"SOLCAST - {translate(status)} fetch_data Returned: {d}")
@@ -951,7 +951,7 @@ class SolcastApi:
             for site, siteinfo in self._data['siteinfo'].items():
                 tally = 0
                 for x in siteinfo['forecasts']:
-                    #loop each rooftop site and its forecasts
+                    #loop each site and its forecasts
                     z = x["period_start"]
                     zz = z.astimezone(self._tz) #- timedelta(minutes=30)
 
