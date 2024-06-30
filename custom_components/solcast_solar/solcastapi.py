@@ -106,6 +106,7 @@ class SolcastApi:
         self._tz = options.tz
         self._dataenergy = {}
         self._data_forecasts = []
+        self._site_data_forecasts = {}
         self._forecasts_start_idx = 0
         self._detailedForecasts = []
         self._loaded_data = False
@@ -443,7 +444,7 @@ class SolcastApi:
         try:
             st_time = time.time()
 
-            st_i, end_i = self.get_forecast_list_slice(args[0], args[1], search_past=True)
+            st_i, end_i = self.get_forecast_list_slice(self._data_forecasts, args[0], args[1], search_past=True)
             h = self._data_forecasts[st_i:end_i]
 
             _LOGGER.debug("SOLCAST - get_forecast_list (%ss) st %s end %s st_i %d end_i %d h.len %d",
@@ -524,7 +525,7 @@ class SolcastApi:
 
         start_utc = self.get_day_start_utc() + timedelta(days=futureday)
         end_utc = start_utc + timedelta(days=1)
-        st_i, end_i = self.get_forecast_list_slice(start_utc, end_utc)
+        st_i, end_i = self.get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
         h = self._data_forecasts[st_i:end_i]
 
         _LOGGER.debug("SOLCAST - get_forecast_day %d st %s end %s st_i %d end_i %d h.len %d",
@@ -575,28 +576,43 @@ class SolcastApi:
         res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc))
         return res
 
-    def get_power_n_mins(self, n_mins) -> int:
+    def get_power_n_mins(self, n_mins, site=None) -> int:
         """Return Solcast Power for the next N minutes"""
         # uses a rolling 20mins interval (arbitrary decision) to smooth out the transitions between the 30mins intervals
         start_utc = self.get_now_utc() + timedelta(minutes=n_mins-10)
         end_utc = start_utc + timedelta(minutes=20)
         # multiply with 1.5 as the power reported is only for a 20mins interval (out of 30mins)
-        res = round(1000 * 1.5 * self.get_forecast_pv_estimates(start_utc, end_utc))
+        res = round(1000 * 1.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site))
         return res
 
-    def get_peak_w_day(self, n_day) -> int:
+    def get_sites_power_n_mins(self, n_mins) -> Dict[str, Any]:
+        res = {}
+        for site in self._sites: res[site['resource_id']] = self.get_power_n_mins(n_mins, site['resource_id'])
+        return res
+
+    def get_peak_w_day(self, n_day, site=None) -> int:
         """Return max kW for site N days ahead"""
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
-        res = self.get_max_forecast_pv_estimate(start_utc, end_utc)
+        res = self.get_max_forecast_pv_estimate(start_utc, end_utc, site=site)
         return 0 if res is None else round(1000 * res[self._use_data_field])
 
-    def get_peak_w_time_day(self, n_day) -> dt:
+    def get_peak_w_time_day(self, n_day, site=None) -> dt:
         """Return hour of max kW for site N days ahead"""
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
-        res = self.get_max_forecast_pv_estimate(start_utc, end_utc)
+        res = self.get_max_forecast_pv_estimate(start_utc, end_utc, site=site)
         return res if res is None else res["period_start"]
+
+    def get_sites_peak_w_day(self, n_day) -> Dict[str, Any]:
+        res = {}
+        for site in self._sites: res[site['resource_id']] = self.get_peak_w_day(n_day, site['resource_id'])
+        return res
+
+    def get_sites_peak_w_time_day(self, n_day) -> Dict[str, Any]:
+        res = {}
+        for site in self._sites: res[site['resource_id']] = self.get_peak_w_time_day(n_day, site['resource_id'])
+        return res
 
     def get_forecast_remaining_today(self) -> float:
         """Return remaining Forecasts data for today"""
@@ -613,13 +629,13 @@ class SolcastApi:
         res = 0.5 * self.get_forecast_pv_estimates(start_utc, end_utc)
         return res
 
-    def get_forecast_list_slice(self, start_utc, end_utc, search_past=False):
+    def get_forecast_list_slice(self, _data, start_utc, end_utc, search_past=False):
         """Return Solcast pv_estimates list slice [st_i, end_i) for interval [start_utc, end_utc)"""
         crt_i = -1
         st_i = -1
-        end_i = len(self._data_forecasts)
+        end_i = len(_data)
         for crt_i in range(0 if search_past else self._forecasts_start_idx, end_i):
-            d = self._data_forecasts[crt_i]
+            d = _data[crt_i]
             d1 = d['period_start']
             d2 = d1 + timedelta(seconds=1800)
             # after the last segment
@@ -635,12 +651,13 @@ class SolcastApi:
             end_i = 0
         return st_i, end_i
 
-    def get_forecast_pv_estimates(self, start_utc, end_utc) -> float:
+    def get_forecast_pv_estimates(self, start_utc, end_utc, site=None) -> float:
         """Return Solcast pv_estimates for interval [start_utc, end_utc)"""
         try:
+            _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
             res = 0
-            st_i, end_i = self.get_forecast_list_slice(start_utc, end_utc)
-            for d in self._data_forecasts[st_i:end_i]:
+            st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc)
+            for d in _data[st_i:end_i]:
                 d1 = d['period_start']
                 d2 = d1 + timedelta(seconds=1800)
                 s = 1800
@@ -652,8 +669,9 @@ class SolcastApi:
                 if s < 1800:
                     f *= s / 1800
                 res += f
-            _LOGGER.debug("SOLCAST - %s st %s end %s st_i %d end_i %d res %s",
+            _LOGGER.debug("SOLCAST - %s%s st %s end %s st_i %d end_i %d res %s",
                           currentFuncName(1),
+                          '' if site is None else ' '+site,
                           start_utc.strftime('%Y-%m-%d %H:%M:%S'),
                           end_utc.strftime('%Y-%m-%d %H:%M:%S'),
                           st_i, end_i, round(res,3))
@@ -662,16 +680,18 @@ class SolcastApi:
             _LOGGER.error(f"SOLCAST - get_forecast_pv_estimates: {ex}")
             return 0
 
-    def get_max_forecast_pv_estimate(self, start_utc, end_utc):
+    def get_max_forecast_pv_estimate(self, start_utc, end_utc, site=None):
         """Return max Solcast pv_estimate for the interval [start_utc, end_utc)"""
         try:
+            _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
             res = None
-            st_i, end_i = self.get_forecast_list_slice(start_utc, end_utc)
-            for d in self._data_forecasts[st_i:end_i]:
+            st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc)
+            for d in _data[st_i:end_i]:
                 if res is None or res[self._use_data_field] < d[self._use_data_field]:
                     res = d
-            _LOGGER.debug("SOLCAST - %s st %s end %s st_i %d end_i %d res %s",
+            _LOGGER.debug("SOLCAST - %s%s st %s end %s st_i %d end_i %d res %s",
                           currentFuncName(1),
+                          '' if site is None else ' '+site,
                           start_utc.strftime('%Y-%m-%d %H:%M:%S'),
                           end_utc.strftime('%Y-%m-%d %H:%M:%S'),
                           st_i, end_i, res)
@@ -952,6 +972,8 @@ class SolcastApi:
             st_time = time.time()
             for site, siteinfo in self._data['siteinfo'].items():
                 tally = 0
+                _site_fcasts_dict = {}
+
                 for x in siteinfo['forecasts']:
                     #loop each site and its forecasts
                     z = x["period_start"]
@@ -964,6 +986,7 @@ class SolcastApi:
                         if zz.date() == today:
                             tally += min(x[self._use_data_field] * 0.5 * self._damp[h], self._hardlimit)
 
+                        # add the dampened forecast for this site to the total
                         itm = _fcasts_dict.get(z)
                         if itm:
                             itm["pv_estimate"] = min(round(itm["pv_estimate"] + (x["pv_estimate"] * self._damp[h]),4), self._hardlimit)
@@ -974,6 +997,13 @@ class SolcastApi:
                                                 "pv_estimate": min(round((x["pv_estimate"]* self._damp[h]),4), self._hardlimit),
                                                 "pv_estimate10": min(round((x["pv_estimate10"]* self._damp[h]),4), self._hardlimit),
                                                 "pv_estimate90": min(round((x["pv_estimate90"]* self._damp[h]),4), self._hardlimit)}
+
+                        # record the individual site forecast
+                        _site_fcasts_dict[z] = {"period_start": z,
+                                            "pv_estimate": min(round((x["pv_estimate"]* self._damp[h]),4), self._hardlimit),
+                                            "pv_estimate10": min(round((x["pv_estimate10"]* self._damp[h]),4), self._hardlimit),
+                                            "pv_estimate90": min(round((x["pv_estimate90"]* self._damp[h]),4), self._hardlimit)}
+                self._site_data_forecasts[site] = sorted(_site_fcasts_dict.values(), key=itemgetter("period_start"))
 
                 siteinfo['tally'] = round(tally, 4)
                 self._tally[site] = siteinfo['tally']
@@ -1006,7 +1036,7 @@ class SolcastApi:
         for i in range(0,8):
             start_utc = self.get_day_start_utc() + timedelta(days=i)
             end_utc = start_utc + timedelta(days=1)
-            st_i, end_i = self.get_forecast_list_slice(start_utc, end_utc)
+            st_i, end_i = self.get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
             num_rec = end_i - st_i
 
             da = dt.now(self._tz).date() + timedelta(days=i)
