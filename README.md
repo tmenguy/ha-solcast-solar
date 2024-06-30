@@ -17,6 +17,11 @@
 >
 > Bug reports unrelated to API changes may not get the attention you want, as the the repository owner is largely retired for medical reasons, but knows the Solcast API as a former / user in this and other projects.
 
+> [!NOTE]
+> This integration can be used as a replacement for the oziee/ha-solcast-solar integration, which has been removed from GitHub and HACS.  
+>
+> Uninstalling the oziee version then installing this one will preserve the history and configuration from the oziee integration.
+
 Version Change Notes: See [below](#changes).
 
 Home Assistant (https://www.home-assistant.io) Integration Component
