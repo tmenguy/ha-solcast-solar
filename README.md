@@ -321,13 +321,16 @@ Modified from the great works of
 
 ## Known issues
 
-- The variable 'tally' should never be unavailable during a forecast fetch retry sequence, but it can be for some reason. This causes site 'forecast today' sensor to show as 'Unknown' until the retries are exhausted, or a successful fetch occurs.
-
-- The call for get current API usage on startup is not correctly retried. This will be fixed in a future release.
-
-- Startup times can be delayed when the Solcast API is returning 429/Too busy status, which is caused by retries. This will be fixed in a future release by getting the data immediately from cache if it exists.
+None
 
 ## Changes
+
+v4.0.35
+* (Enhancement) Breakdown of individual site forecast wattage and time as attributes by @autoSteve
+* Do not log options version upgrade if no upgrade is required by @autoSteve
+* Add info about preserving oziee history and config to banner by @iainfogg
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.34...v4.0.35
 
 v4.0.34
 * Fix query_forecast_data so that near-term historical forecasts are returned by @isorin
