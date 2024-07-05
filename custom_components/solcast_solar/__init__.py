@@ -2,6 +2,7 @@
 
 import logging
 import random
+import asyncio
 
 from homeassistant import loader
 from homeassistant.config_entries import ConfigEntry
@@ -136,7 +137,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as ex:
         raise ConfigEntryNotReady(f"Getting sites data failed: {ex}") from ex
 
-    await solcast.load_saved_data()
+    retry = 3
+    while retry >= 0:
+        if await solcast.load_saved_data(): break
+        retry -= 1
+        if retry >= 0:
+            _LOGGER.warning("Failed to load initial data from cache or Solcast, retrying after 10 seconds")
+            await asyncio.sleep(10)
 
     coordinator = SolcastUpdateCoordinator(hass, solcast, _VERSION)
 

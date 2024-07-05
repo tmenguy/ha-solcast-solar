@@ -441,12 +441,16 @@ class SolcastApi:
                     _LOGGER.warning(f"There is no solcast.json to load, so fetching solar forecast, including past forecasts")
                     #could be a brand new install of the integation so this is poll once now automatically
                     await self.http_data(dopast=True)
+
+                if self._loaded_data: return True
             else:
                 _LOGGER.error(f"Solcast site count is zero in load_saved_data; the get sites must have failed, and there is no sites cache")
+                return True # Not really successful, but don't want the retry in __init__
         except json.decoder.JSONDecodeError:
             _LOGGER.error("The cached data in solcast.json is corrupt in load_saved_data")
         except Exception as e:
             _LOGGER.error("Solcast exception in load_saved_data: %s", traceback.format_exc())
+        return False
 
     async def delete_solcast_file(self, *args):
         _LOGGER.debug(f"SOLCAST - service event to delete old solcast.json file")
