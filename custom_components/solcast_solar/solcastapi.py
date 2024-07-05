@@ -228,10 +228,10 @@ class SolcastApi:
                                 _LOGGER.warning(f"Retries exhausted gathering Solcast sites, last call result: {translate(status)}, using cached data if it exists")
                             status = 404
                             if cacheExists:
-                                _LOGGER.debug(f"SOLCAST - loading cached sites")
                                 async with aiofiles.open(apiCacheFileName) as f:
                                     resp_json = json.loads(await f.read())
                                     status = 200
+                                _LOGGER.debug(f"Loaded sites cache for {self.redact_api_key(spl)}")
                             else:
                                 _LOGGER.error(f"Cached Solcast sites are not yet available for {self.redact_api_key(spl)} to cope with API call failure")
                                 _LOGGER.error(f"At least one successful API 'get sites' call is needed, so the integration will not function correctly")
@@ -274,7 +274,7 @@ class SolcastApi:
                                 i.pop('longitude', None)
                                 i.pop('latitude', None)
                             self._sites = self._sites + d['sites']
-                            _LOGGER.info("Good sites load for {self.redact_api_key(spl)}")
+                            _LOGGER.debug(f"Loaded sites cache for {self.redact_api_key(spl)}")
                     else:
                         error = True
                         _LOGGER.error(f"Cached sites are not yet available for {self.redact_api_key(spl)} to cope with Solcast API call failure")
@@ -332,10 +332,10 @@ class SolcastApi:
                             _LOGGER.warning(f"Timeout getting Solcast API usage allowance, last call result: {translate(status)}, using cached data if it exists")
                         status = 404
                         if cacheExists:
-                            _LOGGER.debug(f"SOLCAST - loading cached usage data")
                             async with aiofiles.open(apiCacheFileName) as f:
                                 resp_json = json.loads(await f.read())
                                 status = 200
+                            _LOGGER.info(f"Loaded API usage cache")
                         else:
                             _LOGGER.warning(f"No Solcast API usage cache found")
 
@@ -783,130 +783,136 @@ class SolcastApi:
                 self._loaded_data = True
 
                 await self.serialize_data()
+            else:
+                _LOGGER.error("At least one Solcast site forecast failed to fetch, so forecast data has not been built")
         except Exception as ex:
-            _LOGGER.error("Exception in http_data: %s", ex)
+            _LOGGER.error("Exception in http_data: %s - Forecast data has not been built", ex)
             _LOGGER.error(traceback.format_exc())
 
     async def http_data_call(self, usageCacheFileName, r_id = None, api = None, dopast = False):
-        """Request forecast data via the Solcast API."""
-        lastday = self.get_day_start_utc() + timedelta(days=8)
-        numhours = math.ceil((lastday - self.get_now_utc()).total_seconds() / 3600)
-        _LOGGER.debug(f"SOLCAST - Polling API for site {r_id} lastday {lastday} numhours {numhours}")
+        """Request forecast data via the Solcast API"""
+        try:
+            lastday = self.get_day_start_utc() + timedelta(days=8)
+            numhours = math.ceil((lastday - self.get_now_utc()).total_seconds() / 3600)
+            _LOGGER.debug(f"SOLCAST - Polling API for site {r_id} lastday {lastday} numhours {numhours}")
 
-        _data = []
-        _data2 = []
+            _data = []
+            _data2 = []
 
-        # This is run once, for a new install or if the solcast.json file is deleted
-        # This does use up an api call count too
-        if dopast:
-            ae = None
-            resp_dict = await self.fetch_data(usageCacheFileName, "estimated_actuals", 168, site=r_id, apikey=api, cachedname="actuals")
+            # This is run once, for a new install or if the solcast.json file is deleted
+            # This does use up an api call count too
+            if dopast:
+                ae = None
+                resp_dict = await self.fetch_data(usageCacheFileName, "estimated_actuals", 168, site=r_id, apikey=api, cachedname="actuals")
+                if not isinstance(resp_dict, dict):
+                    _LOGGER.error(
+                        f"No data was returned for Solcast estimated_actuals so this WILL cause errors... "
+                        f"Either your API limit is exhaused, internet down, what ever the case is it is "
+                        f"NOT a problem with the integration, and all other problems of sensor values being wrong will be seen"
+                    )
+                    raise TypeError(f"Solcast API did not return a json object. Returned {resp_dict}")
+
+                ae = resp_dict.get("estimated_actuals", None)
+
+                if not isinstance(ae, list):
+                    raise TypeError(f"estimated actuals must be a list, not {type(ae)}")
+
+                oldest = dt.now(self._tz).replace(hour=0,minute=0,second=0,microsecond=0) - timedelta(days=6)
+                oldest = oldest.astimezone(timezone.utc)
+
+                for x in ae:
+                    z = parse_datetime(x["period_end"]).astimezone(timezone.utc)
+                    z = z.replace(second=0, microsecond=0) - timedelta(minutes=30)
+                    if z.minute not in {0, 30}:
+                        raise ValueError(
+                            f"Solcast period_start minute is not 0 or 30. {z.minute}"
+                        )
+                    if z > oldest:
+                        _data2.append(
+                            {
+                                "period_start": z,
+                                "pv_estimate": x["pv_estimate"],
+                                "pv_estimate10": 0,
+                                "pv_estimate90": 0,
+                            }
+                        )
+
+            resp_dict = await self.fetch_data(usageCacheFileName, "forecasts", numhours, site=r_id, apikey=api, cachedname="forecasts")
+            if resp_dict is None:
+                return False
+
             if not isinstance(resp_dict, dict):
-                _LOGGER.error(
-                    f"No data was returned for Solcast estimated_actuals so this WILL cause errors... "
-                    f"Either your API limit is exhaused, internet down, what ever the case is it is "
-                    f"NOT a problem with the integration, and all other problems of sensor values being wrong will be seen"
-                )
                 raise TypeError(f"Solcast API did not return a json object. Returned {resp_dict}")
 
-            ae = resp_dict.get("estimated_actuals", None)
+            af = resp_dict.get("forecasts", None)
+            if not isinstance(af, list):
+                raise TypeError(f"forecasts must be a list, not {type(af)}")
 
-            if not isinstance(ae, list):
-                raise TypeError(f"estimated actuals must be a list, not {type(ae)}")
+            _LOGGER.debug(f"SOLCAST - Solcast returned {len(af)} records")
 
-            oldest = dt.now(self._tz).replace(hour=0,minute=0,second=0,microsecond=0) - timedelta(days=6)
-            oldest = oldest.astimezone(timezone.utc)
-
-            for x in ae:
+            st_time = time.time()
+            for x in af:
                 z = parse_datetime(x["period_end"]).astimezone(timezone.utc)
                 z = z.replace(second=0, microsecond=0) - timedelta(minutes=30)
                 if z.minute not in {0, 30}:
                     raise ValueError(
                         f"Solcast period_start minute is not 0 or 30. {z.minute}"
                     )
-                if z > oldest:
+                if z < lastday:
                     _data2.append(
                         {
                             "period_start": z,
                             "pv_estimate": x["pv_estimate"],
-                            "pv_estimate10": 0,
-                            "pv_estimate90": 0,
+                            "pv_estimate10": x["pv_estimate10"],
+                            "pv_estimate90": x["pv_estimate90"],
                         }
                     )
 
-        resp_dict = await self.fetch_data(usageCacheFileName, "forecasts", numhours, site=r_id, apikey=api, cachedname="forecasts")
-        if resp_dict is None:
-            return False
+            _data = sorted(_data2, key=itemgetter("period_start"))
+            _fcasts_dict = {}
 
-        if not isinstance(resp_dict, dict):
-            raise TypeError(f"Solcast API did not return a json object. Returned {resp_dict}")
+            try:
+                for x in self._data['siteinfo'][r_id]['forecasts']:
+                    _fcasts_dict[x["period_start"]] = x
+            except:
+                pass
 
-        af = resp_dict.get("forecasts", None)
-        if not isinstance(af, list):
-            raise TypeError(f"forecasts must be a list, not {type(af)}")
+            _LOGGER.debug("SOLCAST - http_data_call _fcasts_dict len %s", len(_fcasts_dict))
 
-        _LOGGER.debug(f"SOLCAST - Solcast returned {len(af)} records")
+            for x in _data:
+                #loop each site and its forecasts
 
-        st_time = time.time()
-        for x in af:
-            z = parse_datetime(x["period_end"]).astimezone(timezone.utc)
-            z = z.replace(second=0, microsecond=0) - timedelta(minutes=30)
-            if z.minute not in {0, 30}:
-                raise ValueError(
-                    f"Solcast period_start minute is not 0 or 30. {z.minute}"
-                )
-            if z < lastday:
-                _data2.append(
-                    {
-                        "period_start": z,
-                        "pv_estimate": x["pv_estimate"],
-                        "pv_estimate10": x["pv_estimate10"],
-                        "pv_estimate90": x["pv_estimate90"],
-                    }
-                )
+                itm = _fcasts_dict.get(x["period_start"])
+                if itm:
+                    itm["pv_estimate"] = x["pv_estimate"]
+                    itm["pv_estimate10"] = x["pv_estimate10"]
+                    itm["pv_estimate90"] = x["pv_estimate90"]
+                else:
+                    # _LOGGER.debug("adding itm")
+                    _fcasts_dict[x["period_start"]] = {"period_start": x["period_start"],
+                                                            "pv_estimate": x["pv_estimate"],
+                                                            "pv_estimate10": x["pv_estimate10"],
+                                                            "pv_estimate90": x["pv_estimate90"]}
 
-        _data = sorted(_data2, key=itemgetter("period_start"))
-        _fcasts_dict = {}
+            #_fcasts_dict now contains all data for the site up to 730 days worth
+            #this deletes data that is older than 730 days (2 years)
+            pastdays = dt.now(timezone.utc).date() + timedelta(days=-730)
+            _forecasts = list(filter(lambda x: x["period_start"].date() >= pastdays, _fcasts_dict.values()))
 
-        try:
-            for x in self._data['siteinfo'][r_id]['forecasts']:
-                _fcasts_dict[x["period_start"]] = x
-        except:
-            pass
+            _forecasts = sorted(_forecasts, key=itemgetter("period_start"))
 
-        _LOGGER.debug("SOLCAST - http_data_call _fcasts_dict len %s", len(_fcasts_dict))
+            self._data['siteinfo'].update({r_id:{'forecasts': copy.deepcopy(_forecasts)}})
 
-        for x in _data:
-            #loop each site and its forecasts
-
-            itm = _fcasts_dict.get(x["period_start"])
-            if itm:
-                itm["pv_estimate"] = x["pv_estimate"]
-                itm["pv_estimate10"] = x["pv_estimate10"]
-                itm["pv_estimate90"] = x["pv_estimate90"]
-            else:
-                # _LOGGER.debug("adding itm")
-                _fcasts_dict[x["period_start"]] = {"period_start": x["period_start"],
-                                                        "pv_estimate": x["pv_estimate"],
-                                                        "pv_estimate10": x["pv_estimate10"],
-                                                        "pv_estimate90": x["pv_estimate90"]}
-
-        #_fcasts_dict now contains all data for the site up to 730 days worth
-        #this deletes data that is older than 730 days (2 years)
-        pastdays = dt.now(timezone.utc).date() + timedelta(days=-730)
-        _forecasts = list(filter(lambda x: x["period_start"].date() >= pastdays, _fcasts_dict.values()))
-
-        _forecasts = sorted(_forecasts, key=itemgetter("period_start"))
-
-        self._data['siteinfo'].update({r_id:{'forecasts': copy.deepcopy(_forecasts)}})
-
-        _LOGGER.debug(f"SOLCAST - http_data_call processing took {round(time.time()-st_time,4)}s")
-        return True
+            _LOGGER.debug(f"SOLCAST - http_data_call processing took {round(time.time()-st_time,4)}s")
+            return True
+        except Exception as ex:
+            _LOGGER.error("Exception in http_data_call: %s", ex)
+            _LOGGER.error(traceback.format_exc())
+        return False
 
 
     async def fetch_data(self, usageCacheFileName, path= "error", hours=168, site="", apikey="", cachedname="forcasts") -> dict[str, Any]:
         """fetch data via the Solcast API."""
-
         try:
             params = {"format": "json", "api_key": apikey, "hours": hours}
             url=f"{self.options.host}/rooftop_sites/{site}/{path}"
