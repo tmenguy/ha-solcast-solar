@@ -67,15 +67,18 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         try:
             await self.solcast.reset_api_usage()
         except Exception:
-            #_LOGGER.error("SOLCAST - update_utcmidnight_usage_sensor_data: %s", traceback.format_exc())
+            #_LOGGER.error("Exception in update_utcmidnight_usage_sensor_data: %s", traceback.format_exc())
             pass
 
     async def service_event_update(self, *args):
-        #await self.solcast.sites_weather()
-        await self.solcast.http_data(dopast=False)
-        self._dataUpdated = True
-        await self.update_integration_listeners()
-        self._dataUpdated = False
+        try:
+            #await self.solcast.sites_weather()
+            await self.solcast.http_data(dopast=False)
+            self._dataUpdated = True
+            await self.update_integration_listeners()
+            self._dataUpdated = False
+        except Exception as ex:
+            _LOGGER.error("Exception in service_event_update: %s", traceback.format_exc())
 
     async def service_event_delete_old_solcast_json_file(self, *args):
         await self.solcast.delete_solcast_file()

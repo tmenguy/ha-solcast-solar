@@ -121,15 +121,24 @@ class SolcastApi:
 
     async def serialize_data(self):
         """Serialize data to file."""
-        if not self._loaded_data:
-            _LOGGER.debug(
-                f"SOLCAST - serialize_data not saving data as it has not been loaded yet"
-            )
-            return
+        try:
+            if not self._loaded_data:
+                _LOGGER.debug("SOLCAST - serialize_data not saving forecast cache as no data has been loaded yet")
+                return
+            # If the _loaded_data flag is True, yet last_updated is 1/1/1970 then data has not been loaded
+            # properly for some reason, or no forecast has been received since start.
+            # Abort the save.
+            if self._data['last_updated'] == dt.fromtimestamp(0, timezone.utc).isoformat():
+                _LOGGER.error("Internal error: Solcast forecast cache date has not been set, not saving data")
+                return
 
-        async with self._serialize_lock:
-            async with aiofiles.open(self._filename, "w") as f:
-                 await f.write(json.dumps(self._data, ensure_ascii=False, cls=DateTimeEncoder))
+            async with self._serialize_lock:
+                async with aiofiles.open(self._filename, "w") as f:
+                    await f.write(json.dumps(self._data, ensure_ascii=False, cls=DateTimeEncoder))
+                    _LOGGER.debug("SOLCAST - saved forecast cache")
+        except Exception as ex:
+            _LOGGER.error("Exception in serialize_data: %s", ex)
+            _LOGGER.error(traceback.format_exc())
 
     def redact_api_key(self, api_key):
         return '*'*6 + api_key[-6:]
@@ -138,9 +147,13 @@ class SolcastApi:
         return msg.replace(api_key, self.redact_api_key(api_key))
 
     async def write_api_usage_cache_file(self, json_file, json_content, api_key):
-        _LOGGER.debug(f"SOLCAST - writing API usage cache file: {self.redact_msg_api_key(json_file, api_key)}")
-        async with aiofiles.open(json_file, 'w') as f:
-            await f.write(json.dumps(json_content, ensure_ascii=False))
+        try:
+            _LOGGER.debug(f"SOLCAST - writing API usage cache file: {self.redact_msg_api_key(json_file, api_key)}")
+            async with aiofiles.open(json_file, 'w') as f:
+                await f.write(json.dumps(json_content, ensure_ascii=False))
+        except Exception as ex:
+            _LOGGER.error("Exception in write_api_usage_cache_file: %s", ex)
+            _LOGGER.error(traceback.format_exc())
 
     def get_api_usage_cache_filename(self, entry_name):
         return "/config/solcast-usage%s.json" % ("" if len(self.options.api_key.split(",")) < 2 else "-" + entry_name) # For more than one API key use separate files
@@ -154,7 +167,8 @@ class SolcastApi:
             await self.write_api_usage_cache_file(
                 self.get_api_usage_cache_filename(api_key),
                 {"daily_limit": self._api_limit[api_key], "daily_limit_consumed": self._api_used[api_key]},
-                api_key)
+                api_key
+            )
 
     async def sites_data(self):
         """Request data via the Solcast API."""
@@ -392,8 +406,8 @@ class SolcastApi:
                         #self._weather = jsonData.get("weather", "unknown")
                         _LOGGER.debug(f"SOLCAST - load_saved_data file exists: file type is {type(jsonData)}")
                         if json_version == _JSON_VERSION:
-                            self._loaded_data = True
                             self._data = jsonData
+                            self._loaded_data = True
 
                             #any new API keys so no sites data yet for those
                             ks = {}
@@ -748,26 +762,30 @@ class SolcastApi:
 
     async def http_data(self, dopast = False):
         """Request forecast data via the Solcast API."""
-        if self.get_last_updated_datetime() + timedelta(minutes=15) > dt.now(timezone.utc):
-            _LOGGER.warning(f"Not requesting a forecast from Solcast because time is within fifteen minutes of last update ({self.get_last_updated_datetime().astimezone(self._tz)})")
-            return
+        try:
+            if self.get_last_updated_datetime() + timedelta(minutes=15) > dt.now(timezone.utc):
+                _LOGGER.warning(f"Not requesting a forecast from Solcast because time is within fifteen minutes of last update ({self.get_last_updated_datetime().astimezone(self._tz)})")
+                return
 
-        failure = False
-        for site in self._sites:
-            _LOGGER.info(f"Solcast getting forecast update for site {site['resource_id']}")
-            result = await self.http_data_call(self.get_api_usage_cache_filename(site['apikey']), site['resource_id'], site['apikey'], dopast)
-            if not result:
-                failure = True
+            failure = False
+            for site in self._sites:
+                _LOGGER.info(f"Solcast getting forecast update for site {site['resource_id']}")
+                result = await self.http_data_call(self.get_api_usage_cache_filename(site['apikey']), site['resource_id'], site['apikey'], dopast)
+                if not result:
+                    failure = True
 
-        self._data["version"] = _JSON_VERSION
-        if not failure:
-            self._data["last_updated"] = dt.now(timezone.utc).isoformat()
-            #await self.sites_usage()
-            #self._data["weather"] = self._weather
-            self._loaded_data = True
+            if not failure:
+                self._data["last_updated"] = dt.now(timezone.utc).isoformat()
+                #self._data["weather"] = self._weather
 
-        await self.buildforecastdata()
-        await self.serialize_data()
+                await self.buildforecastdata()
+                self._data["version"] = _JSON_VERSION
+                self._loaded_data = True
+
+                await self.serialize_data()
+        except Exception as ex:
+            _LOGGER.error("Exception in http_data: %s", ex)
+            _LOGGER.error(traceback.format_exc())
 
     async def http_data_call(self, usageCacheFileName, r_id = None, api = None, dopast = False):
         """Request forecast data via the Solcast API."""
