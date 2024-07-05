@@ -664,7 +664,7 @@ class SolcastApi:
         # time remaining today
         start_utc = self.get_now_utc()
         end_utc = self.get_day_start_utc() + timedelta(days=1)
-        res = 0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field)
+        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field), 4)
         return res
 
     def get_forecasts_remaining_today(self) -> Dict[str, Any]:
@@ -676,7 +676,7 @@ class SolcastApi:
         """Return forecast kWh total for site N days ahead"""
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
-        res = 0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field)
+        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field), 4)
         return res
 
     def get_total_kwh_forecasts_day(self, n_day) -> Dict[str, Any]:
