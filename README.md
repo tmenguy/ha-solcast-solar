@@ -23,7 +23,7 @@
 > [!NOTE]
 > This integration can be used as a replacement for the oziee/ha-solcast-solar integration, which has been removed from GitHub and HACS.  
 >
-> Uninstalling the oziee version then installing this one will preserve the history and configuration from the oziee integration.
+> Uninstalling the Oziee version then installing this one will preserve the history and configuration from that prior integration.
 
 Version Change Notes: See [below](#changes).
 
@@ -65,7 +65,7 @@ More info [here](https://hacs.xyz/docs/faq/custom_repositories/)
 1. Search for 'Solcast' in HACS, open it and click the ```Download``` button
 1. See [Configuration](#configuration) below
 
-If previously using oziee's ha-solcast-solar then all history and config should remain.
+If previously using Oziee's ha-solcast-solar then all history and config should remain.
 
 <summary><h3>Manually</summary></h3>
 
