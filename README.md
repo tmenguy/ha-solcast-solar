@@ -18,12 +18,12 @@
 >
 > Collaborators are welcome, as are PRs for enhancements.
 >
-> Bug reports unrelated to API changes may not get the attention you want, as the the repository owner is largely retired for medical reasons, but knows the Solcast API as a former / user in this and other projects.
+> Bug reports unrelated to API changes may not get the attention you want, as the repository owner is largely retired for medical reasons, but knows the Solcast API as a former user in this and other projects.
 
 > [!NOTE]
 > This integration can be used as a replacement for the oziee/ha-solcast-solar integration, which has been removed from GitHub and HACS.  
 >
-> Uninstalling the oziee version then installing this one will preserve the history and configuration from the oziee integration.
+> Uninstalling the Oziee version then installing this one will preserve the history and configuration from that prior integration.
 
 Version Change Notes: See [below](#changes).
 
@@ -65,7 +65,7 @@ More info [here](https://hacs.xyz/docs/faq/custom_repositories/)
 1. Search for 'Solcast' in HACS, open it and click the ```Download``` button
 1. See [Configuration](#configuration) below
 
-If previously using oziee's ha-solcast-solar then all history and config should remain.
+If previously using Oziee's ha-solcast-solar then all history and config should remain.
 
 <summary><h3>Manually</summary></h3>
 
@@ -287,13 +287,15 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 > [!NOTE]
 > Where a site breakdown is available as an attribute, the attribute name is the Solcast site resource ID.
 >
-> Most sensors also include an attribute for `pv_estimate`, `pv_estimate10` and `pv_estimate90`. Template sensors may be created to expose their value, or the `state_attr()` can be used directly in automations.
+> Most sensors also include an attribute for `estimate`, `estimate10` and `estimate90`. Template sensors may be created to expose their value, or the `state_attr()` can be used directly in automations.
 >
 > Access these in a template sensor or automation using something like:
 >
-> `{{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', '1234-5678-9012-3456') | float(0) }}`
-> `{{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'pv_estimate10') | float(0) }}`
-> `{{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', '1234-5678-9012-3456_pv_estimate10') | float(0) }}`
+> ```
+> {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', '1234-5678-9012-3456') | float(0) }}
+> {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10') | float(0) }}
+> {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10-1234-5678-9012-3456') | float(0) }}
+> ```
 
 ### Configuration
 
@@ -328,6 +330,17 @@ Modified from the great works of
 None
 
 ## Changes
+
+v4.0.37
+* Alter attribute naming to remove "pv_" by @autoSteve (note: breaking if new attributes have already been used in templates/automations)
+* Sensor attribute rounding #51 by @autoSteve
+* Improve exception handling for forecast fetch by @autoSteve
+* Further improve exception handling for forecast fetch by @autoSteve
+* Replace exception with a warning #74 by @autoSteve
+* Retry an unexplained cache/initial data load by @autoSteve
+* Less shouty debug logging by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.36...v4.0.37
 
 v4.0.36
 * (Enhancement) Additional sensor attributes (estimate/estimate10/estimate90) and logging improvements by @autoSteve

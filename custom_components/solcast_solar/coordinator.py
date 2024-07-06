@@ -48,7 +48,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             async_track_utc_time_change(self._hass, self.update_utcmidnight_usage_sensor_data, hour=0,minute=0,second=0)
             async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
         except Exception as error:
-            _LOGGER.error("Solcast exception in coordinator setup: %s", traceback.format_exc())
+            _LOGGER.error("Exception in Solcast coordinator setup: %s", traceback.format_exc())
 
 
     async def update_integration_listeners(self, *args):
@@ -60,22 +60,25 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
             self.async_update_listeners()
         except Exception:
-            #_LOGGER.error("SOLCAST - update_integration_listeners: %s", traceback.format_exc())
+            #_LOGGER.error("update_integration_listeners: %s", traceback.format_exc())
             pass
 
     async def update_utcmidnight_usage_sensor_data(self, *args):
         try:
             await self.solcast.reset_api_usage()
         except Exception:
-            #_LOGGER.error("SOLCAST - update_utcmidnight_usage_sensor_data: %s", traceback.format_exc())
+            #_LOGGER.error("Exception in update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
             pass
 
     async def service_event_update(self, *args):
-        #await self.solcast.sites_weather()
-        await self.solcast.http_data(dopast=False)
-        self._dataUpdated = True
-        await self.update_integration_listeners()
-        self._dataUpdated = False
+        try:
+            #await self.solcast.sites_weather()
+            await self.solcast.http_data(dopast=False)
+            self._dataUpdated = True
+            await self.update_integration_listeners()
+            self._dataUpdated = False
+        except Exception as ex:
+            _LOGGER.error("Exception in service_event_update(): %s", traceback.format_exc())
 
     async def service_event_delete_old_solcast_json_file(self, *args):
         await self.solcast.delete_solcast_file()
