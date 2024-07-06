@@ -167,18 +167,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_service_update_forecast(call: ServiceCall):
         """Handle service call"""
-        _LOGGER.info(f"Solcast service call: {SERVICE_UPDATE}")
+        _LOGGER.info(f"Service call: {SERVICE_UPDATE}")
         await coordinator.service_event_update()
 
     async def handle_service_clear_solcast_data(call: ServiceCall):
         """Handle service call"""
-        _LOGGER.info(f"Solcast service call: {SERVICE_CLEAR_DATA}")
+        _LOGGER.info(f"Service call: {SERVICE_CLEAR_DATA}")
         await coordinator.service_event_delete_old_solcast_json_file()
 
     async def handle_service_get_solcast_data(call: ServiceCall) -> ServiceResponse:
         """Handle service call"""
         try:
-            _LOGGER.info(f"Solcast service call: {SERVICE_QUERY_FORECAST_DATA}")
+            _LOGGER.info(f"Service call: {SERVICE_QUERY_FORECAST_DATA}")
 
             start = call.data.get(EVENT_START_DATETIME, dt_util.now())
             end = call.data.get(EVENT_END_DATETIME, dt_util.now())
@@ -195,7 +195,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_service_set_dampening(call: ServiceCall):
         """Handle service call"""
         try:
-            _LOGGER.info(f"Solcast service call: {SERVICE_SET_DAMPENING}")
+            _LOGGER.info(f"Service call: {SERVICE_SET_DAMPENING}")
 
             factors = call.data.get(DAMP_FACTOR, None)
 
@@ -231,7 +231,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_service_set_hard_limit(call: ServiceCall):
         """Handle service call"""
         try:
-            _LOGGER.info(f"Solcast service call: {SERVICE_SET_HARD_LIMIT}")
+            _LOGGER.info(f"Service call: {SERVICE_SET_HARD_LIMIT}")
 
             hl = call.data.get(HARD_LIMIT, 100000)
 
@@ -256,7 +256,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_service_remove_hard_limit(call: ServiceCall):
         """Handle service call"""
         try:
-            _LOGGER.info(f"Solcast service call: {SERVICE_REMOVE_HARD_LIMIT}")
+            _LOGGER.info(f"Service call: {SERVICE_REMOVE_HARD_LIMIT}")
 
             opt = {**entry.options}
             opt[HARD_LIMIT] = 100000
@@ -317,10 +317,10 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     def upgraded():
-        _LOGGER.debug("SOLCAST - Upgraded to options version %s", config_entry.version)
+        _LOGGER.debug("Upgraded to options version %s", config_entry.version)
 
     try:
-        _LOGGER.debug("SOLCAST - Options version %s", config_entry.version)
+        _LOGGER.debug("Options version %s", config_entry.version)
     except:
         pass
 
