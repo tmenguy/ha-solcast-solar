@@ -331,6 +331,17 @@ None
 
 ## Changes
 
+v4.0.37
+* Alter attribute naming to remove "pv_" by @autoSteve (note: breaking if new attributes have already been used in templates/automations)
+* Sensor attribute rounding #51 by @autoSteve
+* Improve exception handling for forecast fetch by @autoSteve
+* Further improve exception handling for forecast fetch by @autoSteve
+* Replace exception with a warning #74 by @autoSteve
+* Retry an unexplained cache/initial data load by @autoSteve
+* Less shouty debug logging by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.36...v4.0.37
+
 v4.0.36
 * (Enhancement) Additional sensor attributes (estimate/estimate10/estimate90) and logging improvements by @autoSteve
 
