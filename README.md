@@ -287,13 +287,15 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 > [!NOTE]
 > Where a site breakdown is available as an attribute, the attribute name is the Solcast site resource ID.
 >
-> Most sensors also include an attribute for `pv_estimate`, `pv_estimate10` and `pv_estimate90`. Template sensors may be created to expose their value, or the `state_attr()` can be used directly in automations.
+> Most sensors also include an attribute for `estimate`, `estimate10` and `estimate90`. Template sensors may be created to expose their value, or the `state_attr()` can be used directly in automations.
 >
 > Access these in a template sensor or automation using something like:
 >
-> `{{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', '1234-5678-9012-3456') | float(0) }}`
-> `{{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'pv_estimate10') | float(0) }}`
-> `{{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', '1234-5678-9012-3456_pv_estimate10') | float(0) }}`
+> ```
+> {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', '1234-5678-9012-3456') | float(0) }}
+> {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10') | float(0) }}
+> {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', '1234-5678-9012-3456-estimate10') | float(0) }}
+> ```
 
 ### Configuration
 
