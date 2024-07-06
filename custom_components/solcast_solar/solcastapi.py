@@ -624,7 +624,7 @@ class SolcastApi:
         res = {}
         for site in self._sites:
             res[site['resource_id']] = self.get_power_n_mins(n_mins, site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[site['resource_id']+'-'+_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, site['resource_id'], _data_field)
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_power_n_mins(n_mins, site['resource_id'], _data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, None, _data_field)
         return res
 
@@ -640,7 +640,7 @@ class SolcastApi:
         res = {}
         for site in self._sites:
             res[site['resource_id']] = self.get_peak_w_day(n_day, site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[site['resource_id']+'-'+_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, site['resource_id'], _data_field)
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_day(n_day, site['resource_id'], _data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, None, _data_field)
         return res
 
@@ -655,7 +655,7 @@ class SolcastApi:
         res = {}
         for site in self._sites:
             res[site['resource_id']] = self.get_peak_w_time_day(n_day, site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[site['resource_id']+'-'+_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, site['resource_id'], _data_field)
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_time_day(n_day, site['resource_id'], _data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, None, _data_field)
         return res
 
