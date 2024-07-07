@@ -274,7 +274,7 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 | `D7` | number | Y | `kWh` | Total forecast solar production for day + 6 (day 7) |
 | `This Hour` | number | Y | `Wh` | Forecasted solar production current hour (attributes contain site breakdown) |
 | `Next Hour` | number | Y | `Wh` | Forecasted solar production next hour (attributes contain site breakdown) |
-| `Forecast Next X Hours` | number | Y | `kWh` | Custom user defined X hour forecast |
+| `Forecast Next X Hours` | number | Y | `Wh` | Custom user defined X hour forecast |
 | `Remaining Today` | number | Y | `kWh` | Predicted remaining solar production today |
 | `Peak Forecast Today` | number | Y | `W` | Highest predicted production within an hour period today (attributes contain site breakdown) |
 | `Peak Time Today` | date/time | Y |  | Hour of max forecasted production of solar today (attributes contain site breakdown) |
@@ -296,6 +296,13 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 > {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10') | float(0) }}
 > {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10-1234-5678-9012-3456') | float(0) }}
 > ```
+
+> [!NOTE]
+> The values for `Next Hour` and `Forecast Next X Hours` may be different if the custom X hour setting is 1. This has a simple explanation.
+>
+> They are calculated using a different start and end time. One is from the start of this hour, i.e. in the past, e.g. 14:00:00 to 15:00:00. The custom is from now(), e.g. 14:21:19 to 15:21:19.
+>
+> This will likely yield a different result, depending on the time the value is requested, so it is not wrong. It's just different.
 
 ### Configuration
 
