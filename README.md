@@ -338,6 +338,12 @@ None
 
 ## Changes
 
+v4.0.38
+* Add Solcast key concepts and sample PV generation graph to readme by @gcoan
+* Add PCHIP spline to forecast remaining by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.37...v4.0.38
+
 v4.0.37
 * Alter attribute naming to remove "pv_" by @autoSteve (note: breaking if new attributes have already been used in templates/automations)
 * Sensor attribute rounding #51 by @autoSteve
