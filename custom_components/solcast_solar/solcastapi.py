@@ -13,6 +13,7 @@ import time
 import traceback
 import random
 import re
+from scipy.interpolate import PchipInterpolator
 from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timedelta, timezone
@@ -137,7 +138,7 @@ class SolcastApi:
                     await f.write(json.dumps(self._data, ensure_ascii=False, cls=DateTimeEncoder))
                     _LOGGER.debug("Saved forecast cache")
         except Exception as ex:
-            _LOGGER.error("Exception in serialize_data: %s", ex)
+            _LOGGER.error("Exception in serialize_data(): %s", ex)
             _LOGGER.error(traceback.format_exc())
 
     def redact_api_key(self, api_key):
@@ -152,7 +153,7 @@ class SolcastApi:
             async with aiofiles.open(json_file, 'w') as f:
                 await f.write(json.dumps(json_content, ensure_ascii=False))
         except Exception as ex:
-            _LOGGER.error("Exception in write_api_usage_cache_file: %s", ex)
+            _LOGGER.error("Exception in write_api_usage_cache_file(): %s", ex)
             _LOGGER.error(traceback.format_exc())
 
     def get_api_usage_cache_filename(self, entry_name):
@@ -280,7 +281,9 @@ class SolcastApi:
                         _LOGGER.error(f"Cached sites are not yet available for {self.redact_api_key(spl)} to cope with Solcast API call failure")
                         _LOGGER.error(f"At least one successful API 'get sites' call is needed, so the integration cannot function")
                 if error:
-                    _LOGGER.error("Timed out getting Solcast sites, and one or more site caches failed to load. This is critical, and the integration cannot function reliably. Suggestion: Attempt integration reload.")
+                    _LOGGER.error("Timed out getting Solcast sites, and one or more site caches failed to load")
+                    _LOGGER.error("This is critical, and the integration cannot function reliably")
+                    _LOGGER.error("Suggestion: Double check your overall HA configuration, specifically networking related")
             except Exception as e:
                 pass
         except Exception as e:
@@ -579,6 +582,9 @@ class SolcastApi:
                     x2 = round((tup[index]["pv_estimate10"]), 4)
                     x3 = round((tup[index]["pv_estimate90"]), 4)
                     hourlyturp.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
+                except Exception as ex:
+                    _LOGGER.error("Exception in get_forecast_day(): %s", ex)
+                    _LOGGER.error(traceback.format_exc())
 
         return {
             "detailedForecast": tup,
@@ -664,7 +670,7 @@ class SolcastApi:
         # time remaining today
         start_utc = self.get_now_utc()
         end_utc = self.get_day_start_utc() + timedelta(days=1)
-        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field), 4)
+        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field, interpolate=True), 4)
         return res
 
     def get_forecasts_remaining_today(self) -> Dict[str, Any]:
@@ -706,24 +712,37 @@ class SolcastApi:
             end_i = 0
         return st_i, end_i
 
-    def get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None) -> float:
+    def get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None, interpolate=False) -> float:
         """Return Solcast pv_estimates for interval [start_utc, end_utc)"""
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
             res = 0
             st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc)
+            def pchip(xx, i):
+                x = [-1800, 0, 1800, 3600, ]
+                y = [_data[i-1][_data_field] + _data[i][_data_field], _data[i][_data_field], 0, -1 * _data[i+1][_data_field], ]
+                i = PchipInterpolator(x, y)
+                return float(i([xx])[0])
+            # Calculate remaining
             for d in _data[st_i:end_i]:
                 d1 = d['period_start']
                 d2 = d1 + timedelta(seconds=1800)
-                s = 1800
+                if not interpolate:
+                    s = 1800
                 f = d[_data_field]
                 if start_utc > d1:
-                    s -= (start_utc - d1).total_seconds()
+                    if not interpolate:
+                        s -= (start_utc - d1).total_seconds()
+                    else:
+                        f = pchip((start_utc - d1).total_seconds(), st_i)
                 if end_utc < d2:
-                    s -= (d2 - end_utc).total_seconds()
-                if s < 1800:
-                    f *= s / 1800
+                    if not interpolate:
+                        s -= (d2 - end_utc).total_seconds()
+                    else:
+                        f = pchip((d2 - end_utc).total_seconds(), end_i)
+                if not interpolate and s < 1800:
+                    f *= s / 1800 # Simple linear interpolation
                 res += f
             if _SENSOR_DEBUG_LOGGING: _LOGGER.debug("Get estimate: %s()%s st %s end %s st_i %d end_i %d res %s",
                           currentFuncName(1),
@@ -772,13 +791,15 @@ class SolcastApi:
                 return
 
             failure = False
+            sitesAttempted = 0
             for site in self._sites:
+                sitesAttempted += 1
                 _LOGGER.info(f"Getting forecast update for Solcast site {site['resource_id']}")
                 result = await self.http_data_call(self.get_api_usage_cache_filename(site['apikey']), site['resource_id'], site['apikey'], dopast)
                 if not result:
                     failure = True
 
-            if not failure:
+            if sitesAttempted > 0 and not failure:
                 self._data["last_updated"] = dt.now(timezone.utc).isoformat()
                 #self._data["weather"] = self._weather
 
@@ -788,9 +809,12 @@ class SolcastApi:
 
                 await self.serialize_data()
             else:
-                _LOGGER.error("At least one Solcast site forecast failed to fetch, so forecast data has not been built")
+                if sitesAttempted > 0:
+                    _LOGGER.error("At least one Solcast site forecast failed to fetch, so forecast data has not been built")
+                else:
+                    _LOGGER.error("No Solcast sites were attempted, so forecast data has not been built - check for earlier failure to retrieve sites")
         except Exception as ex:
-            _LOGGER.error("Exception in http_data: %s - Forecast data has not been built", ex)
+            _LOGGER.error("Exception in http_data(): %s - Forecast data has not been built", ex)
             _LOGGER.error(traceback.format_exc())
 
     async def http_data_call(self, usageCacheFileName, r_id = None, api = None, dopast = False):

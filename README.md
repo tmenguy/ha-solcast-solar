@@ -91,7 +91,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 
 * Change the configuration options for an existing `Solcast PV Forecast` integration in the Home Assistant Integrations by selecting Solcast then `Configure` (cog wheel).
 
-* If you have more than one Solcast account because you have more than 2 rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (do not use any space characters. _NB: this goes against Solcast T&C's by having more than one account_).
+* If you have more than one Solcast account because you have more than 2 rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_NB: this goes against Solcast T&C's by having more than one account_).
 
 * Make sure you enter your `API Key` not your rooftop id created in Solcast. You can find your API key here [api key](https://toolkit.solcast.com.au/account).
 
@@ -288,7 +288,7 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 | `D7` | number | Y | `kWh` | Total forecast solar production for day + 6 (day 7) |
 | `This Hour` | number | Y | `Wh` | Forecasted solar production current hour (attributes contain site breakdown) |
 | `Next Hour` | number | Y | `Wh` | Forecasted solar production next hour (attributes contain site breakdown) |
-| `Forecast Next X Hours` | number | Y | `kWh` | Custom user defined X hour forecast |
+| `Forecast Next X Hours` | number | Y | `Wh` | Custom user defined X hour forecast |
 | `Remaining Today` | number | Y | `kWh` | Predicted remaining solar production today |
 | `Peak Forecast Today` | number | Y | `W` | Highest predicted production within an hour period today (attributes contain site breakdown) |
 | `Peak Time Today` | date/time | Y |  | Hour of max forecasted production of solar today (attributes contain site breakdown) |
@@ -310,6 +310,13 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 > {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10') | float(0) }}
 > {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10-1234-5678-9012-3456') | float(0) }}
 > ```
+
+> [!NOTE]
+> The values for `Next Hour` and `Forecast Next X Hours` may be different if the custom X hour setting is 1. This has a simple explanation.
+>
+> They are calculated using a different start and end time. One is from the start of this hour, i.e. in the past, e.g. 14:00:00 to 15:00:00. The custom is from now(), e.g. 14:21:19 to 15:21:19.
+>
+> This will likely yield a different result, depending on the time the value is requested, so it is not wrong. It's just different.
 
 ### Configuration
 
@@ -468,6 +475,12 @@ Modified from the great works of
 None
 
 ## Changes
+
+v4.0.38
+* Add Solcast key concepts and sample PV generation graph to readme by @gcoan
+* Add PCHIP spline to forecast remaining by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.37...v4.0.38
 
 v4.0.37
 * Alter attribute naming to remove "pv_" by @autoSteve (note: breaking if new attributes have already been used in templates/automations)
