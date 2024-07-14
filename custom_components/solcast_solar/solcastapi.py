@@ -138,7 +138,7 @@ class SolcastApi:
                     await f.write(json.dumps(self._data, ensure_ascii=False, cls=DateTimeEncoder))
                     _LOGGER.debug("Saved forecast cache")
         except Exception as ex:
-            _LOGGER.error("Exception in serialize_data: %s", ex)
+            _LOGGER.error("Exception in serialize_data(): %s", ex)
             _LOGGER.error(traceback.format_exc())
 
     def redact_api_key(self, api_key):
@@ -153,7 +153,7 @@ class SolcastApi:
             async with aiofiles.open(json_file, 'w') as f:
                 await f.write(json.dumps(json_content, ensure_ascii=False))
         except Exception as ex:
-            _LOGGER.error("Exception in write_api_usage_cache_file: %s", ex)
+            _LOGGER.error("Exception in write_api_usage_cache_file(): %s", ex)
             _LOGGER.error(traceback.format_exc())
 
     def get_api_usage_cache_filename(self, entry_name):
@@ -582,6 +582,9 @@ class SolcastApi:
                     x2 = round((tup[index]["pv_estimate10"]), 4)
                     x3 = round((tup[index]["pv_estimate90"]), 4)
                     hourlyturp.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
+                except Exception as ex:
+                    _LOGGER.error("Exception in get_forecast_day(): %s", ex)
+                    _LOGGER.error(traceback.format_exc())
 
         return {
             "detailedForecast": tup,
@@ -811,7 +814,7 @@ class SolcastApi:
                 else:
                     _LOGGER.error("No Solcast sites were attempted, so forecast data has not been built - check for earlier failure to retrieve sites")
         except Exception as ex:
-            _LOGGER.error("Exception in http_data: %s - Forecast data has not been built", ex)
+            _LOGGER.error("Exception in http_data(): %s - Forecast data has not been built", ex)
             _LOGGER.error(traceback.format_exc())
 
     async def http_data_call(self, usageCacheFileName, r_id = None, api = None, dopast = False):
