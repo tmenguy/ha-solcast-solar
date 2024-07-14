@@ -281,9 +281,9 @@ class SolcastApi:
                         _LOGGER.error(f"Cached sites are not yet available for {self.redact_api_key(spl)} to cope with Solcast API call failure")
                         _LOGGER.error(f"At least one successful API 'get sites' call is needed, so the integration cannot function")
                 if error:
-                    _LOGGER.error("Timed out getting Solcast sites, and one or more site caches failed to load.")
-                    _LOGGER.error("This is critical, and the integration cannot function reliably.")
-                    _LOGGER.error("Suggestion: Double check your configuration, and solcast.com connectivity, and attempt integration reload.")
+                    _LOGGER.error("Timed out getting Solcast sites, and one or more site caches failed to load")
+                    _LOGGER.error("This is critical, and the integration cannot function reliably")
+                    _LOGGER.error("Suggestion: Double check your configuration, and network connectivity, and attempt integration reload")
             except Exception as e:
                 pass
         except Exception as e:
