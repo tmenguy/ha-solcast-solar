@@ -283,7 +283,7 @@ class SolcastApi:
                 if error:
                     _LOGGER.error("Timed out getting Solcast sites, and one or more site caches failed to load")
                     _LOGGER.error("This is critical, and the integration cannot function reliably")
-                    _LOGGER.error("Suggestion: Double check your configuration, and network connectivity, and attempt integration reload")
+                    _LOGGER.error("Suggestion: Double check your overall HA configuration, specifically networking related")
             except Exception as e:
                 pass
         except Exception as e:
