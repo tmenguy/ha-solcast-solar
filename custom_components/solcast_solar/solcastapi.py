@@ -593,28 +593,34 @@ class SolcastApi:
             "dataCorrect": noDataError,
         }
 
-    def get_forecast_n_hour(self, n_hour, _use_data_field=None) -> int:
+    def get_forecast_n_hour(self, n_hour, site=None, _use_data_field=None) -> int:
         """Return Solcast Forecast for the Nth hour"""
         start_utc = self.get_hour_start_utc() + timedelta(hours=n_hour)
         end_utc = start_utc + timedelta(hours=1)
-        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, _use_data_field=_use_data_field))
+        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
         return res
 
     def get_forecasts_n_hour(self, n_hour) -> Dict[str, Any]:
         res = {}
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_n_hour(n_hour, _data_field)
+        for site in self._sites:
+            res[site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'])
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'], _use_data_field=_data_field)
+        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_n_hour(n_hour, _use_data_field=_data_field)
         return res
 
-    def get_forecast_custom_hours(self, n_hours, _use_data_field=None) -> int:
+    def get_forecast_custom_hours(self, n_hours, site=None, _use_data_field=None) -> int:
         """Return Solcast Forecast for the next N hours"""
         start_utc = self.get_now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
-        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, _use_data_field=_use_data_field))
+        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
         return res
 
     def get_forecasts_custom_hours(self, n_hour) -> Dict[str, Any]:
         res = {}
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_custom_hours(n_hour, _data_field)
+        for site in self._sites:
+            res[site['resource_id']] = self.get_forecast_custom_hours(n_hour, site=site['resource_id'])
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_custom_hours(n_hour, site=site['resource_id'], _use_data_field=_data_field)
+        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_custom_hours(n_hour, _use_data_field=_data_field)
         return res
 
     def get_power_n_mins(self, n_mins, site=None, _use_data_field=None) -> int:
@@ -623,15 +629,15 @@ class SolcastApi:
         start_utc = self.get_now_utc() + timedelta(minutes=n_mins-10)
         end_utc = start_utc + timedelta(minutes=20)
         # multiply with 1.5 as the power reported is only for a 20mins interval (out of 30mins)
-        res = round(1000 * 1.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site, _use_data_field=_use_data_field))
+        res = round(1000 * 1.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
         return res
 
     def get_sites_power_n_mins(self, n_mins) -> Dict[str, Any]:
         res = {}
         for site in self._sites:
-            res[site['resource_id']] = self.get_power_n_mins(n_mins, site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_power_n_mins(n_mins, site['resource_id'], _data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, None, _data_field)
+            res[site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'])
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'], _use_data_field=_data_field)
+        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, site=None, _use_data_field=_data_field)
         return res
 
     def get_peak_w_day(self, n_day, site=None, _use_data_field=None) -> int:
@@ -645,9 +651,9 @@ class SolcastApi:
     def get_sites_peak_w_day(self, n_day) -> Dict[str, Any]:
         res = {}
         for site in self._sites:
-            res[site['resource_id']] = self.get_peak_w_day(n_day, site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_day(n_day, site['resource_id'], _data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, None, _data_field)
+            res[site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'])
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
+        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
     def get_peak_w_time_day(self, n_day, site=None, _use_data_field=None) -> dt:
@@ -660,34 +666,40 @@ class SolcastApi:
     def get_sites_peak_w_time_day(self, n_day) -> Dict[str, Any]:
         res = {}
         for site in self._sites:
-            res[site['resource_id']] = self.get_peak_w_time_day(n_day, site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_time_day(n_day, site['resource_id'], _data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, None, _data_field)
+            res[site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'])
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
+        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
-    def get_forecast_remaining_today(self, _use_data_field=None) -> float:
+    def get_forecast_remaining_today(self, site=None, _use_data_field=None) -> float:
         """Return remaining forecasted production for today"""
         # time remaining today
         start_utc = self.get_now_utc()
         end_utc = self.get_day_start_utc() + timedelta(days=1)
-        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field, interpolate=True), 4)
+        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field, interpolate=True), 4)
         return res
 
     def get_forecasts_remaining_today(self) -> Dict[str, Any]:
         res = {}
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_remaining_today(_data_field)
+        for site in self._sites:
+            res[site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'])
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'], _use_data_field=_data_field)
+        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_remaining_today(_use_data_field=_data_field)
         return res
 
-    def get_total_kwh_forecast_day(self, n_day, _use_data_field=None) -> float:
+    def get_total_kwh_forecast_day(self, n_day, site=None, _use_data_field=None) -> float:
         """Return forecast kWh total for site N days ahead"""
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
-        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=None, _use_data_field=_use_data_field), 4)
+        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
-    def get_total_kwh_forecasts_day(self, n_day) -> Dict[str, Any]:
+    def get_sites_total_kwh_forecast_day(self, n_day) -> Dict[str, Any]:
         res = {}
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, _data_field)
+        for site in self._sites:
+            res[site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'])
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
+        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
     def get_forecast_list_slice(self, _data, start_utc, end_utc, search_past=False):
@@ -753,6 +765,7 @@ class SolcastApi:
             return res
         except Exception as ex:
             _LOGGER.error(f"Exception in get_forecast_pv_estimates(): {ex}")
+            _LOGGER.error(traceback.format_exc())
             return 0
 
     def get_max_forecast_pv_estimate(self, start_utc, end_utc, site=None, _use_data_field=None):
@@ -774,13 +787,15 @@ class SolcastApi:
             return res
         except Exception as ex:
             _LOGGER.error(f"Exception in get_max_forecast_pv_estimate(): {ex}")
+            _LOGGER.error(traceback.format_exc())
             return None
 
     def get_energy_data(self) -> dict[str, Any]:
         try:
             return self._dataenergy
-        except Exception as e:
-            _LOGGER.error(f"Exception in get_energy_data(): {e}")
+        except Exception as ex:
+            _LOGGER.error(f"Exception in get_energy_data(): {ex}")
+            _LOGGER.error(traceback.format_exc())
             return None
 
     async def http_data(self, dopast = False):

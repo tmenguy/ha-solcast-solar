@@ -150,31 +150,31 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 return self.solcast.get_forecasts_custom_hours(self.solcast._customhoursensor)
             case "total_kwh_forecast_today":
                 ret = self.solcast.get_forecast_day(0)
-                ret = {**ret, **self.solcast.get_total_kwh_forecasts_day(0)}
+                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(0)}
                 return ret
             case "total_kwh_forecast_tomorrow":
                 ret = self.solcast.get_forecast_day(1)
-                ret = {**ret, **self.solcast.get_total_kwh_forecasts_day(1)}
+                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(1)}
                 return ret
             case "total_kwh_forecast_d3":
                 ret = self.solcast.get_forecast_day(2)
-                ret = {**ret, **self.solcast.get_total_kwh_forecasts_day(2)}
+                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(2)}
                 return ret
             case "total_kwh_forecast_d4":
                 ret = self.solcast.get_forecast_day(3)
-                ret = {**ret, **self.solcast.get_total_kwh_forecasts_day(3)}
+                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(3)}
                 return ret
             case "total_kwh_forecast_d5":
                 ret = self.solcast.get_forecast_day(4)
-                ret = {**ret, **self.solcast.get_total_kwh_forecasts_day(4)}
+                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(4)}
                 return ret
             case "total_kwh_forecast_d6":
                 ret = self.solcast.get_forecast_day(5)
-                ret = {**ret, **self.solcast.get_total_kwh_forecasts_day(5)}
+                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(5)}
                 return ret
             case "total_kwh_forecast_d7":
                 ret = self.solcast.get_forecast_day(6)
-                ret = {**ret, **self.solcast.get_total_kwh_forecasts_day(6)}
+                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(6)}
                 return ret
             case "power_now":
                 return self.solcast.get_sites_power_n_mins(0)
