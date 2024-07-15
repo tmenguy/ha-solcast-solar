@@ -27,7 +27,9 @@ from .const import (
     SERVICE_REMOVE_HARD_LIMIT,
     SOLCAST_URL,
     CUSTOM_HOUR_SENSOR,
-    KEY_ESTIMATE
+    KEY_ESTIMATE,
+    BRK_ESTIMATE,
+    BRK_SITE
 )
 
 from .coordinator import SolcastUpdateCoordinator
@@ -89,15 +91,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except loader.IntegrationNotFound:
         pass
 
-    #new in v4.0.16 for the selector of which field to use from the data
     if entry.options.get(KEY_ESTIMATE,None) is None:
         new = {**entry.options}
         new[KEY_ESTIMATE] = "estimate"
-        hass.config_entries.async_update_entry(entry, options=new, version=7)
+        hass.config_entries.async_update_entry(entry, options=new, version=8)
 
     optdamp = {}
     try:
-        #if something goes wrong ever with the damp factors just create a blank 1.0
+        #if something ever goes wrong with the damp factors just create a blank 1.0
         for a in range(0,24):
             optdamp[str(a)] = entry.options[f"damp{str(a).zfill(2)}"]
     except Exception as ex:
@@ -108,7 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for a in range(0,24):
             optdamp[str(a)] = 1.0
 
-    # Introduced in 2024.6.0: async_get_time_zone
+    # Introduced in core 2024.6.0: async_get_time_zone
     try:
         dt_util.async_get_time_zone
         asynctz = True
@@ -127,6 +128,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.options[CUSTOM_HOUR_SENSOR],
         entry.options.get(KEY_ESTIMATE,"estimate"),
         (entry.options.get(HARD_LIMIT,100000)/1000),
+        entry.options[BRK_ESTIMATE],
+        entry.options[BRK_SITE],
     )
 
     solcast = SolcastApi(aiohttp_client.async_get_clientsession(hass), options)
@@ -340,7 +343,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     #new 4.0.8
     #dampening factor for each hour
-    if config_entry.version == 4:
+    if config_entry.version < 5:
         new = {**config_entry.options}
         for a in range(0,24):
             new[f"damp{str(a).zfill(2)}"] = 1.0
@@ -357,7 +360,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     #new 4.0.15
     #custom sensor for 'next x hours'
-    if config_entry.version == 5:
+    if config_entry.version < 6:
         new = {**config_entry.options}
         new[CUSTOM_HOUR_SENSOR] = 1
         try:
@@ -373,7 +376,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 
     #new 4.0.16
     #which estimate value to use for data calcs est,est10,est90
-    if config_entry.version == 6:
+    if config_entry.version < 7:
         new = {**config_entry.options}
         new[KEY_ESTIMATE] = "estimate"
         try:
@@ -382,6 +385,23 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 config_entry.version = 7
+                hass.config_entries.async_update_entry(config_entry, options=new_options)
+                upgraded()
+            else:
+                raise
+
+    #new 4.0.39
+    #attributes to include
+    if config_entry.version < 8:
+        new = {**config_entry.options}
+        new[BRK_ESTIMATE] = True
+        new[BRK_SITE] = True
+        try:
+            hass.config_entries.async_update_entry(config_entry, options=new, version=8)
+            upgraded()
+        except Exception as e:
+            if "unexpected keyword argument 'version'" in e:
+                config_entry.version = 8
                 hass.config_entries.async_update_entry(config_entry, options=new_options)
                 upgraded()
             else:

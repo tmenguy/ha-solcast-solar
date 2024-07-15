@@ -17,6 +17,8 @@ ATTRIBUTION: Final = "Data retrieved from Solcast"
 
 CUSTOM_HOUR_SENSOR = "customhoursensor"
 KEY_ESTIMATE = "key_estimate"
+BRK_ESTIMATE = "attr_brk_estimate"
+BRK_SITE = "attr_brk_site"
 
 SERVICE_UPDATE = "update_forecasts"
 SERVICE_CLEAR_DATA = "clear_all_solcast_data"
@@ -31,4 +33,5 @@ CONFIG_OPTIONS = [
     selector.SelectOptionDict(value="configure_api", label="option1"),
     selector.SelectOptionDict(value="configure_dampening", label="option2"),
     selector.SelectOptionDict(value="configure_customsensor", label="option3"),
+    selector.SelectOptionDict(value="configure_attributes", label="option4"),
 ]

@@ -85,6 +85,8 @@ class ConnectionOptions:
     customhoursensor: int
     key_estimate: str
     hard_limit: int
+    attr_brk_estimate: bool
+    attr_brk_site: bool
 
 
 class SolcastApi:
@@ -602,10 +604,13 @@ class SolcastApi:
 
     def get_forecasts_n_hour(self, n_hour) -> Dict[str, Any]:
         res = {}
-        for site in self._sites:
-            res[site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'], _use_data_field=_data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_n_hour(n_hour, _use_data_field=_data_field)
+        if self.options.attr_brk_site:
+            for site in self._sites:
+                res[site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'])
+                if self.options.attr_brk_estimate:
+                    for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'], _use_data_field=_data_field)
+        if self.options.attr_brk_estimate:
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_n_hour(n_hour, _use_data_field=_data_field)
         return res
 
     def get_forecast_custom_hours(self, n_hours, site=None, _use_data_field=None) -> int:
@@ -617,10 +622,13 @@ class SolcastApi:
 
     def get_forecasts_custom_hours(self, n_hour) -> Dict[str, Any]:
         res = {}
-        for site in self._sites:
-            res[site['resource_id']] = self.get_forecast_custom_hours(n_hour, site=site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_custom_hours(n_hour, site=site['resource_id'], _use_data_field=_data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_custom_hours(n_hour, _use_data_field=_data_field)
+        if self.options.attr_brk_site:
+            for site in self._sites:
+                res[site['resource_id']] = self.get_forecast_custom_hours(n_hour, site=site['resource_id'])
+                if self.options.attr_brk_estimate:
+                    for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_custom_hours(n_hour, site=site['resource_id'], _use_data_field=_data_field)
+        if self.options.attr_brk_estimate:
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_custom_hours(n_hour, _use_data_field=_data_field)
         return res
 
     def get_power_n_mins(self, n_mins, site=None, _use_data_field=None) -> int:
@@ -634,10 +642,13 @@ class SolcastApi:
 
     def get_sites_power_n_mins(self, n_mins) -> Dict[str, Any]:
         res = {}
-        for site in self._sites:
-            res[site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'], _use_data_field=_data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, site=None, _use_data_field=_data_field)
+        if self.options.attr_brk_site:
+            for site in self._sites:
+                res[site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'])
+                if self.options.attr_brk_estimate:
+                    for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'], _use_data_field=_data_field)
+        if self.options.attr_brk_estimate:
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, site=None, _use_data_field=_data_field)
         return res
 
     def get_peak_w_day(self, n_day, site=None, _use_data_field=None) -> int:
@@ -650,10 +661,13 @@ class SolcastApi:
 
     def get_sites_peak_w_day(self, n_day) -> Dict[str, Any]:
         res = {}
-        for site in self._sites:
-            res[site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, site=None, _use_data_field=_data_field)
+        if self.options.attr_brk_site:
+            for site in self._sites:
+                res[site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'])
+                if self.options.attr_brk_estimate:
+                    for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
+        if self.options.attr_brk_estimate:
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
     def get_peak_w_time_day(self, n_day, site=None, _use_data_field=None) -> dt:
@@ -665,10 +679,13 @@ class SolcastApi:
 
     def get_sites_peak_w_time_day(self, n_day) -> Dict[str, Any]:
         res = {}
-        for site in self._sites:
-            res[site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, site=None, _use_data_field=_data_field)
+        if self.options.attr_brk_site:
+            for site in self._sites:
+                res[site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'])
+                if self.options.attr_brk_estimate:
+                    for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
+        if self.options.attr_brk_estimate:
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
     def get_forecast_remaining_today(self, site=None, _use_data_field=None) -> float:
@@ -681,10 +698,13 @@ class SolcastApi:
 
     def get_forecasts_remaining_today(self) -> Dict[str, Any]:
         res = {}
-        for site in self._sites:
-            res[site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'], _use_data_field=_data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_remaining_today(_use_data_field=_data_field)
+        if self.options.attr_brk_site:
+            for site in self._sites:
+                res[site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'])
+                if self.options.attr_brk_estimate:
+                    for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'], _use_data_field=_data_field)
+        if self.options.attr_brk_estimate:
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_forecast_remaining_today(_use_data_field=_data_field)
         return res
 
     def get_total_kwh_forecast_day(self, n_day, site=None, _use_data_field=None) -> float:
@@ -696,10 +716,13 @@ class SolcastApi:
 
     def get_sites_total_kwh_forecast_day(self, n_day) -> Dict[str, Any]:
         res = {}
-        for site in self._sites:
-            res[site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'])
-            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
-        for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, site=None, _use_data_field=_data_field)
+        if self.options.attr_brk_site:
+            for site in self._sites:
+                res[site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'])
+                if self.options.attr_brk_estimate:
+                    for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
+        if self.options.attr_brk_estimate:
+            for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'): res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
     def get_forecast_list_slice(self, _data, start_utc, end_utc, search_past=False):

@@ -60,6 +60,13 @@
                     "customhoursensor": "Ďalší X-hodinový senzor"
                 },
                 "description": "Vlastný senzor pre celkovú energiu na ďalších X hodín"
+            },
+            "attributes": {
+                "data": {
+                    "attr_brk_estimate": "Povoliť rozdelenie odhadov",
+                    "attr_brk_site": "Povoliť rozdelenie stránok"
+                },
+                "description": "Vyberte atribúty senzora, ktoré budú k dispozícii"
             }
         },
         "error": {
@@ -71,7 +78,9 @@
         "solcast_config_action": {
             "options": {
                 "configure_api": "Solcast API kľúč",
-                "configure_dampening": "Konfigurácia tlmenia"
+                "configure_dampening": "Konfigurácia tlmenia",
+                "configure_customsensor": "Konfigurácia vlastného snímača hodín",
+                "configure_attributes": "Konfigurácia dostupných atribútov"
             }
         }
     },

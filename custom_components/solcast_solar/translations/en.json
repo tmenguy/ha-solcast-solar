@@ -60,6 +60,13 @@
                     "customhoursensor": "Next X Hour Sensor"
                 },
                 "description": "Custom sensor for total energy for the next X hours"
+            },
+            "attributes": {
+                "data": {
+                    "attr_brk_estimate": "Enable estimate breakdown",
+                    "attr_brk_site": "Enable site breakdown"
+                },
+                "description": "Select the sensor attributes that will be available"
             }
         },
         "error": {
@@ -72,7 +79,8 @@
             "options": {
                 "configure_api": "Solcast API key",
                 "configure_dampening": "Configure Dampening",
-                "configure_customsensor": "Configure Custom Hour Sensor"
+                "configure_customsensor": "Configure Custom Hour Sensor",
+                "configure_attributes": "Configure Available Attributes"
             }
         }
     },

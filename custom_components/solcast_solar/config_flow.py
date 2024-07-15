@@ -13,13 +13,13 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 from homeassistant import config_entries
-from .const import DOMAIN, CONFIG_OPTIONS, CUSTOM_HOUR_SENSOR
+from .const import DOMAIN, CONFIG_OPTIONS, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK_SITE
 
 @config_entries.HANDLERS.register(DOMAIN)
 class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Solcast Solar."""
 
-    VERSION = 6 #v5 started in 4.0.8, #6 started 4.0.15
+    VERSION = 8 #v5 started in 4.0.8, #6 started 4.0.15, #7 started in 4.0.16, #8 started in 4.0.39
 
     @staticmethod
     @callback
@@ -67,6 +67,8 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                     "damp22":1.0,
                     "damp23":1.0,
                     "customhoursensor":1,
+                    BRK_ESTIMATE: True,
+                    BRK_SITE: True,
                 },
             )
 
@@ -99,6 +101,8 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     return await self.async_step_api()
                 elif nextAction == "configure_customsensor":
                     return await self.async_step_customsensor()
+                elif nextAction == "configure_attributes":
+                    return await self.async_step_attributes()
                 else:
                     errors["base"] = "incorrect_options_action"
 
@@ -325,6 +329,44 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 {
                     vol.Required(CUSTOM_HOUR_SENSOR, description={"suggested_value": customhoursensor}):
                             vol.All(vol.Coerce(int), vol.Range(min=1,max=144)),
+                }
+            ),
+            errors=errors,
+        )
+    
+    async def async_step_attributes(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Manage the attributes present."""
+
+        errors = {}
+
+        estimateBreakdown = self.config_entry.options[BRK_ESTIMATE]
+        siteBreakdown = self.config_entry.options[BRK_SITE]
+        
+        if user_input is not None:
+            try:
+                estimateBreakdown = user_input[BRK_ESTIMATE]
+                siteBreakdown = user_input[BRK_SITE]
+
+                allConfigData = {**self.config_entry.options}
+                allConfigData[BRK_ESTIMATE] = estimateBreakdown
+                allConfigData[BRK_SITE] = siteBreakdown
+
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry,
+                    title="Solcast Solar",
+                    options=allConfigData,
+                )
+                
+                return self.async_create_entry(title="Solcast Solar", data=None)
+            except Exception as e:
+                errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="attributes",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(BRK_ESTIMATE, description={"suggested_value": estimateBreakdown}): bool,
+                    vol.Required(BRK_SITE, description={"suggested_value": siteBreakdown}): bool,
                 }
             ),
             errors=errors,

@@ -54,6 +54,19 @@
                     "damp23": "23:00"
                 },
                 "description": "Modifier le coefficient d'amortissement horaire"
+            },
+            "customsensor": {
+                "data": {
+                    "customhoursensor": "Capteur X heures suivant"
+                },
+                "description": "Capteur personnalisé pour l'énergie totale pour les X prochaines heures"
+            },
+            "attributes": {
+                "data": {
+                    "attr_brk_estimate": "Activer la répartition des estimations",
+                    "attr_brk_site": "Activer la répartition du site"
+                },
+                "description": "Sélectionnez les attributs du capteur qui seront disponibles"
             }
         },
         "error": {
