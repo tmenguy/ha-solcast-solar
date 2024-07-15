@@ -13,13 +13,13 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 from homeassistant import config_entries
-from .const import DOMAIN, CONFIG_OPTIONS, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK_SITE
+from .const import DOMAIN, CONFIG_OPTIONS, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK_ESTIMATE10, BRK_ESTIMATE90, BRK_SITE, BRK_HALFHOURLY, BRK_HOURLY
 
 @config_entries.HANDLERS.register(DOMAIN)
 class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Solcast Solar."""
 
-    VERSION = 8 #v5 started in 4.0.8, #6 started 4.0.15, #7 started in 4.0.16, #8 started in 4.0.39
+    VERSION = 9 #v5 started in 4.0.8, #6 started 4.0.15, #7 started in 4.0.16, #8/9 started in 4.0.39
 
     @staticmethod
     @callback
@@ -68,7 +68,11 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                     "damp23":1.0,
                     "customhoursensor":1,
                     BRK_ESTIMATE: True,
+                    BRK_ESTIMATE10: True,
+                    BRK_ESTIMATE90: True,
                     BRK_SITE: True,
+                    BRK_HALFHOURLY: True,
+                    BRK_HOURLY: True,
                 },
             )
 
@@ -340,16 +344,28 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         errors = {}
 
         estimateBreakdown = self.config_entry.options[BRK_ESTIMATE]
+        estimateBreakdown10 = self.config_entry.options[BRK_ESTIMATE10]
+        estimateBreakdown90 = self.config_entry.options[BRK_ESTIMATE90]
         siteBreakdown = self.config_entry.options[BRK_SITE]
+        halfHourly = self.config_entry.options[BRK_HALFHOURLY]
+        hourly = self.config_entry.options[BRK_HOURLY]
         
         if user_input is not None:
             try:
                 estimateBreakdown = user_input[BRK_ESTIMATE]
+                estimateBreakdown10 = user_input[BRK_ESTIMATE10]
+                estimateBreakdown90 = user_input[BRK_ESTIMATE90]
                 siteBreakdown = user_input[BRK_SITE]
+                halfHourly = user_input[BRK_HALFHOURLY]
+                hourly = user_input[BRK_HOURLY]
 
                 allConfigData = {**self.config_entry.options}
                 allConfigData[BRK_ESTIMATE] = estimateBreakdown
+                allConfigData[BRK_ESTIMATE10] = estimateBreakdown10
+                allConfigData[BRK_ESTIMATE90] = estimateBreakdown90
                 allConfigData[BRK_SITE] = siteBreakdown
+                allConfigData[BRK_HALFHOURLY] = halfHourly
+                allConfigData[BRK_HOURLY] = hourly
 
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
@@ -365,8 +381,12 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             step_id="attributes",
             data_schema=vol.Schema(
                 {
+                    vol.Required(BRK_ESTIMATE10, description={"suggested_value": estimateBreakdown10}): bool,
                     vol.Required(BRK_ESTIMATE, description={"suggested_value": estimateBreakdown}): bool,
+                    vol.Required(BRK_ESTIMATE90, description={"suggested_value": estimateBreakdown90}): bool,
                     vol.Required(BRK_SITE, description={"suggested_value": siteBreakdown}): bool,
+                    vol.Required(BRK_HALFHOURLY, description={"suggested_value": halfHourly}): bool,
+                    vol.Required(BRK_HOURLY, description={"suggested_value": hourly}): bool,
                 }
             ),
             errors=errors,

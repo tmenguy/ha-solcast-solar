@@ -63,8 +63,12 @@
             },
             "attributes": {
                 "data": {
-                    "attr_brk_estimate": "Enable estimate breakdown",
-                    "attr_brk_site": "Enable site breakdown"
+                    "attr_brk_estimate10": "Enable estimate 10 breakdown",
+                    "attr_brk_estimate": "Enable estimate 50 breakdown",
+                    "attr_brk_estimate90": "Enable estimate 90 breakdown",
+                    "attr_brk_site": "Enable site breakdown",
+                    "attr_brk_halfhourly": "Enable forecast half-hourly detail",
+                    "attr_brk_hourly": "Enable forecast hourly detail"
                 },
                 "description": "Select the sensor attributes that will be available"
             }
@@ -80,7 +84,7 @@
                 "configure_api": "Solcast API key",
                 "configure_dampening": "Configure Dampening",
                 "configure_customsensor": "Configure Custom Hour Sensor",
-                "configure_attributes": "Configure Attributes"
+                "configure_attributes": "Configure Available Attributes"
             }
         }
     },

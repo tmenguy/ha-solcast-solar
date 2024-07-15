@@ -60,8 +60,12 @@
             },
             "attributes": {
                 "data": {
-                    "attr_brk_estimate": "Włącz podział szacunków",
-                    "attr_brk_site": "Włącz podział witryny"
+                    "attr_brk_estimate10": "Włącz podział szacunkowy 10",
+                    "attr_brk_estimate": "Włącz podział szacunkowy 50",
+                    "attr_brk_estimate90": "Włącz podział szacunkowy 90",
+                    "attr_brk_site": "Włącz podział witryny",
+                    "attr_brk_halfhourly": "Włącz szczegóły prognozy półgodzinnej",
+                    "attr_brk_hourly": "Włącz szczegółowe informacje godzinowe prognozy"
                 },
                 "description": "Wybierz atrybuty czujnika, które będą dostępne"
             }
