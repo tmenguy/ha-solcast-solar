@@ -288,15 +288,15 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 | `D7` | number | Y | `kWh` | Total forecast solar production for day + 6 (day 7) |
 | `This Hour` | number | Y | `Wh` | Forecasted solar production current hour (attributes contain site breakdown) |
 | `Next Hour` | number | Y | `Wh` | Forecasted solar production next hour (attributes contain site breakdown) |
-| `Forecast Next X Hours` | number | Y | `Wh` | Custom user defined X hour forecast |
+| `Forecast Next X Hours` | number | Y | `Wh` | Custom user defined forecasted solar production for next X hours<br>Note: This forecast starts at current time, it is not aligned on the hour like "This hour", "Next Hour". |
 | `Remaining Today` | number | Y | `kWh` | Predicted remaining solar production today |
 | `Peak Forecast Today` | number | Y | `W` | Highest predicted production within an hour period today (attributes contain site breakdown) |
 | `Peak Time Today` | date/time | Y |  | Hour of max forecasted production of solar today (attributes contain site breakdown) |
 | `Peak Forecast Tomorrow` | number | Y | `W` | Highest predicted production within an hour period tomorrow (attributes contain site breakdown) |
 | `Peak Time Tomorrow` | date/time | Y |  | Hour of max forecasted production of solar tomorrow (attributes contain site breakdown) |
-| `Power Now` | number | Y | `W` | Power forecast during the current 0-30 / 30-59 min hour period (attributes contain site breakdown) |
-| `Power Next 30 Mins` | number | Y | `W` | Power forecast for the next 30 min block period (attributes contain site breakdown) |
-| `Power Next Hour` | number | Y | `W` | Power forecast for the next block 60 min from now (attributes contain site breakdown) |
+| `Power Now` | number | Y | `W` | Predicted nominal solar power this moment (attributes contain site breakdown) |
+| `Power in 30 Mins` | number | Y | `W` | Predicted nominal solar power in 30 minutes (attributes contain site breakdown) |
+| `Power in 1 Hour` | number | Y | `W` | Predicted nominal solar power in 1 hour (attributes contain site breakdown) |
 
 > [!NOTE]
 > Where a site breakdown is available as an attribute, the attribute name is the Solcast site resource ID.

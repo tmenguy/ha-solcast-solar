@@ -99,7 +99,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 return self.solcast.get_forecast_n_hour(0)
             case "forecast_next_hour":
                 return self.solcast.get_forecast_n_hour(1)
-            case "forecast_custom_hour":
+            case "forecast_custom_hours":
                 return self.solcast.get_forecast_custom_hours(self.solcast._customhoursensor)
             case "total_kwh_forecast_today":
                 return self.solcast.get_total_kwh_forecast_day(0)
@@ -146,7 +146,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 return self.solcast.get_forecasts_n_hour(0)
             case "forecast_next_hour":
                 return self.solcast.get_forecasts_n_hour(1)
-            case "forecast_custom_hour":
+            case "forecast_custom_hours":
                 return self.solcast.get_forecasts_custom_hours(self.solcast._customhoursensor)
             case "total_kwh_forecast_today":
                 ret = self.solcast.get_forecast_day(0)

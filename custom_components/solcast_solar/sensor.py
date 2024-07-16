@@ -91,11 +91,11 @@ SENSORS: dict[str, SensorEntityDescription] = {
         icon="mdi:solar-power",
         suggested_display_precision=0,
     ),
-    "forecast_custom_hour": SensorEntityDescription(
-        key="forecast_custom_hour",
+    "forecast_custom_hours": SensorEntityDescription(
+        key="forecast_custom_hours",
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-        translation_key="forecast_custom_hour",
+        translation_key="forecast_custom_hours",
         name="Forecast Custom Hours",
         icon="mdi:solar-power",
         suggested_display_precision=0,
@@ -241,7 +241,7 @@ def getSensorUpdatePolicy(key) -> SensorUpdatePolicy:
         case (
             "forecast_this_hour" |
             "forecast_next_hour" |
-            "forecast_custom_hour" |
+            "forecast_custom_hours" |
             "forecast_remaining_today" |
             "get_remaining_today" |
             "power_now" |
@@ -303,8 +303,8 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
 
         #doesnt work :()
-        if entity_description.key == "forecast_custom_hour":
-            self._attr_translation_placeholders = {"forecast_custom_hour": f"{coordinator.solcast._customhoursensor}"}
+        if entity_description.key == "forecast_custom_hours":
+            self._attr_translation_placeholders = {"forecast_custom_hours": f"{coordinator.solcast._customhoursensor}"}
 
         self.entity_description = entity_description
         self.coordinator = coordinator
