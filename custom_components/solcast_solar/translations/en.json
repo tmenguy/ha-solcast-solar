@@ -134,7 +134,7 @@
             "fields": {
                 "hard_limit": {
                     "name": "Limit value in Watts",
-                    "description": "Set the max value in watts that the inverter can produce."
+                    "description": "Set the max value in Watts that the inverter can produce."
                 }
             }
         },
