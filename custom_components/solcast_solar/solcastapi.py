@@ -13,7 +13,7 @@ import time
 import traceback
 import random
 import re
-from scipy.interpolate import PchipInterpolator
+from .spline import cubic_interp
 from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timedelta, timezone
@@ -763,8 +763,7 @@ class SolcastApi:
             def pchip(xx, i):
                 x = [-1800, 0, 1800, 3600, ]
                 y = [_data[i-1][_data_field] + _data[i][_data_field], _data[i][_data_field], 0, -1 * _data[i+1][_data_field], ]
-                i = PchipInterpolator(x, y)
-                return float(i([xx])[0])
+                return cubic_interp([xx], x, y)[0]
             # Calculate remaining
             for d in _data[st_i:end_i]:
                 d1 = d['period_start']
