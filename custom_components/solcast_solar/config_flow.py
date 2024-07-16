@@ -19,7 +19,7 @@ from .const import DOMAIN, CONFIG_OPTIONS, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK
 class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Solcast Solar."""
 
-    VERSION = 9 #v5 started in 4.0.8, #6 started 4.0.15, #7 started in 4.0.16, #8/9 started in 4.0.39
+    VERSION = 8 #v5 started in 4.0.8, #6 started 4.0.15, #7 started in 4.0.16, #8 started in 4.0.39
 
     @staticmethod
     @callback

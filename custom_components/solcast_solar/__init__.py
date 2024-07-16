@@ -402,33 +402,18 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     #attributes to include
     if config_entry.version < 8:
         new = {**config_entry.options}
-        new[BRK_ESTIMATE] = True
-        new[BRK_SITE] = True
+        if new.get(BRK_ESTIMATE) is None: new[BRK_ESTIMATE] = True
+        if new.get(BRK_ESTIMATE10) is None: new[BRK_ESTIMATE10] = True
+        if new.get(BRK_ESTIMATE90) is None: new[BRK_ESTIMATE90] = True
+        if new.get(BRK_SITE) is None: new[BRK_SITE] = True
+        if new.get(BRK_HALFHOURLY)is None: new[BRK_HALFHOURLY] = True
+        if new.get(BRK_HOURLY) is None: new[BRK_HOURLY] = True
         try:
             hass.config_entries.async_update_entry(config_entry, options=new, version=8)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 config_entry.version = 8
-                hass.config_entries.async_update_entry(config_entry, options=new_options)
-                upgraded()
-            else:
-                raise
-
-    #new 4.0.39
-    #more attributes to include
-    if config_entry.version < 9:
-        new = {**config_entry.options}
-        new[BRK_ESTIMATE10] = True
-        new[BRK_ESTIMATE90] = True
-        new[BRK_HALFHOURLY] = True
-        new[BRK_HOURLY] = True
-        try:
-            hass.config_entries.async_update_entry(config_entry, options=new, version=9)
-            upgraded()
-        except Exception as e:
-            if "unexpected keyword argument 'version'" in e:
-                config_entry.version = 9
                 hass.config_entries.async_update_entry(config_entry, options=new_options)
                 upgraded()
             else:
