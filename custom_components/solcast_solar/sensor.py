@@ -214,7 +214,7 @@ SENSORS: dict[str, SensorEntityDescription] = {
         translation_key="power_now_30m",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
-        #name="Power Next 30 Mins",
+        #name="Power in 30 Minutes",
         suggested_display_precision=0,
     ),
     "power_now_1hr": SensorEntityDescription(
@@ -222,7 +222,7 @@ SENSORS: dict[str, SensorEntityDescription] = {
         translation_key="power_now_1hr",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
-        #name="Power Next Hour",
+        #name="Power in 1 Hour",
         suggested_display_precision=0,
     ),
     #"weather_description": SensorEntityDescription(

@@ -118,8 +118,8 @@
     },
     "entity": {
         "sensor": {
-            "power_now_30m": {"name": "Výkon ďalších 30 min"},
-            "power_now_1hr": {"name": "Výkon ďalšiu hodinu"},
+            "power_now_30m": {"name": "Výkon za 30 minút"},
+            "power_now_1hr": {"name": "Výkon za 1 hodinu"},
             "total_kwh_forecast_today": {"name": "Predpoveď dnes"},
             "peak_w_today": {"name": "Predpoveď špičky dnes"},
             "peak_w_time_today": {"name": "Čas špičky dnes"},
