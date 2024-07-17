@@ -763,7 +763,8 @@ class SolcastApi:
             def pchip(xx, i):
                 x = [-1800, 0, 1800, 3600, ]
                 y = [_data[i-1][_data_field] + _data[i][_data_field], _data[i][_data_field], 0, -1 * _data[i+1][_data_field], ]
-                return cubic_interp([xx], x, y)[0]
+                remain = cubic_interp([xx], x, y)[0]
+                return remain if remain > 0 else 0
             # Calculate remaining
             for d in _data[st_i:end_i]:
                 d1 = d['period_start']
