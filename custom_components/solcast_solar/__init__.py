@@ -95,11 +95,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except loader.IntegrationNotFound:
         pass
 
-    if entry.options.get(KEY_ESTIMATE, None) is None:
-        new = {**entry.options}
-        new[KEY_ESTIMATE] = "estimate"
-        hass.config_entries.async_update_entry(entry, options=new, version=8)
-
     optdamp = {}
     try:
         #if something ever goes wrong with the damp factors just create a blank 1.0
@@ -124,51 +119,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         tz = dt_util.get_time_zone(hass.config.time_zone)
 
-    if entry.options.get(BRK_ESTIMATE, None) is None:
-        new = {**entry.options}
-        new[BRK_ESTIMATE] = True
-        hass.config_entries.async_update_entry(entry, options=new, version=8)
-
-    if entry.options.get(BRK_ESTIMATE10, None) is None:
-        new = {**entry.options}
-        new[BRK_ESTIMATE10] = True
-        hass.config_entries.async_update_entry(entry, options=new, version=8)
-
-    if entry.options.get(BRK_ESTIMATE90, None) is None:
-        new = {**entry.options}
-        new[BRK_ESTIMATE90] = True
-        hass.config_entries.async_update_entry(entry, options=new, version=8)
-
-    if entry.options.get(BRK_SITE, None) is None:
-        new = {**entry.options}
-        new[BRK_SITE] = True
-        hass.config_entries.async_update_entry(entry, options=new, version=8)
-
-    if entry.options.get(BRK_HALFHOURLY, None) is None:
-        new = {**entry.options}
-        new[BRK_HALFHOURLY] = True
-        hass.config_entries.async_update_entry(entry, options=new, version=8)
-
-    if entry.options.get(BRK_HOURLY, None) is None:
-        new = {**entry.options}
-        new[BRK_HOURLY] = True
-        hass.config_entries.async_update_entry(entry, options=new, version=8)
-
     options = ConnectionOptions(
         entry.options[CONF_API_KEY],
         SOLCAST_URL,
         hass.config.path('/config/solcast.json'),
         tz,
         optdamp,
-        entry.options[CUSTOM_HOUR_SENSOR],
-        entry.options.get(KEY_ESTIMATE,"estimate"),
-        (entry.options.get(HARD_LIMIT,100000)/1000),
-        entry.options[BRK_ESTIMATE],
-        entry.options[BRK_ESTIMATE10],
-        entry.options[BRK_ESTIMATE90],
-        entry.options[BRK_SITE],
-        entry.options[BRK_HALFHOURLY],
-        entry.options[BRK_HOURLY],
+        entry.options.get(CUSTOM_HOUR_SENSOR, 1),
+        entry.options.get(KEY_ESTIMATE, "estimate"),
+        (entry.options.get(HARD_LIMIT,100000) / 1000),
+        entry.options.get(BRK_ESTIMATE, True),
+        entry.options.get(BRK_ESTIMATE10, True),
+        entry.options.get(BRK_ESTIMATE90, True),
+        entry.options.get(BRK_SITE, True),
+        entry.options.get(BRK_HALFHOURLY, True),
+        entry.options.get(BRK_HOURLY, True),
     )
 
     solcast = SolcastApi(aiohttp_client.async_get_clientsession(hass), options)
