@@ -95,7 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except loader.IntegrationNotFound:
         pass
 
-    if entry.options.get(KEY_ESTIMATE,None) is None:
+    if entry.options.get(KEY_ESTIMATE, None) is None:
         new = {**entry.options}
         new[KEY_ESTIMATE] = "estimate"
         hass.config_entries.async_update_entry(entry, options=new, version=8)
@@ -123,6 +123,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         tz = await dt_util.async_get_time_zone(hass.config.time_zone)
     else:
         tz = dt_util.get_time_zone(hass.config.time_zone)
+
+    if entry.options.get(BRK_ESTIMATE, None) is None:
+        new = {**entry.options}
+        new[BRK_ESTIMATE] = True
+        hass.config_entries.async_update_entry(entry, options=new, version=8)
+
+    if entry.options.get(BRK_ESTIMATE10, None) is None:
+        new = {**entry.options}
+        new[BRK_ESTIMATE10] = True
+        hass.config_entries.async_update_entry(entry, options=new, version=8)
+
+    if entry.options.get(BRK_ESTIMATE90, None) is None:
+        new = {**entry.options}
+        new[BRK_ESTIMATE90] = True
+        hass.config_entries.async_update_entry(entry, options=new, version=8)
+
+    if entry.options.get(BRK_SITE, None) is None:
+        new = {**entry.options}
+        new[BRK_SITE] = True
+        hass.config_entries.async_update_entry(entry, options=new, version=8)
+
+    if entry.options.get(BRK_HALFHOURLY, None) is None:
+        new = {**entry.options}
+        new[BRK_HALFHOURLY] = True
+        hass.config_entries.async_update_entry(entry, options=new, version=8)
+
+    if entry.options.get(BRK_HOURLY, None) is None:
+        new = {**entry.options}
+        new[BRK_HOURLY] = True
+        hass.config_entries.async_update_entry(entry, options=new, version=8)
+
     options = ConnectionOptions(
         entry.options[CONF_API_KEY],
         SOLCAST_URL,
