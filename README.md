@@ -116,6 +116,19 @@ Here you can change the dampening factor value for any hour. Values from 0.0 - 1
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png)
 
+## Sensor Attributes Configuration
+
+New in v4.0.39 is the option to turn off many sensor attributes.
+
+There are quite a few sensor attributes that can be used as a data source for template sensors, charts, etc., including a per-site breakdown, estimate 10/50/90 values, and per-hour and half hour detailed breakdown for each forecast day.
+
+Many users will not use these attributes, so to cut the clutter (especially in the UI) and also long-term statistics (LTS) storage all of these can be disabled.
+
+By default, all of them are enabled. (Hourly and half-hourly detail is excluded from being sent to LTS.)
+
+> [!NOTE]
+> If you want to implement the sample PV graph below then you'll need to keep half-hourly detail breakdown enabled.
+
 ## Key Solcast concepts
 
 Solcast will produce a forecast of your solar PV generation for today, tomorrow, the day after (day 3), ... up to day 7.
@@ -310,6 +323,8 @@ Click the Forecast option button and select the Solcast Solar option.. Click SAV
 > {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10') | float(0) }}
 > {{ state_attr('sensor.solcast_pv_forecast_peak_forecast_today', 'estimate10-1234-5678-9012-3456') | float(0) }}
 > ```
+>
+> Also see the sample PV graph below for how to chart forecast detail from the detailedForecast attribute.
 
 > [!NOTE]
 > The values for `Next Hour` and `Forecast Next X Hours` may be different if the custom X hour setting is 1. This has a simple explanation.
