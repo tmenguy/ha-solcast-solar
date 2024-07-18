@@ -52,8 +52,8 @@
     },
     "entity": {
         "sensor": {
-            "power_now_30m": {"name": "Leistung kommende 30 Minuten"},
-            "power_now_1hr": {"name": "Leistung kommende 60 Minuten"},
+            "power_now_30m": {"name": "Leistung in 30 Minuten"},
+            "power_now_1hr": {"name": "Leistung in 1 Stunde"},
             "total_kwh_forecast_today": {"name": "Prognose heute"},
             "peak_w_today": {"name": "Prognose Spitzenleistung heute"},
             "peak_w_time_today": {"name": "Zeitpunkt Spitzenleistung heute"},

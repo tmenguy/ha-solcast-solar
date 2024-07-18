@@ -133,15 +133,15 @@
     },
     "entity": {
         "sensor": {
-            "power_now_30m": {"name": "Power Next 30 Mins"},
-            "power_now_1hr": {"name": "Power Next Hour"},
+            "power_now_30m": {"name": "Power in 30 Minutes"},
+            "power_now_1hr": {"name": "Power in 1 Hour"},
             "total_kwh_forecast_today": {"name": "Forecast Today"},
             "peak_w_today": {"name": "Peak Forecast Today"},
             "peak_w_time_today": {"name": "Peak Time Today"},
             "forecast_this_hour": {"name": "Forecast This Hour"},
             "get_remaining_today": {"name": "Forecast Remaining Today"},
             "forecast_next_hour": {"name": "Forecast Next Hour"},
-            "forecast_custom_hour": {"name": "Forecast Next {forecast_custom_hour} Hours"},
+            "forecast_custom_hours": {"name": "Forecast Next X Hours"},
             "total_kwh_forecast_tomorrow": {"name": "Forecast Tomorrow"},
             "peak_w_tomorrow": {"name": "Peak Forecast Tomorrow"},
             "peak_w_time_tomorrow": {"name": "Peak Time Tomorrow"},
