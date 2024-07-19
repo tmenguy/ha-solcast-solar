@@ -491,6 +491,13 @@ None
 
 ## Changes
 
+v4.0.39
+* Updates to sensor descriptions, and alter some sensor names by @isorin (Potentially breaking for UI/automations/etc. should these these sensors be in use. Power in 30/60 minutes, and custom X hours sensor.)
+* Remove dependency on scipy library by @autoSteve
+* Add granular configuration options for attributes by @autosteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.38...v4.0.39
+
 v4.0.38
 * Add Solcast key concepts and sample PV generation graph to readme by @gcoan
 * Add PCHIP spline to forecast remaining by @autoSteve
