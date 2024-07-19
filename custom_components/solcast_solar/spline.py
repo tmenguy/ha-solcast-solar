@@ -16,13 +16,6 @@ def cubic_interp(x0, x, y):
         for i in range(size): r[i] = lst[i+1] - lst[i] 
         return r
     
-    def list_searchsorted(listToInsert, insertInto): # numpy-like searchsorted
-        def float_searchsorted(floatToInsert, insertInto):
-            for i in range(len(insertInto)):
-                if floatToInsert <= insertInto[i]: return i
-            return len(insertInto)
-        return [float_searchsorted(i, insertInto) for i in listToInsert]
-    
     def clip(lst, min_val, max_val, inPlace = False): # numpy-like clip
         if not inPlace: lst = lst[:]  
         for i in range(len(lst)):
@@ -32,16 +25,23 @@ def cubic_interp(x0, x, y):
                 lst[i] = max_val  
         return lst
     
-    def subtract(a,b):
+    def searchsorted(listToInsert, insertInto): # numpy-like searchsorted
+        def float_searchsorted(floatToInsert, insertInto):
+            for i in range(len(insertInto)):
+                if floatToInsert <= insertInto[i]: return i
+            return len(insertInto)
+        return [float_searchsorted(i, insertInto) for i in listToInsert]
+    
+    def subtract(a, b):
         return a - b
     
     size = len(x)
     xdiff = diff(x)
     ydiff = diff(y)
 
-    Li   = [0] * size
+    Li = [0] * size
     Li_1 = [0] * (size - 1)
-    z    = [0] * (size)
+    z = [0] * (size)
 
     Li[0] = math.sqrt(2 * xdiff[0])
     Li_1[0] = 0.0
@@ -65,7 +65,7 @@ def cubic_interp(x0, x, y):
     for i in range(size - 2, -1, -1):
         z[i] = (z[i] - Li_1[i-1] * z[i+1]) / Li[i]
 
-    index = list_searchsorted(x0, x)
+    index = searchsorted(x0, x)
     index = clip(index, 1, size - 1)
 
     xi1 = [x[num] for num in index]
