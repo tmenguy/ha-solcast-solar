@@ -60,6 +60,17 @@
                     "customhoursensor": "Next X Hour Sensor"
                 },
                 "description": "Custom sensor for total energy for the next X hours"
+            },
+            "attributes": {
+                "data": {
+                    "attr_brk_estimate10": "Enable estimate 10 breakdown",
+                    "attr_brk_estimate": "Enable estimate 50 breakdown",
+                    "attr_brk_estimate90": "Enable estimate 90 breakdown",
+                    "attr_brk_site": "Enable site breakdown",
+                    "attr_brk_halfhourly": "Enable forecast half-hourly detail",
+                    "attr_brk_hourly": "Enable forecast hourly detail"
+                },
+                "description": "Select the sensor attributes that will be available"
             }
         },
         "error": {
@@ -72,7 +83,8 @@
             "options": {
                 "configure_api": "Solcast API key",
                 "configure_dampening": "Configure Dampening",
-                "configure_customsensor": "Configure Custom Hour Sensor"
+                "configure_customsensor": "Configure Custom Hour Sensor",
+                "configure_attributes": "Configure Available Attributes"
             }
         }
     },
@@ -122,7 +134,7 @@
                 "fields": {
                     "hard_limit": {
                         "name": "Limit value in Watts",
-                        "description": "Set the max value in watts that the inverter can produce."
+                        "description": "Set the max value in Watts that the inverter can produce."
                     }
                 }
             },
