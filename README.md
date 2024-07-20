@@ -122,9 +122,9 @@ New in v4.0.39 is the option to turn off many sensor attributes.
 
 There are quite a few sensor attributes that can be used as a data source for template sensors, charts, etc., including a per-site breakdown, estimate 10/50/90 values, and per-hour and half hour detailed breakdown for each forecast day.
 
-Many users will not use these attributes, so to cut the clutter (especially in the UI) and also long-term statistics (LTS) storage all of these can be disabled.
+Many users will not use these attributes, so to cut the clutter (especially in the UI) and also long-term statistics (LTS) storage all of these can be individually disabled.
 
-By default, all of them are enabled. (Hourly and half-hourly detail is excluded from being sent to LTS.)
+By default, all of them are enabled. (NB: Hourly and half-hourly detail is already excluded from being sent to LTS.)
 
 > [!NOTE]
 > If you want to implement the sample PV graph below then you'll need to keep half-hourly detail breakdown enabled.
@@ -359,6 +359,8 @@ The following YAML produces a graph of today's PV generation, PV forecast and PV
 [<img src=".github/SCREENSHOTS/forecast_today.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/forecast_today.png)
 
 Customise with appropriate Home Assistant sensors for today's total solar generation and solar panel PV power output.
+
+The chart assumes that your Solar PV sensors are in kW, but if some are in W, add the line `transform: "return x / 1000;"` under the entity id to convert the sensor value to kW.
 
 ```yaml
 type: custom:apexcharts-card
