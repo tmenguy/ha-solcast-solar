@@ -167,10 +167,10 @@ class SolcastApi:
             _LOGGER.error(traceback.format_exc())
 
     def get_api_usage_cache_filename(self, entry_name):
-        return "/config/solcast-usage%s.json" % ("" if len(self.options.api_key.split(",")) < 2 else "-" + entry_name) # For more than one API key use separate files
+        return "%s/solcast-usage%s.json" % (self.configDir, "" if len(self.options.api_key.split(",")) < 2 else "-" + entry_name) # For more than one API key use separate files
 
     def get_api_sites_cache_filename(self, entry_name):
-        return "/config/solcast-sites%s.json" % ("" if len(self.options.api_key.split(",")) < 2 else "-" + entry_name) # Ditto
+        return "%s/solcast-sites%s.json" % (self.configDir, "" if len(self.options.api_key.split(",")) < 2 else "-" + entry_name) # Ditto
 
     async def reset_api_usage(self):
         for api_key in self._api_used.keys():
@@ -1022,7 +1022,7 @@ class SolcastApi:
             _LOGGER.debug(f"Fetch data url: {url}")
 
             async with async_timeout.timeout(600):
-                apiCacheFileName = '/config/' + cachedname + "_" + site + ".json"
+                apiCacheFileName = self.configDir + '/' + cachedname + "_" + site + ".json"
                 if self.apiCacheEnabled and file_exists(apiCacheFileName):
                     status = 404
                     async with aiofiles.open(apiCacheFileName) as f:
