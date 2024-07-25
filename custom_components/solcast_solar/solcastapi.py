@@ -107,14 +107,14 @@ class SolcastApi:
         self.aiohttp_session = aiohttp_session
         self.options = options
         self.apiCacheEnabled = apiCacheEnabled
-        self.configDir = dirname(dirname(dirname(os.path.realpath(__file__))))
-        _LOGGER.debug("Configuration directory is %s", self.configDir)
         self._sites = []
         self._data = {'siteinfo': {}, 'last_updated': dt.fromtimestamp(0, timezone.utc).isoformat()}
         self._tally = {}
         self._api_used = {}
         self._api_limit = {}
         self._filename = options.file_path
+        self.configDir = dirname(self._filename)
+        _LOGGER.debug("Configuration directory is %s", self.configDir)
         self._tz = options.tz
         self._dataenergy = {}
         self._data_forecasts = []
