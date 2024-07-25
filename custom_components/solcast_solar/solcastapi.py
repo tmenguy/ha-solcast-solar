@@ -19,6 +19,7 @@ from datetime import datetime as dt
 from datetime import timedelta, timezone
 from operator import itemgetter
 from os.path import exists as file_exists
+from os.path import dirname
 from typing import Any, Dict, cast
 
 import async_timeout
@@ -106,6 +107,8 @@ class SolcastApi:
         self.aiohttp_session = aiohttp_session
         self.options = options
         self.apiCacheEnabled = apiCacheEnabled
+        self.configDir = dirname(dirname(dirname(os.path.realpath(__file__))))
+        _LOGGER.debug("Configuration directory is %s", self.configDir)
         self._sites = []
         self._data = {'siteinfo': {}, 'last_updated': dt.fromtimestamp(0, timezone.utc).isoformat()}
         self._tally = {}
@@ -479,8 +482,10 @@ class SolcastApi:
             st_i, end_i = self.get_forecast_list_slice(self._data_forecasts, args[0], args[1], search_past=True)
             h = self._data_forecasts[st_i:end_i]
 
-            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug("Get forecast list: (%ss) st %s end %s st_i %d end_i %d h.len %d",
-                            round(time.time()-st_time,4), args[0], args[1], st_i, end_i, len(h))
+            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
+                "Get forecast list: (%ss) st %s end %s st_i %d end_i %d h.len %d",
+                round(time.time()-st_time,4), args[0], args[1], st_i, end_i, len(h)
+            )
 
             return tuple(
                     {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h
@@ -524,26 +529,28 @@ class SolcastApi:
         if len(g) != 1:
             raise ValueError(f"Unable to find site {site}")
         site: Dict[str, Any] = g[0]
-        ret = {}
-
-        ret["name"] = site.get("name", None)
-        ret["resource_id"] = site.get("resource_id", None)
-        ret["capacity"] = site.get("capacity", None)
-        ret["capacity_dc"] = site.get("capacity_dc", None)
-        ret["longitude"] = site.get("longitude", None)
-        ret["latitude"] = site.get("latitude", None)
-        ret["azimuth"] = site.get("azimuth", None)
-        ret["tilt"] = site.get("tilt", None)
-        ret["install_date"] = site.get("install_date", None)
-        ret["loss_factor"] = site.get("loss_factor", None)
+        ret = {
+            "name": site.get("name", None),
+            "resource_id": site.get("resource_id", None),
+            "capacity": site.get("capacity", None),
+            "capacity_dc": site.get("capacity_dc", None),
+            "longitude": site.get("longitude", None),
+            "latitude": site.get("latitude", None),
+            "azimuth": site.get("azimuth", None),
+            "tilt": site.get("tilt", None),
+            "install_date": site.get("install_date", None),
+            "loss_factor": site.get("loss_factor", None)
+        }
         for key in tuple(ret.keys()):
-            if ret[key] is None:
-                ret.pop(key, None)
-
+            if ret[key] is None: ret.pop(key, None)
         return ret
 
     def get_now_utc(self):
         return dt.now(self._tz).astimezone(timezone.utc)
+
+    def get_interval_start_utc(self, moment):
+        n = moment.replace(second=0, microsecond=0)
+        return n.replace(minute=0 if n.minute < 30 else 30).astimezone(timezone.utc)
 
     def get_hour_start_utc(self):
         return dt.now(self._tz).replace(minute=0, second=0, microsecond=0).astimezone(timezone.utc)
@@ -560,11 +567,12 @@ class SolcastApi:
         st_i, end_i = self.get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
         h = self._data_forecasts[st_i:end_i]
 
-        if _SENSOR_DEBUG_LOGGING: _LOGGER.debug("Get forecast day: %d st %s end %s st_i %d end_i %d h.len %d",
-                        futureday,
-                        start_utc.strftime('%Y-%m-%d %H:%M:%S'),
-                        end_utc.strftime('%Y-%m-%d %H:%M:%S'),
-                        st_i, end_i, len(h))
+        if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
+            "Get forecast day: %d st %s end %s st_i %d end_i %d h.len %d",
+            futureday,
+            start_utc.strftime('%Y-%m-%d %H:%M:%S'), end_utc.strftime('%Y-%m-%d %H:%M:%S'),
+            st_i, end_i, len(h)
+        )
 
         tup = tuple(
                 {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h
@@ -620,7 +628,7 @@ class SolcastApi:
         """Return Solcast Forecast for the next N hours"""
         start_utc = self.get_now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
-        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
+        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field, interpolate=True))
         return res
 
     def get_forecasts_custom_hours(self, n_hour) -> Dict[str, Any]:
@@ -635,13 +643,9 @@ class SolcastApi:
         return res
 
     def get_power_n_mins(self, n_mins, site=None, _use_data_field=None) -> int:
-        """Return Solcast Power for the next N minutes"""
-        # uses a rolling 20mins interval (arbitrary decision) to smooth out the transitions between the 30mins intervals
-        start_utc = self.get_now_utc() + timedelta(minutes=n_mins-10)
-        end_utc = start_utc + timedelta(minutes=20)
-        # multiply with 1.5 as the power reported is only for a 20mins interval (out of 30mins)
-        res = round(1000 * 1.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
-        return res
+        """Return Solcast expected power generation in the next N minutes"""
+        time_utc = self.get_now_utc() + timedelta(minutes=n_mins)
+        return round(1000 * self.get_forecast_pv_moment(time_utc, site=site, _use_data_field=_use_data_field))
 
     def get_sites_power_n_mins(self, n_mins) -> Dict[str, Any]:
         res = {}
@@ -751,7 +755,7 @@ class SolcastApi:
         return st_i, end_i
 
     def get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None, interpolate=False) -> float:
-        """Return Solcast pv_estimates for interval [start_utc, end_utc)"""
+        """Return Solcast pv_estimates for period [start_utc, end_utc)"""
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
@@ -782,15 +786,46 @@ class SolcastApi:
                 if not interpolate and s < 1800:
                     f *= s / 1800 # Simple linear interpolation
                 res += f
-            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug("Get estimate: %s()%s st %s end %s st_i %d end_i %d res %s",
-                          currentFuncName(1),
-                          '' if site is None else ' '+site,
-                          start_utc.strftime('%Y-%m-%d %H:%M:%S'),
-                          end_utc.strftime('%Y-%m-%d %H:%M:%S'),
-                          st_i, end_i, round(res,3))
+            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
+                "Get estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
+                currentFuncName(1), '' if site is None else ' '+site, _data_field,
+                start_utc.strftime('%Y-%m-%d %H:%M:%S'),
+                end_utc.strftime('%Y-%m-%d %H:%M:%S'),
+                st_i, end_i, round(res,3)
+            )
             return res
         except Exception as ex:
             _LOGGER.error(f"Exception in get_forecast_pv_estimates(): {ex}")
+            _LOGGER.error(traceback.format_exc())
+            return 0
+
+    def get_forecast_pv_moment(self, time_utc, site=None, _use_data_field=None) -> float:
+        """Return interpolated pv_estimates power for a point in time (time_utc)"""
+        try:
+            _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
+            _data_field = self._use_data_field if _use_data_field is None else _use_data_field
+            st_i, _ = self.get_forecast_list_slice(_data, time_utc, time_utc)
+            def pchip(xx, i):
+                x = [-3600, -1800, 0, 1800, 3600, ]
+                y = [
+                    _data[i-2][_data_field] if i-2 >= 0 else 0,
+                    _data[i-1][_data_field] if i-1 >= 0 else 0,
+                    _data[i][_data_field],
+                    _data[i+1][_data_field] if i+1 <= len(_data) else 0,
+                    _data[i+2][_data_field] if i+2 <= len(_data) else 0,
+                ]
+                ci = cubic_interp([xx], x, y)[0]
+                return ci if ci >= 0 else 0
+            interval_start = self.get_interval_start_utc(time_utc)
+            res = pchip((time_utc - interval_start).total_seconds(), st_i)
+            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
+                "Get moment: %s()%s %s t %s is %s st_i %d res %s",
+                currentFuncName(1), '' if site is None else ' '+site, _data_field,
+                time_utc.strftime('%Y-%m-%d %H:%M:%S'), interval_start.strftime('%Y-%m-%d %H:%M:%S'), st_i, res
+            )
+            return res
+        except Exception as ex:
+            _LOGGER.error(f"Exception in get_forecast_pv_moment(): {ex}")
             _LOGGER.error(traceback.format_exc())
             return 0
 
@@ -804,12 +839,13 @@ class SolcastApi:
             for d in _data[st_i:end_i]:
                 if res is None or res[_data_field] < d[_data_field]:
                     res = d
-            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug("Get max estimete: %s()%s st %s end %s st_i %d end_i %d res %s",
-                          currentFuncName(1),
-                          '' if site is None else ' '+site,
-                          start_utc.strftime('%Y-%m-%d %H:%M:%S'),
-                          end_utc.strftime('%Y-%m-%d %H:%M:%S'),
-                          st_i, end_i, res)
+            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
+                "Get max estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
+                currentFuncName(1), '' if site is None else ' '+site, _data_field,
+                start_utc.strftime('%Y-%m-%d %H:%M:%S'),
+                end_utc.strftime('%Y-%m-%d %H:%M:%S'),
+                st_i, end_i, res
+            )
             return res
         except Exception as ex:
             _LOGGER.error(f"Exception in get_max_forecast_pv_estimate(): {ex}")
@@ -985,7 +1021,7 @@ class SolcastApi:
             url=f"{self.options.host}/rooftop_sites/{site}/{path}"
             _LOGGER.debug(f"Fetch data url: {url}")
 
-            async with async_timeout.timeout(480):
+            async with async_timeout.timeout(600):
                 apiCacheFileName = '/config/' + cachedname + "_" + site + ".json"
                 if self.apiCacheEnabled and file_exists(apiCacheFileName):
                     status = 404
@@ -996,21 +1032,24 @@ class SolcastApi:
                 else:
                     if self._api_used[apikey] < self._api_limit[apikey]:
                         tries = 5
-                        counter = 1
-                        backoff = 30
-                        while counter <= 5:
+                        counter = 0
+                        backoff = 30 # On every retry the back-off increses by (at least) thirty seconds more than the previous back-off
+                        while True:
                             _LOGGER.debug(f"Fetching forecast")
+                            counter += 1
                             resp: ClientResponse = await self.aiohttp_session.get(
                                 url=url, params=params, ssl=False
                             )
                             status = resp.status
                             if status == 200: break
                             if status == 429:
+                                if counter >= tries:
+                                    status = 999 # All retries have been exhausted
+                                    break
                                 # Solcast is busy, so delay (30 seconds * counter), plus a random number of seconds between zero and 30
                                 delay = (counter * backoff) + random.randrange(0,30)
                                 _LOGGER.warning(f"The Solcast API is busy, pausing {delay} seconds before retry")
                                 await asyncio.sleep(delay)
-                                counter += 1
 
                         if status == 200:
                             _LOGGER.debug(f"Fetch successful")
@@ -1026,8 +1065,12 @@ class SolcastApi:
                             if self.apiCacheEnabled:
                                 async with aiofiles.open(apiCacheFileName, 'w') as f:
                                     await f.write(json.dumps(resp_json, ensure_ascii=False))
+                        elif status == 999:
+                            _LOGGER.error(f"The Solcast API was tried {tries} times, but all attempts have failed")
+                            return None
                         else:
                             _LOGGER.error(f"Solcast API returned status {translate(status)}. API used is {self._api_used[apikey]}/{self._api_limit[apikey]}")
+                            return None
                     else:
                         _LOGGER.warning(f"API limit exceeded, not getting forecast")
                         return None
