@@ -1033,7 +1033,7 @@ class SolcastApi:
                     if self._api_used[apikey] < self._api_limit[apikey]:
                         tries = 5
                         counter = 0
-                        backoff = 30 # On every retry the back-off increses by (at least) thirty seconds more than the previous back-off
+                        backoff = 30 # On every retry the back-off increases by (at least) thirty seconds more than the previous back-off
                         while True:
                             _LOGGER.debug(f"Fetching forecast")
                             counter += 1
