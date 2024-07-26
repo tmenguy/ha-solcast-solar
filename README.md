@@ -493,6 +493,13 @@ None
 
 ## Changes
 
+v4.0.40
+* Interpolated forecast 0/30/60 power and energy X hours by @autoSteve
+* Ensure config directory is always relative to install location by @autoSteve
+* Sample PV chart enhancements by @gcoan
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.39...v4.0.40
+
 v4.0.39
 * Updates to sensor descriptions, and alter some sensor names by @isorin (Potentially breaking for UI/automations/etc. should these these sensors be in use. Power in 30/60 minutes, and custom X hours sensor.)
 * Remove dependency on scipy library by @autoSteve
