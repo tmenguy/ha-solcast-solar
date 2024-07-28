@@ -128,6 +128,7 @@ class SolcastApi:
         self._use_data_field = f"pv_{options.key_estimate}"
         self._hardlimit = options.hard_limit
         self._estimen = {'pv_estimate': options.attr_brk_estimate, 'pv_estimate10': options.attr_brk_estimate10, 'pv_estimate90': options.attr_brk_estimate90}
+        self._whole_day = list(range(0, 86400, 1800))
         #self._weather = ""
 
     async def serialize_data(self):
@@ -628,7 +629,7 @@ class SolcastApi:
         """Return Solcast Forecast for the next N hours"""
         start_utc = self.get_now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
-        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field, interpolate=True))
+        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
         return res
 
     def get_forecasts_custom_hours(self, n_hour) -> Dict[str, Any]:
@@ -700,7 +701,7 @@ class SolcastApi:
         # time remaining today
         start_utc = self.get_now_utc()
         end_utc = self.get_day_start_utc() + timedelta(days=1)
-        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field, interpolate=True), 4)
+        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
     def get_forecasts_remaining_today(self) -> Dict[str, Any]:
@@ -732,8 +733,9 @@ class SolcastApi:
             if self._estimen.get(_data_field): res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
-    def get_forecast_list_slice(self, _data, start_utc, end_utc, search_past=False):
+    def get_forecast_list_slice(self, _data, start_utc, end_utc=None, search_past=False):
         """Return Solcast pv_estimates list slice [st_i, end_i) for interval [start_utc, end_utc)"""
+        if end_utc is None: end_utc = start_utc + timedelta(seconds=1800)
         crt_i = -1
         st_i = -1
         end_i = len(_data)
@@ -754,37 +756,28 @@ class SolcastApi:
             end_i = 0
         return st_i, end_i
 
-    def get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None, interpolate=False) -> float:
-        """Return Solcast pv_estimates for period [start_utc, end_utc)"""
+    def pchip(self, _data, _data_field, xx, st):
+        y = [_data[st+i][_data_field] for i in range(0, 48)]
+        ci = cubic_interp([xx], self._whole_day, y)[0]
+        return ci # if ci >= 0 else 0
+
+    def get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None) -> float:
+        """Return Solcast pv_estimates total for period [start_utc, end_utc)"""
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
             res = 0
-            st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc)
-            def pchip(xx, i):
-                x = [-1800, 0, 1800, 3600, ]
-                y = [_data[i-1][_data_field] + _data[i][_data_field], _data[i][_data_field], 0, -1 * _data[i+1][_data_field], ]
-                partial = cubic_interp([xx], x, y)[0]
-                return partial if partial > 0 else 0
-            # Calculate remaining
+            st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc) # Get start and end indexes
+            day_start = self.get_day_start_utc()
+            st_di, _ = self.get_forecast_list_slice(_data, day_start) # Get start of day index
             for d in _data[st_i:end_i]:
                 d1 = d['period_start']
                 d2 = d1 + timedelta(seconds=1800)
-                if not interpolate:
-                    s = 1800
                 f = d[_data_field]
                 if start_utc > d1:
-                    if not interpolate:
-                        s -= (start_utc - d1).total_seconds()
-                    else:
-                        f = pchip((start_utc - d1).total_seconds(), st_i)
+                    f = self.pchip(_data, _data_field, (start_utc - day_start).total_seconds(), st_di)
                 if end_utc < d2:
-                    if not interpolate:
-                        s -= (d2 - end_utc).total_seconds()
-                    else:
-                        f = pchip((d2 - end_utc).total_seconds(), end_i)
-                if not interpolate and s < 1800:
-                    f *= s / 1800 # Simple linear interpolation
+                    f = self.pchip(_data, _data_field, (end_utc - day_start).total_seconds(), st_di)
                 res += f
             if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                 "Get estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
@@ -804,24 +797,13 @@ class SolcastApi:
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
-            st_i, _ = self.get_forecast_list_slice(_data, time_utc, time_utc)
-            def pchip(xx, i):
-                x = [-3600, -1800, 0, 1800, 3600, ]
-                y = [
-                    _data[i-2][_data_field] if i-2 >= 0 else 0,
-                    _data[i-1][_data_field] if i-1 >= 0 else 0,
-                    _data[i][_data_field],
-                    _data[i+1][_data_field] if i+1 <= len(_data) else 0,
-                    _data[i+2][_data_field] if i+2 <= len(_data) else 0,
-                ]
-                ci = cubic_interp([xx], x, y)[0]
-                return ci if ci >= 0 else 0
-            interval_start = self.get_interval_start_utc(time_utc)
-            res = pchip((time_utc - interval_start).total_seconds(), st_i)
+            day_start = self.get_day_start_utc()
+            st_di, _ = self.get_forecast_list_slice(_data, day_start) # Get start of day index
+            res = self.pchip(_data, _data_field, (time_utc - day_start).total_seconds(), st_di)
             if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
-                "Get moment: %s()%s %s t %s is %s st_i %d res %s",
+                "Get moment: %s()%s %s t %s st_di %d sec %d res %s",
                 currentFuncName(1), '' if site is None else ' '+site, _data_field,
-                time_utc.strftime('%Y-%m-%d %H:%M:%S'), interval_start.strftime('%Y-%m-%d %H:%M:%S'), st_i, res
+                time_utc.strftime('%Y-%m-%d %H:%M:%S'), st_di, (time_utc - day_start).total_seconds(), round(res, 4)
             )
             return res
         except Exception as ex:
