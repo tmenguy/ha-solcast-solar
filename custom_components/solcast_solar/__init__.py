@@ -3,6 +3,7 @@
 import logging
 import random
 import asyncio
+import os
 
 from homeassistant import loader
 from homeassistant.config_entries import ConfigEntry
@@ -122,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     options = ConnectionOptions(
         entry.options[CONF_API_KEY],
         SOLCAST_URL,
-        hass.config.path('/config/solcast.json'),
+        hass.config.path('%s/solcast.json' % os.path.abspath(os.path.join(os.path.dirname(__file__) ,"../.."))),
         tz,
         optdamp,
         entry.options.get(CUSTOM_HOUR_SENSOR, 1),
