@@ -785,7 +785,7 @@ class SolcastApi:
         return self.fc_moment['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
 
     def spline_remaining(self):
-        """A cubic spline to retrieve interpolated inter-interval momentary estimates for five minute periods"""
+        """A cubic spline to retrieve interpolated inter-interval reducing estimates for five minute periods"""
         def buildY(_data, _data_field, st):
             y = []
             for i in range(0, 48):
@@ -834,7 +834,7 @@ class SolcastApi:
                 if start_utc > d1:
                     f = self.get_remaining(site, _data_field, (start_utc - day_start).total_seconds())
                 if end_utc < d2:
-                    if end_utc < day_start + timedelta(hours=24): # Spline data points are only calculated for today only
+                    if end_utc < day_start + timedelta(hours=24): # Spline data points are only calculated for today
                         f = self.get_remaining(site, _data_field, (end_utc - day_start).total_seconds())
                 res += f
             if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
