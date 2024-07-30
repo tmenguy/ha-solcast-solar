@@ -770,7 +770,9 @@ class SolcastApi:
         for _data_field in df:
             y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
             self.fc_moment['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
-            for j in xx: self.fc_moment['all'][_data_field][int(j/300)] = round(self.fc_moment['all'][_data_field][int(j/300)],4) if self.fc_moment['all'][_data_field][int(j/300)] > 0 else 0
+            for j in xx:
+                i = int(j/300)
+                if self.fc_moment['all'][_data_field][i] < 0: self.fc_moment['all'][_data_field][i] = 0 # Suppress negative values
         if self.options.attr_brk_site:
             for site in self._sites:
                 self.fc_moment[site] = {}
@@ -779,7 +781,9 @@ class SolcastApi:
                 for _data_field in df:
                     y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
                     self.fc_moment[site][_data_field] = cubic_interp(xx, self._spline_period, y)
-                    for j in xx: self.fc_moment[site][_data_field][int(j/300)] = round(self.fc_moment[site][_data_field][int(j/300)],4) if self.fc_moment[site][_data_field][int(j/300)] > 0 else 0
+                    for j in xx:
+                        i = int(j/300)
+                        if self.fc_moment[site][_data_field][i] < 0: self.fc_moment[site][_data_field][i] = 0 # Suppress negative values
 
     def get_moment(self, site, _data_field, t):
         return self.fc_moment['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
@@ -803,7 +807,11 @@ class SolcastApi:
         for _data_field in df:
             y = buildY(_data, _data_field, st)
             self.fc_remaining['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
-            for j in xx: self.fc_remaining['all'][_data_field][int(j/300)] = round(self.fc_remaining['all'][_data_field][int(j/300)],4) if self.fc_remaining['all'][_data_field][int(j/300)] > 0 else 0
+            for j in xx:
+                i = int(j/300)
+                k = int(math.floor(j/1800))
+                if self.fc_remaining['all'][_data_field][i] < 0: self.fc_remaining['all'][_data_field][i] = 0 # Suppress negative values
+                if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining['all'][_data_field][i] > round(y[k],4): self.fc_remaining['all'][_data_field][i] = y[k] # Correct spline bounce
         if self.options.attr_brk_site:
             for site in self._sites:
                 self.fc_remaining[site] = {}
@@ -812,7 +820,11 @@ class SolcastApi:
                 for _data_field in df:
                     y = buildY(_data, _data_field, st)
                     self.fc_remaining[site][_data_field] = cubic_interp(xx, self._spline_period, y)
-                    for j in xx: self.fc_remaining[site][_data_field][int(j/300)] = round(self.fc_remaining[site][_data_field][int(j/300)],4) if self.fc_remaining[site][_data_field][int(j/300)] > 0 else 0
+                    for j in xx:
+                        i = int(j/300)
+                        k = int(math.floor(j/1800))
+                        if self.fc_remaining[site][_data_field][i] < 0: self.fc_remaining[site][_data_field][i] = 0 # Suppress negative values
+                        if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining[site][_data_field][i] > round(y[k],4): self.fc_remaining[site][_data_field][i] = y[k] # Correct spline bounce
 
     def get_remaining(self, site, _data_field, t):
         return self.fc_remaining['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
