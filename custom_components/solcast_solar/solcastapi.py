@@ -32,7 +32,7 @@ from isodate import parse_datetime
 # for name of caller of caller of current func, specify 2. etc.
 currentFuncName = lambda n=0: sys._getframe(n + 1).f_code.co_name
 
-_SENSOR_DEBUG_LOGGING = False
+_SENSOR_DEBUG_LOGGING = True
 
 _JSON_VERSION = 4
 _LOGGER = logging.getLogger(__name__)
@@ -758,7 +758,7 @@ class SolcastApi:
             end_i = 0
         return st_i, end_i
 
-    def spline_moments(self):
+    async def spline_moments(self):
         """A cubic spline to retrieve interpolated inter-interval momentary estimates for five minute periods"""
         df = ['pv_estimate']
         if self.options.attr_brk_estimate10: df.append('pv_estimate10')
@@ -788,7 +788,7 @@ class SolcastApi:
     def get_moment(self, site, _data_field, t):
         return self.fc_moment['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
 
-    def spline_remaining(self):
+    async def spline_remaining(self):
         """A cubic spline to retrieve interpolated inter-interval reducing estimates for five minute periods"""
         def buildY(_data, _data_field, st):
             y = []
@@ -1265,8 +1265,8 @@ class SolcastApi:
 
             await self.checkDataRecords()
 
-            self.spline_moments()
-            self.spline_remaining()
+            await self.spline_moments()
+            await self.spline_remaining()
 
             _LOGGER.debug(f"Build forecast processing took {round(time.time()-st_time,4)}s")
 

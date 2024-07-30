@@ -6,6 +6,7 @@ import logging
 import traceback
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.event import async_track_utc_time_change
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -47,6 +48,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             #4.0.18 - added reset usage call to reset usage sensors at UTC midnight
             async_track_utc_time_change(self._hass, self.update_utcmidnight_usage_sensor_data, hour=0,minute=0,second=0)
             async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
+            #4.0.41 - recalculate splines at midnight local
+            async_track_time_change(self._hass, self.update_midnight_spline_recalc, hour=0,minute=0,second=0)
         except Exception as error:
             _LOGGER.error("Exception in Solcast coordinator setup: %s", traceback.format_exc())
 
@@ -69,6 +72,16 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except Exception:
             #_LOGGER.error("Exception in update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
             pass
+
+    async def update_midnight_spline_recalc(self, *args):
+        try:
+            _LOGGER.debug('Recalculating splines')
+            await self.solcast.spline_moments()
+            await self.solcast.spline_remaining()
+        except Exception:
+            _LOGGER.error("Exception in update_midnight_spline_recalc(): %s", traceback.format_exc())
+            pass
+
 
     async def service_event_update(self, *args):
         try:
