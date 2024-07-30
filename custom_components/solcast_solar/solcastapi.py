@@ -834,7 +834,6 @@ class SolcastApi:
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
-            res = 0
             start_utc = start_utc.replace(minute = math.floor(start_utc.minute / 5) * 5)
             st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc) # Get start and end indexes for the requested range
             day_start = self.get_day_start_utc()
