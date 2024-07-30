@@ -128,7 +128,7 @@ class SolcastApi:
         self._use_data_field = f"pv_{options.key_estimate}"
         self._hardlimit = options.hard_limit
         self._estimen = {'pv_estimate': options.attr_brk_estimate, 'pv_estimate10': options.attr_brk_estimate10, 'pv_estimate90': options.attr_brk_estimate90}
-        self._whole_day = list(range(0, 86400, 1800))
+        self._spline_period = list(range(0, 90000, 1800))
         self.fc_moment = {}
         self.fc_remaining = {}
         #self._weather = ""
@@ -703,7 +703,7 @@ class SolcastApi:
         # time remaining today
         start_utc = self.get_now_utc()
         end_utc = self.get_day_start_utc() + timedelta(days=1)
-        res = round(self.get_forecast_pv_remaining(start_utc, site=site, _use_data_field=_use_data_field), 4)
+        res = round(self.get_forecast_pv_remaining(start_utc, end_utc=end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
     def get_forecasts_remaining_today(self) -> Dict[str, Any]:
@@ -763,13 +763,13 @@ class SolcastApi:
         df = ['pv_estimate']
         if self.options.attr_brk_estimate10: df.append('pv_estimate10')
         if self.options.attr_brk_estimate90: df.append('pv_estimate90')
-        xx = [ i for i in range(0, 86400, 300) ]
+        xx = [ i for i in range(0, 1800*len(self._spline_period), 300) ]
         _data = self._data_forecasts
         st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
         self.fc_moment['all'] = {}
         for _data_field in df:
-            y = [_data[st+i][_data_field] for i in range(0, 48)]
-            self.fc_moment['all'][_data_field] = cubic_interp(xx, self._whole_day, y)
+            y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
+            self.fc_moment['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
             for j in xx: self.fc_moment['all'][_data_field][int(j/300)] = round(self.fc_moment['all'][_data_field][int(j/300)],4) if self.fc_moment['all'][_data_field][int(j/300)] > 0 else 0
         if self.options.attr_brk_site:
             for site in self._sites:
@@ -777,8 +777,8 @@ class SolcastApi:
                 _data = self._site_data_forecasts[site]
                 st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
                 for _data_field in df:
-                    y = [_data[st+i][_data_field] for i in range(0, 48)]
-                    self.fc_moment[site][_data_field] = cubic_interp(xx, self._whole_day, y)
+                    y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
+                    self.fc_moment[site][_data_field] = cubic_interp(xx, self._spline_period, y)
                     for j in xx: self.fc_moment[site][_data_field][int(j/300)] = round(self.fc_moment[site][_data_field][int(j/300)],4) if self.fc_moment[site][_data_field][int(j/300)] > 0 else 0
 
     def get_moment(self, site, _data_field, t):
@@ -788,21 +788,21 @@ class SolcastApi:
         """A cubic spline to retrieve interpolated inter-interval reducing estimates for five minute periods"""
         def buildY(_data, _data_field, st):
             y = []
-            for i in range(0, 48):
+            for i in range(0, len(self._spline_period)):
                 rem = 0
-                for j in range(i, 48): rem += _data[st+j][_data_field]
+                for j in range(i, len(self._spline_period)): rem += _data[st+j][_data_field]
                 y.append(0.5 * rem)
             return  y
         df = ['pv_estimate']
         if self.options.attr_brk_estimate10: df.append('pv_estimate10')
         if self.options.attr_brk_estimate90: df.append('pv_estimate90')
-        xx = [ i for i in range(0, 86400, 300) ]
+        xx = [ i for i in range(0, 1800*len(self._spline_period), 300) ]
         _data = self._data_forecasts
         st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
         self.fc_remaining['all'] = {}
         for _data_field in df:
             y = buildY(_data, _data_field, st)
-            self.fc_remaining['all'][_data_field] = cubic_interp(xx, self._whole_day, y)
+            self.fc_remaining['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
             for j in xx: self.fc_remaining['all'][_data_field][int(j/300)] = round(self.fc_remaining['all'][_data_field][int(j/300)],4) if self.fc_remaining['all'][_data_field][int(j/300)] > 0 else 0
         if self.options.attr_brk_site:
             for site in self._sites:
@@ -811,7 +811,7 @@ class SolcastApi:
                 st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
                 for _data_field in df:
                     y = buildY(_data, _data_field, st)
-                    self.fc_remaining[site][_data_field] = cubic_interp(xx, self._whole_day, y)
+                    self.fc_remaining[site][_data_field] = cubic_interp(xx, self._spline_period, y)
                     for j in xx: self.fc_remaining[site][_data_field][int(j/300)] = round(self.fc_remaining[site][_data_field][int(j/300)],4) if self.fc_remaining[site][_data_field][int(j/300)] > 0 else 0
 
     def get_remaining(self, site, _data_field, t):
@@ -829,12 +829,19 @@ class SolcastApi:
             res = self.get_remaining(site, _data_field, (start_utc - day_start).total_seconds())
             if end_utc is not None:
                 end_utc = end_utc.replace(minute = math.floor(end_utc.minute / 5) * 5)
-                if end_utc < day_start + timedelta(hours=24): # Spline data points are only calculated for today
+                if end_utc < day_start + timedelta(seconds=1800*len(self._spline_period)): # Spline data points are limited
                     res -= self.get_remaining(site, _data_field, (end_utc - day_start).total_seconds())
                 else:
-                    st_i2, _ = self.get_forecast_list_slice(_data, day_start + timedelta(hours=24)) # Get next day onwards start index
+                    st_i2, _ = self.get_forecast_list_slice(_data, day_start + timedelta(seconds=1800*len(self._spline_period))) # Get post-spline day onwards start index
                     for d in _data[st_i2:end_i]:
-                        res += 0.5 * d[_data_field]
+                        d2 = d['period_start'] + timedelta(seconds=1800)
+                        s = 1800
+                        f = 0.5 * d[_data_field]
+                        if end_utc < d2:
+                            s -= (d2 - end_utc).total_seconds()
+                            res += f * s / 1800 # Simple linear interpolation
+                        else:
+                            res += f
             if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                 "Get estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
                 currentFuncName(1), '' if site is None else ' '+site, _data_field,
