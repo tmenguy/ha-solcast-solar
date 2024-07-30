@@ -631,7 +631,7 @@ class SolcastApi:
         """Return Solcast Forecast for the next N hours"""
         start_utc = self.get_now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
-        res = round(500 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
+        res = round(1000 * self.get_forecast_pv_remaining(start_utc, end_utc=end_utc, site=site, _use_data_field=_use_data_field))
         return res
 
     def get_forecasts_custom_hours(self, n_hour) -> Dict[str, Any]:
@@ -703,7 +703,7 @@ class SolcastApi:
         # time remaining today
         start_utc = self.get_now_utc()
         end_utc = self.get_day_start_utc() + timedelta(days=1)
-        res = round(0.5 * self.get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field), 4)
+        res = round(self.get_forecast_pv_remaining(start_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
     def get_forecasts_remaining_today(self) -> Dict[str, Any]:
@@ -791,7 +791,7 @@ class SolcastApi:
             for i in range(0, 48):
                 rem = 0
                 for j in range(i, 48): rem += _data[st+j][_data_field]
-                y.append(rem)
+                y.append(0.5 * rem)
             return  y
         df = ['pv_estimate']
         if self.options.attr_brk_estimate10: df.append('pv_estimate10')
@@ -817,6 +817,37 @@ class SolcastApi:
     def get_remaining(self, site, _data_field, t):
         return self.fc_remaining['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
 
+    def get_forecast_pv_remaining(self, start_utc, end_utc=None, site=None, _use_data_field=None) -> float:
+        """Return Solcast pv_estimates remaining for period [start_utc, end_utc)"""
+        try:
+            _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
+            _data_field = self._use_data_field if _use_data_field is None else _use_data_field
+            res = 0
+            start_utc = start_utc.replace(minute = math.floor(start_utc.minute / 5) * 5)
+            st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc) # Get start and end indexes for the requested range
+            day_start = self.get_day_start_utc()
+            res = self.get_remaining(site, _data_field, (start_utc - day_start).total_seconds())
+            if end_utc is not None:
+                end_utc = end_utc.replace(minute = math.floor(end_utc.minute / 5) * 5)
+                if end_utc < day_start + timedelta(hours=24): # Spline data points are only calculated for today
+                    res -= self.get_remaining(site, _data_field, (end_utc - day_start).total_seconds())
+                else:
+                    st_i2, _ = self.get_forecast_list_slice(_data, day_start + timedelta(hours=24)) # Get next day onwards start index
+                    for d in _data[st_i2:end_i]:
+                        res += 0.5 * d[_data_field]
+            if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
+                "Get estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
+                currentFuncName(1), '' if site is None else ' '+site, _data_field,
+                start_utc.strftime('%Y-%m-%d %H:%M:%S'),
+                end_utc.strftime('%Y-%m-%d %H:%M:%S') if end_utc is not None else None,
+                st_i, end_i, round(res,4)
+            )
+            return res
+        except Exception as ex:
+            _LOGGER.error(f"Exception in get_forecast_pv_remaining(): {ex}")
+            _LOGGER.error(traceback.format_exc())
+            return 0
+
     def get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None) -> float:
         """Return Solcast pv_estimates total for period [start_utc, end_utc)"""
         try:
@@ -826,17 +857,8 @@ class SolcastApi:
             start_utc = start_utc.replace(minute = math.floor(start_utc.minute / 5) * 5)
             end_utc = end_utc.replace(minute = math.floor(end_utc.minute / 5) * 5)
             st_i, end_i = self.get_forecast_list_slice(_data, start_utc, end_utc) # Get start and end indexes for the requested range
-            day_start = self.get_day_start_utc()
             for d in _data[st_i:end_i]:
-                d1 = d['period_start']
-                d2 = d1 + timedelta(seconds=1800)
-                f = d[_data_field]
-                if start_utc > d1:
-                    f = self.get_remaining(site, _data_field, (start_utc - day_start).total_seconds())
-                if end_utc < d2:
-                    if end_utc < day_start + timedelta(hours=24): # Spline data points are only calculated for today
-                        f = self.get_remaining(site, _data_field, (end_utc - day_start).total_seconds())
-                res += f
+                res += d[_data_field]
             if _SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                 "Get estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
                 currentFuncName(1), '' if site is None else ' '+site, _data_field,
