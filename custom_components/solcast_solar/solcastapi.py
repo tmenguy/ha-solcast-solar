@@ -32,7 +32,7 @@ from isodate import parse_datetime
 # for name of caller of caller of current func, specify 2. etc.
 currentFuncName = lambda n=0: sys._getframe(n + 1).f_code.co_name
 
-_SENSOR_DEBUG_LOGGING = True
+_SENSOR_DEBUG_LOGGING = False
 
 _JSON_VERSION = 4
 _LOGGER = logging.getLogger(__name__)
