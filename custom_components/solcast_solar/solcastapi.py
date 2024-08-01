@@ -767,7 +767,7 @@ class SolcastApi:
             self.fc_moment['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
             for j in xx:
                 i = int(j/300)
-                if self.fc_moment['all'][_data_field][i] < 0: self.fc_moment['all'][_data_field][i] = 0 # Suppress negative values
+                if math.copysign(1.0, self.fc_moment['all'][_data_field][i]) < 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress negative values
         if self.options.attr_brk_site:
             for site in self._sites:
                 self.fc_moment[site['resource_id']] = {}
@@ -778,7 +778,7 @@ class SolcastApi:
                     self.fc_moment[site['resource_id']][_data_field] = cubic_interp(xx, self._spline_period, y)
                     for j in xx:
                         i = int(j/300)
-                        if self.fc_moment[site['resource_id']][_data_field][i] < 0: self.fc_moment[site['resource_id']][_data_field][i] = 0 # Suppress negative values
+                        if math.copysign(1.0, self.fc_moment[site['resource_id']][_data_field][i]) < 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
 
     def get_moment(self, site, _data_field, t):
         return self.fc_moment['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
@@ -805,7 +805,7 @@ class SolcastApi:
             for j in xx:
                 i = int(j/300)
                 k = int(math.floor(j/1800))
-                if self.fc_remaining['all'][_data_field][i] < 0: self.fc_remaining['all'][_data_field][i] = 0 # Suppress negative values
+                if math.copysign(1.0, self.fc_remaining['all'][_data_field][i]) < 0: self.fc_remaining['all'][_data_field][i] = 0.0 # Suppress negative values
                 if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining['all'][_data_field][i] > round(y[k],4): self.fc_remaining['all'][_data_field][i] = y[k] # Correct spline bounce
         if self.options.attr_brk_site:
             for site in self._sites:
@@ -818,7 +818,7 @@ class SolcastApi:
                     for j in xx:
                         i = int(j/300)
                         k = int(math.floor(j/1800))
-                        if self.fc_remaining[site['resource_id']][_data_field][i] < 0: self.fc_remaining[site['resource_id']][_data_field][i] = 0 # Suppress negative values
+                        if math.copysign(1.0, self.fc_remaining[site['resource_id']][_data_field][i]) < 0: self.fc_remaining[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
                         if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining[site['resource_id']][_data_field][i] > round(y[k],4): self.fc_remaining[site['resource_id']][_data_field][i] = y[k] # Correct spline bounce
 
     def get_remaining(self, site, _data_field, t):
