@@ -493,6 +493,14 @@ None
 
 ## Changes
 
+v4.0.41
+* Interpolated forecast 0/30/60 fix #101 by @autoSteve
+* Ensure config directory is always relative to install location #98 by @autoSteve
+* Add state_class to `power_now_30m` and `power_now_1hr` to match `power_now` by @autoSteve (will remove LTS, but LTS is not useful for these sensors)
+* Utilise daily splines of momentatry and reducing forecast values by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.40...v4.0.41
+
 v4.0.40
 * Interpolated forecast 0/30/60 power and energy X hours by @autoSteve
 * Ensure config directory is always relative to install location by @autoSteve
