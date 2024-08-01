@@ -27,9 +27,9 @@ from aiohttp import ClientConnectionError, ClientSession
 from aiohttp.client_reqrep import ClientResponse
 from isodate import parse_datetime
 
-# for current func name, specify 0 or no argument.
-# for name of caller of current func, specify 1.
-# for name of caller of caller of current func, specify 2. etc.
+# For current func name, specify 0 or no argument.
+# For name of caller of current func, specify 1.
+# For name of caller of caller of current func, specify 2. etc.
 currentFuncName = lambda n=0: sys._getframe(n + 1).f_code.co_name
 
 _SENSOR_DEBUG_LOGGING = False
@@ -123,7 +123,7 @@ class SolcastApi:
         self._detailedForecasts = []
         self._loaded_data = False
         self._serialize_lock = asyncio.Lock()
-        self._damp =options.dampening
+        self._damp = options.dampening
         self._customhoursensor = options.customhoursensor
         self._use_data_field = f"pv_{options.key_estimate}"
         self._hardlimit = options.hard_limit
@@ -185,7 +185,7 @@ class SolcastApi:
             )
 
     async def sites_data(self):
-        """Request data via the Solcast API."""
+        """Request sites detail via the Solcast API."""
 
         try:
             def redact(s):
@@ -307,7 +307,6 @@ class SolcastApi:
 
             for spl in sp:
                 sitekey = spl.strip()
-                #params = {"format": "json", "api_key": self.options.api_key}
                 params = {"api_key": sitekey}
                 _LOGGER.debug(f"Getting API limit and usage from solcast for {self.redact_api_key(sitekey)}")
                 async with async_timeout.timeout(60):
@@ -422,20 +421,20 @@ class SolcastApi:
                             self._data = jsonData
                             self._loaded_data = True
 
-                            #any new API keys so no sites data yet for those
+                            # Check for any new API keys so no sites data yet for those
                             ks = {}
                             for d in self._sites:
                                 if not any(s == d.get('resource_id', '') for s in jsonData['siteinfo']):
                                     ks[d.get('resource_id')] = d.get('apikey')
 
                             if len(ks.keys()) > 0:
-                                #some site data does not exist yet so go and get it
+                                # Some site data does not exist yet so get it
                                 _LOGGER.debug("Likely a new API key added, getting the data for it")
                                 for a in ks:
                                     await self.http_data_call(self.get_api_usage_cache_filename(ks[a]), r_id=a, api=ks[a], dopast=True)
                                 await self.serialize_data()
 
-                            #any site changes that need to be removed
+                            # Check for sites that need to be removed
                             l = []
                             for s in jsonData['siteinfo']:
                                 if not any(d.get('resource_id', '') == s for d in self._sites):
@@ -445,14 +444,14 @@ class SolcastApi:
                             for ll in l:
                                 del jsonData['siteinfo'][ll]
 
-                            #create an up to date forecast and make sure the TZ fits just in case its changed
+                            # Create an up to date forecast
                             await self.buildforecastdata()
                             _LOGGER.info(f"Loaded solcast.json forecast cache")
 
                 if not self._loaded_data:
-                    #no file to load
+                    # No file to load
                     _LOGGER.warning(f"There is no solcast.json to load, so fetching solar forecast, including past forecasts")
-                    #could be a brand new install of the integation so this is poll once now automatically
+                    # Could be a brand new install of the integation, or the file has been removed. Poll once now...
                     await self.http_data(dopast=True)
 
                 if self._loaded_data: return True
@@ -490,12 +489,10 @@ class SolcastApi:
                 round(time.time()-st_time,4), args[0], args[1], st_i, end_i, len(h)
             )
 
-            return tuple(
-                    {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h
-                )
+            return tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
 
         except Exception:
-            _LOGGER.error(f"Service event to get list of Solcast forecasts failed")
+            _LOGGER.error(f"Service event to get list of forecasts failed")
             return None
 
     def get_api_used_count(self):
@@ -577,16 +574,14 @@ class SolcastApi:
             st_i, end_i, len(h)
         )
 
-        tup = tuple(
-                {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h
-            )
+        tup = tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
 
         if len(tup) < 48:
             noDataError = False
 
         hourlyturp = []
         for index in range(0,len(tup),2):
-            if len(tup)>0:
+            if len(tup) > 0:
                 try:
                     x1 = round((tup[index]["pv_estimate"] + tup[index+1]["pv_estimate"]) /2, 4)
                     x2 = round((tup[index]["pv_estimate10"] + tup[index+1]["pv_estimate10"]) /2, 4)
@@ -983,9 +978,8 @@ class SolcastApi:
             _data = []
             _data2 = []
 
-            # This is run once, for a new install or if the solcast.json file is deleted
-            # This does use up an api call count too
             if dopast:
+                # Run once, for a new install or if the solcast.json file is deleted. This will use up api call quota.
                 ae = None
                 resp_dict = await self.fetch_data(usageCacheFileName, "estimated_actuals", 168, site=r_id, apikey=api, cachedname="actuals")
                 if not isinstance(resp_dict, dict):
@@ -1076,8 +1070,8 @@ class SolcastApi:
                                                             "pv_estimate10": x["pv_estimate10"],
                                                             "pv_estimate90": x["pv_estimate90"]}
 
-            #_fcasts_dict now contains all data for the site up to 730 days worth
-            #this deletes data that is older than 730 days (2 years)
+            # _fcasts_dict contains all data for the site up to 730 days worth
+            # Delete data that is older than two years
             pastdays = dt.now(timezone.utc).date() + timedelta(days=-730)
             _forecasts = list(filter(lambda x: x["period_start"].date() >= pastdays, _fcasts_dict.values()))
 
@@ -1085,7 +1079,7 @@ class SolcastApi:
 
             self._data['siteinfo'].update({r_id:{'forecasts': copy.deepcopy(_forecasts)}})
 
-            _LOGGER.debug(f"HTTP data call processing took {round(time.time()-st_time,4)}s")
+            _LOGGER.debug(f"HTTP data call processing took {round(time.time() - st_time, 4)}s")
             return True
         except Exception as ex:
             _LOGGER.error("Exception in http_data_call(): %s", ex)
@@ -1094,7 +1088,7 @@ class SolcastApi:
 
 
     async def fetch_data(self, usageCacheFileName, path="error", hours=168, site="", apikey="", cachedname="forcasts") -> dict[str, Any]:
-        """fetch data via the Solcast API."""
+        """Fetch data via the Solcast API."""
         try:
             params = {"format": "json", "api_key": apikey, "hours": hours}
             url=f"{self.options.host}/rooftop_sites/{site}/{path}"
@@ -1183,7 +1177,6 @@ class SolcastApi:
 
     def makeenergydict(self) -> dict:
         wh_hours = {}
-
         try:
             lastv = -1
             lastk = -1
@@ -1210,7 +1203,7 @@ class SolcastApi:
         return wh_hours
 
     async def buildforecastdata(self):
-        """build the data needed and convert where needed"""
+        """Build data structures needed, adjusting if dampening or setting a hard limit"""
         try:
             today = dt.now(self._tz).date()
             yesterday = dt.now(self._tz).date() + timedelta(days=-730)
@@ -1224,18 +1217,17 @@ class SolcastApi:
                 _site_fcasts_dict = {}
 
                 for x in siteinfo['forecasts']:
-                    #loop each site and its forecasts
                     z = x["period_start"]
                     zz = z.astimezone(self._tz) #- timedelta(minutes=30)
 
-                    #v4.0.8 added code to dampen the forecast data: (* self._damp[h])
+                    # v4.0.8 added code to dampen the forecast data: (* self._damp[h])
 
                     if yesterday < zz.date() < lastday:
                         h = f"{zz.hour}"
                         if zz.date() == today:
                             tally += min(x[self._use_data_field] * 0.5 * self._damp[h], self._hardlimit)
 
-                        # add the dampened forecast for this site to the total
+                        # Add the forecast for this site to the total
                         itm = _fcasts_dict.get(z)
                         if itm:
                             itm["pv_estimate"] = min(round(itm["pv_estimate"] + (x["pv_estimate"] * self._damp[h]),4), self._hardlimit)
@@ -1247,7 +1239,7 @@ class SolcastApi:
                                                 "pv_estimate10": min(round((x["pv_estimate10"]* self._damp[h]),4), self._hardlimit),
                                                 "pv_estimate90": min(round((x["pv_estimate90"]* self._damp[h]),4), self._hardlimit)}
 
-                        # record the individual site forecast
+                        # Record the individual site forecast
                         _site_fcasts_dict[z] = {"period_start": z,
                                             "pv_estimate": min(round((x["pv_estimate"]* self._damp[h]),4), self._hardlimit),
                                             "pv_estimate10": min(round((x["pv_estimate10"]* self._damp[h]),4), self._hardlimit),
@@ -1277,8 +1269,8 @@ class SolcastApi:
 
     def calcForecastStartIndex(self):
         midnight_utc = self.get_day_start_utc()
-        # search in reverse (less to iterate) and find the interval just before midnight
-        # we could stop at midnight but some sensors might need the previous interval
+        # Search in reverse (less to iterate) and find the interval just before midnight
+        # Not stop at midnight as some sensors might need the previous interval
         for idx in range(len(self._data_forecasts)-1, -1, -1):
             if self._data_forecasts[idx]["period_start"] < midnight_utc: break
         _LOGGER.debug("Calc forecast start index midnight utc: %s, idx %s, len %s", midnight_utc, idx, len(self._data_forecasts))
@@ -1286,7 +1278,7 @@ class SolcastApi:
 
 
     async def checkDataRecords(self):
-        for i in range(0,8):
+        for i in range(0, 8):
             start_utc = self.get_day_start_utc() + timedelta(days=i)
             end_utc = start_utc + timedelta(days=1)
             st_i, end_i = self.get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
