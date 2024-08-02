@@ -127,7 +127,7 @@ Many users will not use these attributes, so to cut the clutter (especially in t
 By default, all of them are enabled. (NB: Hourly and half-hourly detail is already excluded from being sent to LTS.)
 
 > [!NOTE]
-> If you want to implement the sample PV graph below then you'll need to keep half-hourly detail breakdown enabled.
+> If you want to implement the sample PV graph below then you'll need to keep half-hourly detail breakdown enabled, along with `estimate10`.
 
 ## Key Solcast concepts
 
