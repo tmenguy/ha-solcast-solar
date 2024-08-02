@@ -768,6 +768,8 @@ class SolcastApi:
             for j in xx:
                 i = int(j/300)
                 if math.copysign(1.0, self.fc_moment['all'][_data_field][i]) < 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress negative values
+                k = int(math.floor(j/1800))
+                if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress spline bounce
         if self.options.attr_brk_site:
             for site in self._sites:
                 self.fc_moment[site['resource_id']] = {}
@@ -779,6 +781,8 @@ class SolcastApi:
                     for j in xx:
                         i = int(j/300)
                         if math.copysign(1.0, self.fc_moment[site['resource_id']][_data_field][i]) < 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
+                        k = int(math.floor(j/1800))
+                        if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress spline bounce
 
     def get_moment(self, site, _data_field, t):
         return self.fc_moment['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
