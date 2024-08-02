@@ -201,9 +201,9 @@ mode: single
 ```
 
 > [!NOTE]  
-> If you have two arrays on your roof then 2 api calls will be made for each update, effectively reducing the number of updates to 5 per day. For this case, change to: `api_request_limit = 5`
+> If you have two arrays on your roof then two api calls will be made for each update, effectively reducing the number of updates to five per day. For this case, change to: `api_request_limit = 5`
 
-The next automation also includes a rendomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time, but it triggers every four hours between sunrise and sunset:
+The next automation also includes a randomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time, but it triggers every four hours between sunrise and sunset:
 
 ```yaml
 alias: Solcast_update
@@ -497,7 +497,7 @@ v4.0.41
 * Interpolated forecast 0/30/60 fix #101 by @autoSteve
 * Ensure config directory is always relative to install location #98 by @autoSteve
 * Add state_class to `power_now_30m` and `power_now_1hr` to match `power_now` by @autoSteve (will remove LTS, but LTS is not useful for these sensors)
-* Utilise daily splines of momentatry and reducing forecast values by @autoSteve
+* Utilise daily splines of momentary and reducing forecast values by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.40...v4.0.41
 
