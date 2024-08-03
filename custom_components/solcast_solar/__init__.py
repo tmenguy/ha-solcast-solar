@@ -77,25 +77,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     random.seed()
 
-    _VERSION = ""
-    try:
-        integration = await loader.async_get_integration(hass, DOMAIN)
-        _VERSION = str(integration.version)
-        _LOGGER.info(
-            f"\n{'-'*67}\n"
-            f"Solcast integration version: {_VERSION}\n\n"
-            f"This is a custom integration. When troubleshooting a problem, after\n"
-            f"reviewing open and closed issues, and the discussions, check the\n"
-            f"required automation is functioning correctly and try enabling debug\n"
-            f"logging to see more. Troubleshooting tips available at:\n"
-            f"https://github.com/BJReplay/ha-solcast-solar/discussions/38\n\n"
-            f"Beta versions may also have addressed some issues so look at those.\n\n"
-            f"If all else fails, then open an issue and our community will try to\n"
-            f"help: https://github.com/BJReplay/ha-solcast-solar/issues\n"
-            f"{'-'*67}")
-    except loader.IntegrationNotFound:
-        pass
-
     optdamp = {}
     try:
         #if something ever goes wrong with the damp factors just create a blank 1.0
@@ -141,17 +122,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         await solcast.sites_data()
-        await solcast.sites_usage()
+        if solcast._sites_loaded: await solcast.sites_usage()
     except Exception as ex:
         raise ConfigEntryNotReady(f"Getting sites data failed: {ex}") from ex
 
-    retry = 3
-    while retry >= 0:
-        if await solcast.load_saved_data(): break
-        retry -= 1
-        if retry >= 0:
-            _LOGGER.warning("Failed to load initial data from cache or Solcast, retrying after 10 seconds")
-            await asyncio.sleep(10)
+    if not solcast._sites_loaded:
+        raise ConfigEntryNotReady(f"Sites data could not be retrieved")
+
+    if not await solcast.load_saved_data():
+        raise ConfigEntryNotReady(f"Failed to load initial data from cache or the Solcast API")
+
+    _VERSION = ""
+    try:
+        integration = await loader.async_get_integration(hass, DOMAIN)
+        _VERSION = str(integration.version)
+        _LOGGER.info(
+            f"\n{'-'*67}\n"
+            f"Solcast integration version: {_VERSION}\n\n"
+            f"This is a custom integration. When troubleshooting a problem, after\n"
+            f"reviewing open and closed issues, and the discussions, check the\n"
+            f"required automation is functioning correctly and try enabling debug\n"
+            f"logging to see more. Troubleshooting tips available at:\n"
+            f"https://github.com/BJReplay/ha-solcast-solar/discussions/38\n\n"
+            f"Beta versions may also have addressed some issues so look at those.\n\n"
+            f"If all else fails, then open an issue and our community will try to\n"
+            f"help: https://github.com/BJReplay/ha-solcast-solar/issues\n"
+            f"{'-'*67}")
+    except loader.IntegrationNotFound:
+        pass
 
     coordinator = SolcastUpdateCoordinator(hass, solcast, _VERSION)
 

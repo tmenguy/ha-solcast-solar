@@ -107,6 +107,7 @@ class SolcastApi:
         self.aiohttp_session = aiohttp_session
         self.options = options
         self.apiCacheEnabled = apiCacheEnabled
+        self._sites_loaded = False
         self._sites = []
         self._data = {'siteinfo': {}, 'last_updated': dt.fromtimestamp(0, timezone.utc).isoformat()}
         self._tally = {}
@@ -258,6 +259,7 @@ class SolcastApi:
                         i.pop('longitude', None)
                         i.pop('latitude', None)
                     self._sites = self._sites + d['sites']
+                    self._sites_loaded = True
                 else:
                     _LOGGER.error(f"{self.options.host} HTTP status error {translate(status)} in sites_data() while gathering sites")
                     _LOGGER.error(f"Solcast integration did not start correctly, as site(s) are needed. Suggestion: Restart the integration")
@@ -285,6 +287,7 @@ class SolcastApi:
                                 i.pop('longitude', None)
                                 i.pop('latitude', None)
                             self._sites = self._sites + d['sites']
+                            self._sites_loaded = True
                             _LOGGER.info(f"Loaded sites cache for {self.redact_api_key(spl)}")
                     else:
                         error = True
