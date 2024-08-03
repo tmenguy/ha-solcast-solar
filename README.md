@@ -116,6 +116,11 @@ Here you can change the dampening factor value for any hour. Values from 0.0 - 1
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png)
 
+> [!TIP]
+> Most users of dampening configuration do not enter values in the configuration settings directly. Rather, they build automations to set values that are appropriate for their location at different days or seasons, and these call the `solcast_solar_set_dampening` service.
+>
+> Factors causing dampening to be appropriate might be when different degrees of shading occur at the start or end of a day in Winter only, where the sun is closer to the horizon and might cause nearby buildings or trees to cast a longer shadow than in other seasons.
+
 ## Sensor Attributes Configuration
 
 New in v4.0.39 is the option to turn off many sensor attributes.
