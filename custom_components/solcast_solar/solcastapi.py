@@ -107,6 +107,7 @@ class SolcastApi:
         self.aiohttp_session = aiohttp_session
         self.options = options
         self.apiCacheEnabled = apiCacheEnabled
+        self._sites_loaded = False
         self._sites = []
         self._data = {'siteinfo': {}, 'last_updated': dt.fromtimestamp(0, timezone.utc).isoformat()}
         self._tally = {}
@@ -258,9 +259,9 @@ class SolcastApi:
                         i.pop('longitude', None)
                         i.pop('latitude', None)
                     self._sites = self._sites + d['sites']
+                    self._sites_loaded = True
                 else:
                     _LOGGER.error(f"{self.options.host} HTTP status error {translate(status)} in sites_data() while gathering sites")
-                    _LOGGER.error(f"Solcast integration did not start correctly, as site(s) are needed. Suggestion: Restart the integration")
                     raise Exception(f"HTTP sites_data error: Solcast Error gathering sites")
         except ConnectionRefusedError as err:
             _LOGGER.error("Connection refused in sites_data(): %s", err)
@@ -285,14 +286,15 @@ class SolcastApi:
                                 i.pop('longitude', None)
                                 i.pop('latitude', None)
                             self._sites = self._sites + d['sites']
+                            self._sites_loaded = True
                             _LOGGER.info(f"Loaded sites cache for {self.redact_api_key(spl)}")
                     else:
                         error = True
                         _LOGGER.error(f"Cached sites are not yet available for {self.redact_api_key(spl)} to cope with Solcast API call failure")
-                        _LOGGER.error(f"At least one successful API 'get sites' call is needed, so the integration cannot function")
+                        _LOGGER.error(f"At least one successful API 'get sites' call is needed, so the integration cannot function yet")
                 if error:
                     _LOGGER.error("Timed out getting Solcast sites, and one or more site caches failed to load")
-                    _LOGGER.error("This is critical, and the integration cannot function reliably")
+                    _LOGGER.error("This is critical, and the integration cannot function reliably yet")
                     _LOGGER.error("Suggestion: Double check your overall HA configuration, specifically networking related")
             except Exception as e:
                 pass
