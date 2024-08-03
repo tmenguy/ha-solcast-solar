@@ -499,6 +499,14 @@ None
 
 ## Changes
 
+v4.0.42
+* Initial sites load fail reporting and HA auto-retries by @autoSteve
+* Suppress spline bounce in moment splines by @autoSteve
+* Recalculate splines at midnight before sensors update by @autoSteve
+* Readme updates
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.41...v4.0.42
+
 v4.0.41
 * Interpolated forecast 0/30/60 fix #101 by @autoSteve
 * Ensure config directory is always relative to install location #98 by @autoSteve
