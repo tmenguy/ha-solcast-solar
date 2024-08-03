@@ -100,9 +100,9 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 > [!IMPORTANT]
 > After the integration is started, review the Home Assistant log.
 > 
-> Should an error that gathering rooftop sites data has failed occur then this is not an integration issue, rather a Solcast API issue. The best course of action is to restart the integration, or Home Assistant entirely, and monitor until the sites data can be acquired. Until rooftop sites data is acquired the integration cannot function.
+> Should an error that gathering rooftop sites data has failed occur then this is almost certainly not an integration issue, rather a Solcast API issue. The integration will repeatedly restart in this situation until the sites data can be loaded, as until configured sites data is acquired the integration cannot function.
 >
-> The integration does attempt retries when the Solcast API is busy, but sometimes even this does not help.
+> Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
 
 ## Dampening Configuration
 
@@ -258,7 +258,9 @@ mode: single
 >
 > Log capture instructions are in the Bug Issue Template - you will see them if you start creating a new issue - make sure you include these logs if you want the assistance of the repository constributors.
 >
-> An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should five consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` service call, or wait for your next scheduled automation run. A reload of the integration might also be needed in some cases, should the load of sites data on integration startup be the call that has failed with 429/Too busy.
+> An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should five consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` service call, or wait for your next scheduled automation run.
+>
+> Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration cannot start correctly, and it will retry continuously.
 
 ```
 INFO (MainThread) [custom_components.solcast_solar.solcastapi] Getting forecast update for Solcast site 1234-5678-9012-3456
