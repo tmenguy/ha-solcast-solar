@@ -250,26 +250,27 @@ mode: single
 ```
 
 > [!TIP]
-> The Solcast Servers seem to occasionally be under some strain, and the servers return 429 return codes when they are busy.
-> The Solcast integration will automatically pause, then retry the connection several times, but occasionally even this strategy can fail to download Solcast data.
-> Changing your API Key is not a solution, nor is uninstalling and re-installing the Solcast PV Solar Integration.
-> These "tricks" might appear to work, but all that has actually happened is that you have tried again later, and the integration has worked as the Solcast servers are less busy.
+> The Solcast Servers seem to occasionally be under some strain, and the servers return 429/Too busy return codes at these times. The integration will automatically pause, then retry the connection several times, but occasionally even this strategy can fail to download forecast data.
+>
+> Changing your API Key is not a solution, nor is uninstalling and re-installing the integration. These "tricks" might appear to work, but all that has actually happened is that you have tried again later, and the integration has worked as the Solcast servers are less busy.
 > 
-> If you think that have problems in the integration, make sure that you have logging turned on, and capture logs to find out if you are getting messages indicating that the Solcast API is busy - these indicate that the Solcast API is under stress.
-> Log capture instructions are in the Bug Issue Template - you will see them if you start creating a new issue - make sure you include logs if you want the assistance of the repository constributors.
-> An example of busy messages and a retry are shown below.
+> To find out whether this is your issue look at the Home Assistant logs. To get detailed information (which is required when raising an issue) make sure that you have debug logging turned on.
+>
+> Log capture instructions are in the Bug Issue Template - you will see them if you start creating a new issue - make sure you include these logs if you want the assistance of the repository constributors.
+>
+> An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should five consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` service call, or wait for your next scheduled automation run. A reload of the integration might also be needed in some cases, should the load of sites data on integration startup be the call that has failed with 429/Too busy.
 
 ```
-homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - API polling for rooftop 1234-5678-9012-3456
-homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Polling API for rooftop_id 1234-5678-9012-3456
-homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - fetch_data code url - https://api.solcast.com.au/rooftop_sites/1234-5678-9012-3456/forecasts
-homeassistant  | 2024-06-17 09:34:22.403 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Fetching forecast
-homeassistant  | 2024-06-17 09:34:22.549 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Solcast API is busy, pausing 55 seconds before retry
-homeassistant  | 2024-06-17 09:35:17.552 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - Fetching forecast
-homeassistant  | 2024-06-17 09:35:18.065 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - API returned data. API Counter incremented from 35 to 36
-homeassistant  | 2024-06-17 09:35:18.065 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - writing usage cache
-homeassistant  | 2024-06-17 09:35:18.089 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - fetch_data code http_session returned data type is <class 'dict'>
-homeassistant  | 2024-06-17 09:35:18.090 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] SOLCAST - fetch_data code http_session status is 200
+INFO (MainThread) [custom_components.solcast_solar.solcastapi] Getting forecast update for Solcast site 1234-5678-9012-3456
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Polling API for rooftop_id 1234-5678-9012-3456
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Fetch data url - https://api.solcast.com.au/rooftop_sites/1234-5678-9012-3456/forecasts
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Fetching forecast
+WARNING (MainThread) [custom_components.solcast_solar.solcastapi] Solcast API is busy, pausing 55 seconds before retry
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Fetching forecast
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] API returned data. API Counter incremented from 35 to 36
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Writing usage cache
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] HTTP ssession returned data type in fetch_data() is <class 'dict'>
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] HTTP session status in fetch_data() is 200/Success
 ```
 
 <summary><h3>Set up HA Energy Dashboard settings</summary></h3>
