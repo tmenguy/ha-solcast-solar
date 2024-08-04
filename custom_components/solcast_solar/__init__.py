@@ -2,7 +2,6 @@
 
 import logging
 import random
-import asyncio
 import os
 
 from homeassistant import loader
