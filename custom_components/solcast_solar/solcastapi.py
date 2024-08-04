@@ -459,7 +459,6 @@ class SolcastApi:
                 if self._loaded_data: return True
             else:
                 _LOGGER.error(f"Solcast site count is zero in load_saved_data(); the get sites must have failed, and there is no sites cache")
-                return True # Not really successful, but don't want the retry in __init__
         except json.decoder.JSONDecodeError:
             _LOGGER.error("The cached data in solcast.json is corrupt in load_saved_data()")
         except Exception as e:
@@ -500,14 +499,14 @@ class SolcastApi:
     def get_api_used_count(self):
         """Return API polling count for this UTC 24hr period"""
         used = 0
-        for k, v in self._api_used.items(): used += v
+        for _, v in self._api_used.items(): used += v
         return used
 
     def get_api_limit(self):
         """Return API polling limit for this account"""
         try:
             limit = 0
-            for k, v in self._api_limit.items(): limit += v
+            for _, v in self._api_limit.items(): limit += v
             return limit
         except Exception:
             return None
@@ -581,19 +580,19 @@ class SolcastApi:
         if len(tup) < 48:
             noDataError = False
 
-        hourlyturp = []
+        hourlytup = []
         for index in range(0,len(tup),2):
             if len(tup) > 0:
                 try:
                     x1 = round((tup[index]["pv_estimate"] + tup[index+1]["pv_estimate"]) /2, 4)
                     x2 = round((tup[index]["pv_estimate10"] + tup[index+1]["pv_estimate10"]) /2, 4)
                     x3 = round((tup[index]["pv_estimate90"] + tup[index+1]["pv_estimate90"]) /2, 4)
-                    hourlyturp.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
+                    hourlytup.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
                 except IndexError:
                     x1 = round((tup[index]["pv_estimate"]), 4)
                     x2 = round((tup[index]["pv_estimate10"]), 4)
                     x3 = round((tup[index]["pv_estimate90"]), 4)
-                    hourlyturp.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
+                    hourlytup.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
                 except Exception as ex:
                     _LOGGER.error("Exception in get_forecast_day(): %s", ex)
                     _LOGGER.error(traceback.format_exc())
@@ -603,7 +602,7 @@ class SolcastApi:
             "dataCorrect": noDataError,
         }
         if self.options.attr_brk_halfhourly: res["detailedForecast"] = tup
-        if self.options.attr_brk_hourly: res["detailedHourly"] = hourlyturp
+        if self.options.attr_brk_hourly: res["detailedHourly"] = hourlytup
         return res
 
     def get_forecast_n_hour(self, n_hour, site=None, _use_data_field=None) -> int:
