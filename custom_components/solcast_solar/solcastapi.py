@@ -516,16 +516,16 @@ class SolcastApi:
     #     return self._weather
 
     def get_last_updated_datetime(self) -> dt:
-        """Return date time with the data was last updated"""
+        """Return when the data was last updated"""
         return dt.fromisoformat(self._data["last_updated"])
 
     def get_rooftop_site_total_today(self, site) -> float:
-        """Return a site total kW for today"""
+        """Return total kW for today for a site"""
         if self._tally.get(site) == None: _LOGGER.warning(f"Site total kW forecast today is currently unavailable for {site}")
         return self._tally.get(site)
 
     def get_rooftop_site_extra_data(self, site = ""):
-        """Return a site information"""
+        """Return information about a site"""
         g = tuple(d for d in self._sites if d["resource_id"] == site)
         if len(g) != 1:
             raise ValueError(f"Unable to find site {site}")
