@@ -27,9 +27,9 @@ from aiohttp import ClientConnectionError, ClientSession
 from aiohttp.client_reqrep import ClientResponse
 from isodate import parse_datetime
 
-# For current func name, specify 0 or no argument.
-# For name of caller of current func, specify 1.
-# For name of caller of caller of current func, specify 2. etc.
+# For current func name, specify 0 or no argument
+# For name of caller of current func, specify 1
+# For name of caller of caller of current func, specify 2, etc.
 currentFuncName = lambda n=0: sys._getframe(n + 1).f_code.co_name
 
 _SENSOR_DEBUG_LOGGING = False
@@ -103,7 +103,7 @@ class SolcastApi:
         options: ConnectionOptions,
         apiCacheEnabled: bool = False
     ):
-        """Device init."""
+        """Device init"""
         self.aiohttp_session = aiohttp_session
         self.options = options
         self.apiCacheEnabled = apiCacheEnabled
@@ -135,13 +135,13 @@ class SolcastApi:
         #self._weather = ""
 
     async def serialize_data(self):
-        """Serialize data to file."""
+        """Serialize data to file"""
         try:
             if not self._loaded_data:
                 _LOGGER.debug("Not saving forecast cache in serialize_data() as no data has been loaded yet")
                 return
-            # If the _loaded_data flag is True, yet last_updated is 1/1/1970 then data has not been loaded
-            # properly for some reason, or no forecast has been received since start.
+            # If the _loaded_data flag is True, yet last_updated is 1/1/1970 then data has not been
+            # loaded properly for some reason, or no forecast has been received since startup.
             # Abort the save.
             if self._data['last_updated'] == dt.fromtimestamp(0, timezone.utc).isoformat():
                 _LOGGER.error("Internal error: Solcast forecast cache date has not been set, not saving data")
@@ -732,7 +732,7 @@ class SolcastApi:
         return res
 
     def get_forecast_list_slice(self, _data, start_utc, end_utc=None, search_past=False):
-        """Return pv_estimates list slice [st_i, end_i) for interval [start_utc, end_utc)"""
+        """Return pv_estimates list slice (st_i, end_i) for interval"""
         if end_utc is None: end_utc = start_utc + timedelta(seconds=1800)
         crt_i = -1
         st_i = -1

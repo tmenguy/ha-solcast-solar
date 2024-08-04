@@ -1,4 +1,4 @@
-"""The Solcast Solar integration."""
+"""The Solcast Solar coordinator"""
 from __future__ import annotations
 from datetime import datetime as dt
 
@@ -17,7 +17,7 @@ from .solcastapi import SolcastApi
 _LOGGER = logging.getLogger(__name__)
 
 class SolcastUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from Solcast Solar API."""
+    """Class to manage fetching data"""
 
     def __init__(self, hass: HomeAssistant, solcast: SolcastApi, version: str) -> None:
         """Initialize."""
@@ -37,7 +37,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
 
     async def _async_update_data(self):
-        """Update data via library."""
+        """Update data via library"""
         return self.solcast._data
 
     async def setup(self):
