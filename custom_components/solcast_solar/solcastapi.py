@@ -431,7 +431,7 @@ class SolcastApi:
 
                             if len(ks.keys()) > 0:
                                 # Some site data does not exist yet so get it
-                                _LOGGER.debug("Likely a new API key added, getting the data for it")
+                                _LOGGER.info("New site(s) have been added, so getting forecast data for just those site(s)")
                                 for a in ks:
                                     await self.http_data_call(self.get_api_usage_cache_filename(ks[a]), r_id=a, api=ks[a], dopast=True)
                                 await self.serialize_data()
@@ -440,7 +440,7 @@ class SolcastApi:
                             l = []
                             for s in jsonData['siteinfo']:
                                 if not any(d.get('resource_id', '') == s for d in self._sites):
-                                    _LOGGER.info(f"Solcast site resource id {s} no longer part of your system, removing saved data from cached file")
+                                    _LOGGER.info(f"Solcast site resource id {s} is no longer configured, removing saved data from cached file")
                                     l.append(s)
 
                             for ll in l:
