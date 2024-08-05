@@ -1240,15 +1240,13 @@ class SolcastApi:
                             itm["pv_estimate90"] = min(round(itm["pv_estimate90"] + (x["pv_estimate90"] * self._damp[h]),4), self._hardlimit)
                         else:
                             _fcasts_dict[z] = {"period_start": z,
-                                                "pv_estimate": min(round((x["pv_estimate"]* self._damp[h]),4), self._hardlimit),
-                                                "pv_estimate10": min(round((x["pv_estimate10"]* self._damp[h]),4), self._hardlimit),
-                                                "pv_estimate90": min(round((x["pv_estimate90"]* self._damp[h]),4), self._hardlimit)}
+                                                "pv_estimate": min(round((x["pv_estimate"] * self._damp[h]),4), self._hardlimit),
+                                                "pv_estimate10": min(round((x["pv_estimate10"] * self._damp[h]),4), self._hardlimit),
+                                                "pv_estimate90": min(round((x["pv_estimate90"] * self._damp[h]),4), self._hardlimit)}
 
                         # Record the individual site forecast
-                        _site_fcasts_dict[z] = {"period_start": z,
-                                            "pv_estimate": min(round((x["pv_estimate"]* self._damp[h]),4), self._hardlimit),
-                                            "pv_estimate10": min(round((x["pv_estimate10"]* self._damp[h]),4), self._hardlimit),
-                                            "pv_estimate90": min(round((x["pv_estimate90"]* self._damp[h]),4), self._hardlimit)}
+                        _site_fcasts_dict[z] = {"period_start": z, "pv_estimate": round((x["pv_estimate"]),4), "pv_estimate10": round((x["pv_estimate10"]),4), "pv_estimate90": round((x["pv_estimate90"]),4)}
+
                 self._site_data_forecasts[site] = sorted(_site_fcasts_dict.values(), key=itemgetter("period_start"))
 
                 siteinfo['tally'] = round(tally, 4)

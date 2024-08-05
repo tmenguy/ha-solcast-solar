@@ -507,7 +507,7 @@ Modified from the great works of
 
 ## Known issues
 
-If a "hard limit" is set then the individual sites breakdown attributes will be limited to the overall sum-of-sites hard limit. This is not going to be a correct limit. Further data about the real-world application of a hard limit will be required to solve for this. (Thankfully this appears to be very much a corner case, with a hard limit set by very few users. Just one?)
+If a hard limit or dampening factors are set then the individual sites breakdown attributes will not be limited by these factors. The only way to implement this would be to have separate hard limits and dampening factors for each site, and this would become overly complex.
 
 ## Changes
 
