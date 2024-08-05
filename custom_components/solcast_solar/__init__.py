@@ -3,6 +3,7 @@
 import logging
 import random
 import os
+#from datetime import timedelta
 
 from homeassistant import loader
 from homeassistant.config_entries import ConfigEntry
@@ -169,6 +170,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Solcast inverter hard limit value has been set. If the forecasts and graphs are not as you expect, try running the service 'solcast_solar.remove_hard_limit' to remove this setting. "
             f"This setting is really only for advanced quirky solar setups."
         )
+
+    # Re. #110 @gcoan suggestion, to be tested...
+    # If the integration has failed for some time and then is restarted retrieve forecasts
+    #if solcast._api_used == 0 and solcast._data['last_updated'] < solcast.get_day_start_utc() - timedelta(days=1):
+    #    _LOGGER.info('Integration has been failed for some time, or your update automation has not been running (see readme). Retrieving forecasts...')
+    #    await solcast.http_data()
 
     async def handle_service_update_forecast(call: ServiceCall):
         """Handle service call"""

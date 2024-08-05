@@ -516,6 +516,7 @@ v4.0.42
 * Suppress spline bounce in moment splines by @autoSteve
 * Recalculate splines at midnight before sensors update by @autoSteve
 * Readme updates by @autoSteve
+* Dampening and hard limit removed from per-site forecast breakdowns (too hard, too misleading) by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.41...v4.0.42
 
