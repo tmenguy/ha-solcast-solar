@@ -134,6 +134,16 @@ By default, all of them are enabled. (NB: Hourly and half-hourly detail is alrea
 > [!NOTE]
 > If you want to implement the sample PV graph below then you'll need to keep half-hourly detail breakdown enabled, along with `estimate10`.
 
+## Hard Limit Configuration (hidden away)
+
+Introduced in v4.0.22 is an option to set a "hard limit" for projected inverter output, and this limit will 'clip' the Solcast forecasts to a maximum value.
+
+The scenario requiring use of this limit is straightforward, but note that hardly any PV installations will need to do so. (And if you have micro-inverters, or one inverter per string then definitely not.)
+
+Consider a scenario where you have a single 6kW string inverter, and attached are two strings each of 5.5kW potential generation pointing in separate directions. This is considered "over-sized" from an inverter point of view. It is not possible to set an AC generation limit for Solcast that suits this scenario when configured as two sites, as in the mid-morning or afternoon in Summer a string may in fact be generating 5.5kW DC, with 5kW AC resulting, and the other string will probably be generating as well. So setting an AC limit in Solcast for each string to 3kW (half the inverter) does not make sense. Setting it to 6kW for each string also does not make sense, as Solcast will almost certainly over-state potential generation.
+
+There is currently not a simple configuration option to set this hard limit, and it must be set via a service call in `Developer Tools`. If you think this really should be changed, then start a discussion as a poll to gauge interest.
+
 ## Key Solcast concepts
 
 Solcast will produce a forecast of your solar PV generation for today, tomorrow, the day after (day 3), ... up to day 7.
