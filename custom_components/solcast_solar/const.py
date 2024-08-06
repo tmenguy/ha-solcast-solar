@@ -7,6 +7,7 @@ from typing import Final
 from homeassistant.helpers import selector
 
 DOMAIN = "solcast_solar"
+TITLE = "Solcast Solar"
 SOLCAST_URL = "https://api.solcast.com.au"
 
 

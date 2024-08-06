@@ -100,9 +100,9 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 > [!IMPORTANT]
 > After the integration is started, review the Home Assistant log.
 > 
-> Should an error that gathering rooftop sites data has failed occur then this is not an integration issue, rather a Solcast API issue. The best course of action is to restart the integration, or Home Assistant entirely, and monitor until the sites data can be acquired. Until rooftop sites data is acquired the integration cannot function.
+> Should an error that gathering rooftop sites data has failed occur then this is almost certainly not an integration issue, rather a Solcast API issue. The integration will repeatedly restart in this situation until the sites data can be loaded, as until configured sites data is acquired the integration cannot function.
 >
-> The integration does attempt retries when the Solcast API is busy, but sometimes even this does not help.
+> Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
 
 ## Dampening Configuration
 
@@ -133,6 +133,16 @@ By default, all of them are enabled. (NB: Hourly and half-hourly detail is alrea
 
 > [!NOTE]
 > If you want to implement the sample PV graph below then you'll need to keep half-hourly detail breakdown enabled, along with `estimate10`.
+
+## Hard Limit Configuration (hidden away)
+
+Introduced in v4.0.22 is an option to set a "hard limit" for projected inverter output, and this limit will 'clip' the Solcast forecasts to a maximum value.
+
+The scenario requiring use of this limit is straightforward, but note that hardly any PV installations will need to do so. (And if you have micro-inverters, or one inverter per string then definitely not.)
+
+Consider a scenario where you have a single 6kW string inverter, and attached are two strings each of 5.5kW potential generation pointing in separate directions. This is considered "over-sized" from an inverter point of view. It is not possible to set an AC generation limit for Solcast that suits this scenario when configured as two sites, as in the mid-morning or afternoon in Summer a string may in fact be generating 5.5kW DC, with 5kW AC resulting, and the other string will probably be generating as well. So setting an AC limit in Solcast for each string to 3kW (half the inverter) does not make sense. Setting it to 6kW for each string also does not make sense, as Solcast will almost certainly over-state potential generation.
+
+There is currently not a simple configuration option to set this hard limit, and it must be set via a service call in `Developer Tools`. If you think this really should be changed, then start a discussion as a poll to gauge interest.
 
 ## Key Solcast concepts
 
@@ -258,7 +268,9 @@ mode: single
 >
 > Log capture instructions are in the Bug Issue Template - you will see them if you start creating a new issue - make sure you include these logs if you want the assistance of the repository constributors.
 >
-> An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should five consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` service call, or wait for your next scheduled automation run. A reload of the integration might also be needed in some cases, should the load of sites data on integration startup be the call that has failed with 429/Too busy.
+> An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should five consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` service call, or wait for your next scheduled automation run.
+>
+> Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration cannot start correctly, and it will retry continuously.
 
 ```
 INFO (MainThread) [custom_components.solcast_solar.solcastapi] Getting forecast update for Solcast site 1234-5678-9012-3456
@@ -495,9 +507,18 @@ Modified from the great works of
 
 ## Known issues
 
-None
+If a hard limit or dampening factors are set then the individual sites breakdown attributes will not be limited by these factors. The only way to implement this would be to have separate hard limits and dampening factors for each site, and this would become overly complex.
 
 ## Changes
+
+v4.0.42
+* Initial sites load fail reporting and HA auto-retries by @autoSteve
+* Suppress spline bounce in moment splines by @autoSteve
+* Recalculate splines at midnight before sensors update by @autoSteve
+* Readme updates by @autoSteve
+* Dampening and hard limit removed from per-site forecast breakdowns (too hard, too misleading) by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.41...v4.0.42
 
 v4.0.41
 * Interpolated forecast 0/30/60 fix #101 by @autoSteve

@@ -1,4 +1,4 @@
-"""The Solcast Solar integration."""
+"""The Solcast Solar coordinator"""
 from __future__ import annotations
 from datetime import datetime as dt
 
@@ -17,7 +17,7 @@ from .solcastapi import SolcastApi
 _LOGGER = logging.getLogger(__name__)
 
 class SolcastUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from Solcast Solar API."""
+    """Class to manage fetching data"""
 
     def __init__(self, hass: HomeAssistant, solcast: SolcastApi, version: str) -> None:
         """Initialize."""
@@ -37,7 +37,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
 
     async def _async_update_data(self):
-        """Update data via library."""
+        """Update data via library"""
         return self.solcast._data
 
     async def setup(self):
@@ -45,8 +45,6 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._previousenergy = d
         self._lastDay = dt.now(self.solcast._tz).day
         try:
-            #4.0.41 - recalculate splines at midnight local
-            async_track_time_change(self._hass, self.update_midnight_spline_recalc, hour=0,minute=0,second=0)
             #4.0.18 - added reset usage call to reset usage sensors at UTC midnight
             async_track_utc_time_change(self._hass, self.update_utcmidnight_usage_sensor_data, hour=0,minute=0,second=0)
             async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
@@ -60,6 +58,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self._dateChanged = (crtDay != self._lastDay)
             if self._dateChanged:
                 self._lastDay = crtDay
+                #4.0.41 - recalculate splines at midnight local
+                await self.update_midnight_spline_recalc()
 
             self.async_update_listeners()
         except Exception:
@@ -81,7 +81,6 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except Exception:
             _LOGGER.error("Exception in update_midnight_spline_recalc(): %s", traceback.format_exc())
             pass
-
 
     async def service_event_update(self, *args):
         try:
