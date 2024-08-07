@@ -764,26 +764,32 @@ class SolcastApi:
         st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
         self.fc_moment['all'] = {}
         for _data_field in df:
-            y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
-            self.fc_moment['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
-            for j in xx:
-                i = int(j/300)
-                if math.copysign(1.0, self.fc_moment['all'][_data_field][i]) < 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress negative values
-                k = int(math.floor(j/1800))
-                if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress spline bounce
+            if st > 0:
+                y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
+                self.fc_moment['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
+                for j in xx:
+                    i = int(j/300)
+                    if math.copysign(1.0, self.fc_moment['all'][_data_field][i]) < 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress negative values
+                    k = int(math.floor(j/1800))
+                    if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress spline bounce
+            else: # The list slice was not found, so zero the moments
+                self.fc_moment['all'][_data_field] = [0] * (len(self._spline_period) * 6)
         if self.options.attr_brk_site:
             for site in self._sites:
                 self.fc_moment[site['resource_id']] = {}
                 _data = self._site_data_forecasts[site['resource_id']]
                 st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
                 for _data_field in df:
-                    y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
-                    self.fc_moment[site['resource_id']][_data_field] = cubic_interp(xx, self._spline_period, y)
-                    for j in xx:
-                        i = int(j/300)
-                        if math.copysign(1.0, self.fc_moment[site['resource_id']][_data_field][i]) < 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
-                        k = int(math.floor(j/1800))
-                        if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress spline bounce
+                    if st > 0:
+                        y = [_data[st+i][_data_field] for i in range(0, len(self._spline_period))]
+                        self.fc_moment[site['resource_id']][_data_field] = cubic_interp(xx, self._spline_period, y)
+                        for j in xx:
+                            i = int(j/300)
+                            if math.copysign(1.0, self.fc_moment[site['resource_id']][_data_field][i]) < 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
+                            k = int(math.floor(j/1800))
+                            if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress spline bounce
+                    else: # The list slice was not found, so zero the moments
+                        self.fc_moment[site['resource_id']][_data_field] = [0] * (len(self._spline_period) * 6)
 
     def get_moment(self, site, _data_field, t):
         return self.fc_moment['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
@@ -805,26 +811,32 @@ class SolcastApi:
         st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
         self.fc_remaining['all'] = {}
         for _data_field in df:
-            y = buildY(_data, _data_field, st)
-            self.fc_remaining['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
-            for j in xx:
-                i = int(j/300)
-                k = int(math.floor(j/1800))
-                if math.copysign(1.0, self.fc_remaining['all'][_data_field][i]) < 0: self.fc_remaining['all'][_data_field][i] = 0.0 # Suppress negative values
-                if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining['all'][_data_field][i] > round(y[k],4): self.fc_remaining['all'][_data_field][i] = y[k] # Suppress spline bounce
+            if st > 0:
+                y = buildY(_data, _data_field, st)
+                self.fc_remaining['all'][_data_field] = cubic_interp(xx, self._spline_period, y)
+                for j in xx:
+                    i = int(j/300)
+                    k = int(math.floor(j/1800))
+                    if math.copysign(1.0, self.fc_remaining['all'][_data_field][i]) < 0: self.fc_remaining['all'][_data_field][i] = 0.0 # Suppress negative values
+                    if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining['all'][_data_field][i] > round(y[k],4): self.fc_remaining['all'][_data_field][i] = y[k] # Suppress spline bounce
+            else: # The list slice was not found, so zero the remainings
+                self.fc_remaining['all'][_data_field] = [0] * (len(self._spline_period) * 6)
         if self.options.attr_brk_site:
             for site in self._sites:
                 self.fc_remaining[site['resource_id']] = {}
                 _data = self._site_data_forecasts[site['resource_id']]
                 st, _ = self.get_forecast_list_slice(_data, self.get_day_start_utc()) # Get start of day index
                 for _data_field in df:
-                    y = buildY(_data, _data_field, st)
-                    self.fc_remaining[site['resource_id']][_data_field] = cubic_interp(xx, self._spline_period, y)
-                    for j in xx:
-                        i = int(j/300)
-                        k = int(math.floor(j/1800))
-                        if math.copysign(1.0, self.fc_remaining[site['resource_id']][_data_field][i]) < 0: self.fc_remaining[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
-                        if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining[site['resource_id']][_data_field][i] > round(y[k],4): self.fc_remaining[site['resource_id']][_data_field][i] = y[k] # Suppress spline bounce
+                    if st > 0:
+                        y = buildY(_data, _data_field, st)
+                        self.fc_remaining[site['resource_id']][_data_field] = cubic_interp(xx, self._spline_period, y)
+                        for j in xx:
+                            i = int(j/300)
+                            k = int(math.floor(j/1800))
+                            if math.copysign(1.0, self.fc_remaining[site['resource_id']][_data_field][i]) < 0: self.fc_remaining[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
+                            if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining[site['resource_id']][_data_field][i] > round(y[k],4): self.fc_remaining[site['resource_id']][_data_field][i] = y[k] # Suppress spline bounce
+                    else: # The list slice was not found, so zero the remainings
+                        self.fc_remaining[site['resource_id']][_data_field] = [0] * (len(self._spline_period) * 6)
 
     def get_remaining(self, site, _data_field, t):
         return self.fc_remaining['all' if site is None else site][self._data_field if _data_field is None else _data_field][int(t / 300)]
