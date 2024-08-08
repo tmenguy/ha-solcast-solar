@@ -1165,7 +1165,7 @@ class SolcastApi:
                         _LOGGER.warning(f"API limit exceeded, not getting forecast")
                         return None
 
-                _LOGGER.debug(f"HTTP ssession returned data type in fetch_data() is {type(resp_json)}")
+                _LOGGER.debug(f"HTTP session returned data type in fetch_data() is {type(resp_json)}")
                 _LOGGER.debug(f"HTTP session status in fetch_data() is {translate(status)}")
 
             if status == 429:

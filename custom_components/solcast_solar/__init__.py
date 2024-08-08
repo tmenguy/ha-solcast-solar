@@ -3,7 +3,7 @@
 import logging
 import random
 import os
-#from datetime import timedelta
+from datetime import timedelta
 
 from homeassistant import loader
 from homeassistant.config_entries import ConfigEntry
@@ -171,11 +171,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"This setting is really only for advanced quirky solar setups."
         )
 
-    # Re. #110 @gcoan suggestion, to be tested...
     # If the integration has failed for some time and then is restarted retrieve forecasts
-    #if solcast._api_used == 0 and solcast._data['last_updated'] < solcast.get_day_start_utc() - timedelta(days=1):
-    #    _LOGGER.info('Integration has been failed for some time, or your update automation has not been running (see readme). Retrieving forecasts...')
-    #    await solcast.http_data()
+    if solcast.get_api_used_count() == 0 and solcast.get_last_updated_datetime() < solcast.get_day_start_utc() - timedelta(days=1):
+        try:
+            _LOGGER.info('Integration has been failed for some time, or your update automation has not been running (see readme). Retrieving forecasts.')
+            #await solcast.solcast.sites_weather()
+            await solcast.http_data(dopast=False)
+            coordinator._dataUpdated = True
+            await coordinator.update_integration_listeners()
+            coordinator._dataUpdated = False
+        except Exception as ex:
+            _LOGGER.error("Exception force fetching data on stale start: %s", traceback.format_exc())
 
     async def handle_service_update_forecast(call: ServiceCall):
         """Handle service call"""
