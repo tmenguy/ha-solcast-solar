@@ -511,6 +511,11 @@ If a hard limit or dampening factors are set then the individual sites breakdown
 
 ## Changes
 
+v4.0.43
+* Auto-fetch on startup when stale forecast data is detected by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.42...v4.0.43
+
 v4.0.42
 * Initial sites load fail reporting and HA auto-retries by @autoSteve
 * Suppress spline bounce in moment splines by @autoSteve
