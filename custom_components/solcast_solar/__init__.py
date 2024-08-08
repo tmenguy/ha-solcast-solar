@@ -175,7 +175,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if solcast.get_api_used_count() == 0 and solcast.get_last_updated_datetime() < solcast.get_day_start_utc() - timedelta(days=1):
         try:
             _LOGGER.info('Integration has been failed for some time, or your update automation has not been running (see readme). Retrieving forecasts.')
-            #await solcast.solcast.sites_weather()
+            #await solcast.sites_weather()
             await solcast.http_data(dopast=False)
             coordinator._dataUpdated = True
             await coordinator.update_integration_listeners()
