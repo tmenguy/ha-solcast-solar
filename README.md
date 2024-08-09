@@ -105,7 +105,7 @@ More info [here](https://hacs.xyz/docs/faq/custom_repositories/)
 
 If previously using Oziee's ha-solcast-solar then all history and config should remain.
 
-<summary><h3>Installing Manually (not using HACS)</summary></h3>
+#### Installing Manually (not using HACS)
 
 You probably **do not** want to do this! Use the HACS method above unless you know what you are doing and have a good reason as to why you are installing manually.
 
@@ -122,9 +122,10 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 1. [Click Here](https://my.home-assistant.io/redirect/config_flow_start/?domain=solcast_solar) to directly add a `Solcast Solar` integration **or**<br/>
  a. In Home Assistant, go to Settings -> [Integrations](https://my.home-assistant.io/redirect/integrations/)<br/>
  b. Click `+ Add Integrations`
+
 ![Screenshot 2024-08-08 131049](https://github.com/user-attachments/assets/7e27b769-ba5b-4fd2-a0d9-0b54574dd366)
 
- and select `Solcast PV Forecast`<br/>
+ and start typing `Solcast PV Forecast` to bring up the Solcast PV Forecast integration, and select it.<br/>
  
  ![Screenshot 2024-08-08 131125](https://github.com/user-attachments/assets/6cea242c-fb8a-464d-876e-96de85654456)
 
