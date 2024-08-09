@@ -7,18 +7,21 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/y/BJReplay/ha-solcast-solar?style=for-the-badge)
 ![Maintenance](https://img.shields.io/maintenance/yes/2024?style=for-the-badge)
 
+## Installation
+
+### Custom Repository in HACS
+
+See [detailed](#hacs-recommended) instructions below.  Until HACS 2.0 is released, it is unlikely that this repository will be included as a default repository in HACS.  That means that the quickest and easist way to install is a Custom Repository via HACS.  This is a straightforward process, and detailed instructions are shown below.  Clicking on the button below will open this page in your Home Assistant HACS page (assuming you already have Home Assistant set up and HACS set up), and you can follow the [detailed](#hacs-recommended) instructions from there.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=BJReplay&repository=ha-solcast-solar&category=integration)
+
 > [!WARNING]  
-> This repository is **not** currently in HACS, so cannot yet be searched for there.  While [this PR](https://github.com/hacs/default/pull/2535) remains open, you must install manually using the [Manually in HACS](#manually-in-hacs) instructions below: 
+> This repository is **not** currently in HACS, so cannot yet be searched for there.
+>
+> Until HACS 2.0 is released, it is unlikely that this repository will be included as a default repository in HACS.  While [this PR](https://github.com/hacs/default/pull/2535) remains open, you should install using the [HACS *(recommended)*](#hacs-recommended) instructions below: 
 
 > [!NOTE]
 > The use of beta versions can be a simple way to fix issues. Check the releases at https://github.com/BJReplay/ha-solcast-solar/releases to see if an issue has already been resolved. If so, turn ```Show beta versions``` on when re-downloading from HACS. Your feedback from testing betas will be most welcome in the repository discussions. https://github.com/BJReplay/ha-solcast-solar/discussions.
-
-> [!IMPORTANT]  
-> This repository may only be sporadically maintained.  Breaking API changes from Solcast will be maintained on a best efforts basis.
->
-> Collaborators are welcome, as are PRs for enhancements.
->
-> Bug reports unrelated to API changes may not get the attention you want, as the repository owner is largely retired for medical reasons, but knows the Solcast API as a former user in this and other projects.
 
 > [!NOTE]
 > This integration can be used as a replacement for the oziee/ha-solcast-solar integration, which has been removed from GitHub and HACS.  
