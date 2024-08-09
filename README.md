@@ -556,6 +556,15 @@ If a hard limit or dampening factors are set then the individual sites breakdown
 
 ## Changes
 
+v4.1
+* First major release since v4.0.31 that wasn't tagged as a pre-release
+* Those other releases have mostly been pretty stable, but we're confident that this release is ready for everyone to upgrade to.
+* See https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.31...v4.1 for all changes since v4.0.31
+* @autoSteve is welcomed as a CodeOwner
+* It is now apparent that it is unlikely that this repo will be added as a default repo in HACS until HACS 2.0 is out, so the installation instructions make it clear that adding via the Manual Repository flow is the preferred approach, and new instructions have been added to show how to do this.
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.43...v4.1
+
 v4.0.43
 * Auto-fetch on startup when stale forecast data is detected by @autoSteve
 
