@@ -544,7 +544,7 @@ If a hard limit or dampening factors are set then the individual sites breakdown
 v4.1
 * First major release since v4.0.31 that wasn't tagged as a pre-release
 * Those other releases have mostly been pretty stable, but we're confident that this release is ready for everyone
-* Changes since v4.9.31:
+* Changes since v4.0.31:
   * Greatly improved stability for all, and initial start-up experience for new users
   * Additional sensor attributes
   * New configuration options to suppress sensor attributes
