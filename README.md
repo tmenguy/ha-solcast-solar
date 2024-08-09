@@ -27,6 +27,9 @@ See [detailed](#hacs-recommended) instructions below.  Until HACS 2.0 is release
 > This integration can be used as a replacement for the oziee/ha-solcast-solar integration, which has been removed from GitHub and HACS.  
 >
 > Uninstalling the Oziee version then installing this one will preserve the history and configuration from that prior integration.
+>
+> If you Uninstalled the Oziee version, and installed this version, the only thing you may need to do, is to re-select to use Solcast Solar as the source of Forecast Production for your Energy Dashboard
+
 
 Version Change Notes: See [below](#changes).
 
@@ -55,11 +58,43 @@ Copy the API Key for use with this integration (See [Configuration](#Configurati
 
 ### HACS *(recommended)*
 
-Using HACS. More info [here](https://hacs.xyz/)  
+As a Custom Repository using HACS. More info about HACS can be found [here](https://hacs.xyz/).  If you haven't installed HACS yet, go do it first!
+
+The easiest way is to click the button below (and put in your home assistant URL if you've never used this type of button before) to open this page in your Home Assistant HACS page.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=BJReplay&repository=ha-solcast-solar&category=integration)
 
-#### Manually in HACS  
+You'll be prompted to confirm you want to open the repository inside HACS inside your home assistant:
+
+![Screenshot 2024-08-08 125312](https://github.com/user-attachments/assets/89247761-c81d-48b4-ad8a-870ffefbae67)
+
+You'll see this page, with a `↓ Download` button near the bottom right - click on it:
+
+![Screenshot 2024-08-08 125411](https://github.com/user-attachments/assets/2279acab-f8af-4019-9c5a-8590b2531aab)
+
+You'll be prompted to download the Solcast PV Solar component - click on `Download`:
+
+![Screenshot 2024-08-08 125508](https://github.com/user-attachments/assets/935e1958-b2a1-45d7-8740-5502c455373b)
+
+Once it is installed, you'll probably notice a notification pop up on `Settings`:
+
+![Screenshot 2024-08-08 125808](https://github.com/user-attachments/assets/6167f36c-3cf1-4ea8-894b-82ff7bd11b56)
+
+In any case, click on settings, and you should see a Repair notification for `Restart required`:
+
+![Screenshot 2024-08-08 125612](https://github.com/user-attachments/assets/66753a36-1bc7-4b92-bfe0-fe4228fbb10f)
+
+![Screenshot 2024-08-08 125917](https://github.com/user-attachments/assets/e890b1a7-f923-4da1-92c5-fedd125bb4a6)
+
+![Screenshot 2024-08-08 125940](https://github.com/user-attachments/assets/222dbd05-b456-491b-b696-893209127815)
+
+If you don't see this (you might be running an older version of Home Assistant), navigate to System, Settings, click on the Power Icon, and Restart Home Assistant.  You need to restart Home Assistant before you can then install the custom component that you've just downloaded.
+
+Once you've restarted, follow along at [Configuration](#configuration) to continue setting up the Solcast PV Forecast integration component.
+
+
+
+#### Installing Manually in HACS  
 
 More info [here](https://hacs.xyz/docs/faq/custom_repositories/)
 
@@ -70,7 +105,7 @@ More info [here](https://hacs.xyz/docs/faq/custom_repositories/)
 
 If previously using Oziee's ha-solcast-solar then all history and config should remain.
 
-<summary><h3>Manually</summary></h3>
+<summary><h3>Installing Manually (not using HACS)</summary></h3>
 
 You probably **do not** want to do this! Use the HACS method above unless you know what you are doing and have a good reason as to why you are installing manually.
 
@@ -86,7 +121,13 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 
 1. [Click Here](https://my.home-assistant.io/redirect/config_flow_start/?domain=solcast_solar) to directly add a `Solcast Solar` integration **or**<br/>
  a. In Home Assistant, go to Settings -> [Integrations](https://my.home-assistant.io/redirect/integrations/)<br/>
- b. Click `+ Add Integrations` and select `Solcast PV Forecast`<br/>
+ b. Click `+ Add Integrations`
+![Screenshot 2024-08-08 131049](https://github.com/user-attachments/assets/7e27b769-ba5b-4fd2-a0d9-0b54574dd366)
+
+ and select `Solcast PV Forecast`<br/>
+ 
+ ![Screenshot 2024-08-08 131125](https://github.com/user-attachments/assets/6cea242c-fb8a-464d-876e-96de85654456)
+
 1. Enter your `Solcast API Key`
 1. Click `Submit`
 
