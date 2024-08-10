@@ -134,7 +134,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 
 Make sure you use your `API Key` and not your rooftop id created in Solcast. You can find your API key here [api key](https://toolkit.solcast.com.au/account).
 
-[<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/install.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/install.png)
+[<img src=".github/SCREENSHOTS/install.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/install.png)
 
 > [!IMPORTANT]
 > After the integration is started, review the Home Assistant log.
@@ -280,13 +280,13 @@ Click the Forecast option button and select the Solcast Solar option. Click SAVE
 
 New in v4.0.8 is the option to configure hourly dampening values.
 
-[<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/reconfig.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/reconfig.png)
+[<img src=".github/SCREENSHOTS/reconfig.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/reconfig.png)
 
-[<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/damp.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/damp.png)
+[<img src=".github/SCREENSHOTS/damp.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/damp.png)
 
 Here you can change the dampening factor value for any hour. Values from 0.0 - 1.0 are valid. Setting 0.95 will dampen each Solcast forecast data value by 5%. This is reflected in the sensor values and attributes and also in the Home Assistant Energy dashboard.
 
-[<img src="https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/dampopt.png)
+[<img src=".github/SCREENSHOTS/dampopt.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/dampopt.png)
 
 > [!TIP]
 > Most users of dampening configuration do not enter values in the configuration settings directly. Rather, they build automations to set values that are appropriate for their location at different days or seasons, and these call the `solcast_solar.set_dampening` service.
@@ -413,7 +413,7 @@ These are the services for this integration: ([Configuration](#configuration))
 
 The following YAML produces a graph of today's PV generation, PV forecast and PV10 forecast. Requires [Apex Charts](https://github.com/RomRider/apexcharts-card) to be installed.
 
-[<img src=".github/SCREENSHOTS/forecast_today.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/v3/.github/SCREENSHOTS/forecast_today.png)
+[<img src=".github/SCREENSHOTS/forecast_today.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/forecast_today.png)
 
 Customise with appropriate Home Assistant sensors for today's total solar generation and solar panel PV power output.
 
