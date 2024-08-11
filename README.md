@@ -474,6 +474,7 @@ series:
     opacity: 0.3
     stroke_width: 0
     type: area
+    time_delta: +15min
     extend_to: false
     yaxis_id: kWh
     show:
@@ -489,6 +490,7 @@ series:
     opacity: 0.3
     stroke_width: 0
     type: area
+    time_delta: +15min
     extend_to: false
     yaxis_id: kWh
     show:
