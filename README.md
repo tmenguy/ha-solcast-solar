@@ -37,7 +37,7 @@ Home Assistant (https://www.home-assistant.io) Integration Component.
 
 This custom component integrates the Solcast Hobby PV Forecast API into Home Assistant.
 
-[<img src="https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png" width="300">](https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png)
+[<img src=".github/SCREENSHOTS/solar_production.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png)
 
 > [!NOTE]  
 > Solcast have altered their API limits for new account creators
@@ -66,27 +66,27 @@ The easiest way to install the integration is to click the button below (you wil
 
 You'll be prompted to confirm you want to open the repository inside HACS inside your home assistant:
 
-![Screenshot 2024-08-08 125312](https://github.com/user-attachments/assets/89247761-c81d-48b4-ad8a-870ffefbae67)
+[<img src=".github/SCREENSHOTS/OpenPageinyourHomeAssistant.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/OpenPageinyourHomeAssistant.png)
 
 You'll see this page, with a `↓ Download` button near the bottom right - click on it:
 
-![Screenshot 2024-08-08 125411](https://github.com/user-attachments/assets/2279acab-f8af-4019-9c5a-8590b2531aab)
+[<img src=".github/SCREENSHOTS/Download.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Download.png)
 
 You'll be prompted to download the Solcast PV Solar component - click on `Download`:
 
-![Screenshot 2024-08-08 125508](https://github.com/user-attachments/assets/935e1958-b2a1-45d7-8740-5502c455373b)
+[<img src=".github/SCREENSHOTS/SolcastPVSolar.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolcastPVSolar.png)
 
 Once it is installed, you'll probably notice a notification pop up on `Settings`:
 
-![Screenshot 2024-08-08 125808](https://github.com/user-attachments/assets/6167f36c-3cf1-4ea8-894b-82ff7bd11b56)
+[<img src=".github/SCREENSHOTS/SettingsNotification.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SettingsNotification.png)
 
 Click on settings, and you should see a Repair notification for `Restart required`:
 
-![Screenshot 2024-08-08 125612](https://github.com/user-attachments/assets/66753a36-1bc7-4b92-bfe0-fe4228fbb10f)
+[<img src=".github/SCREENSHOTS/RestartRequired.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/RestartRequired.png)
 
-![Screenshot 2024-08-08 125917](https://github.com/user-attachments/assets/e890b1a7-f923-4da1-92c5-fedd125bb4a6)
+[<img src=".github/SCREENSHOTS/RestartSubmit.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/RestartSubmit.png)
 
-![Screenshot 2024-08-08 125940](https://github.com/user-attachments/assets/222dbd05-b456-491b-b696-893209127815)
+[<img src=".github/SCREENSHOTS/SuccessIssueRepaired.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SuccessIssueRepaired.png)
 
 If you don't see this (you might be running an older version of Home Assistant), navigate to System, Settings, click on the Power Icon, and Restart Home Assistant.  You need to restart Home Assistant before you can then install the custom component that you've just downloaded.
 
@@ -121,11 +121,11 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
  a. In Home Assistant, go to Settings -> [Integrations](https://my.home-assistant.io/redirect/integrations/)<br/>
  b. Click `+ Add Integrations`
 
-![Screenshot 2024-08-08 131049](https://github.com/user-attachments/assets/7e27b769-ba5b-4fd2-a0d9-0b54574dd366)
+[<img src=".github/SCREENSHOTS/AddIntegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/AddIntegration.png)
 
  and start typing `Solcast PV Forecast` to bring up the Solcast PV Forecast integration, and select it.<br/>
  
- ![Screenshot 2024-08-08 131125](https://github.com/user-attachments/assets/6cea242c-fb8a-464d-876e-96de85654456)
+ [<img src=".github/SCREENSHOTS/Setupanewintegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png)
 
 1. Enter your `Solcast API Key`, and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_NB: this goes against Solcast T&C's by having more than one account_).
 1. Create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast within Home Assistant.
@@ -134,7 +134,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 
 Make sure you use your `API Key` and not your rooftop id created in Solcast. You can find your API key here [api key](https://toolkit.solcast.com.au/account).
 
-[<img src=".github/SCREENSHOTS/install.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/install.png)
+[<img src=".github/SCREENSHOTS/install.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/install.png)
 
 > [!IMPORTANT]
 > After the integration is started, review the Home Assistant log.
@@ -266,27 +266,27 @@ Click the 'edit the Solar Production' item you have previously created in the En
 > [!IMPORTANT]  
 > If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor setup.
 
-[<img src="https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png" width="200">](https://user-images.githubusercontent.com/1471841/149643349-d776f1ad-530c-46aa-91dc-8b9e7c7f3123.png)
+[<img src=".github/SCREENSHOTS/SolarPanels.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolarPanels.png)
 
 Click the Forecast option button and select the Solcast Solar option. Click SAVE. HA will do all the rest for you.
 
-[<img src="https://user-images.githubusercontent.com/1471841/174471543-0833b141-0c97-4b90-a058-cf986e89bbce.png" width="200">](https://user-images.githubusercontent.com/1471841/174471543-0833b141-0c97-4b90-a058-cf986e89bbce.png)
+[<img src=".github/SCREENSHOTS/SolcastSolar.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolcastSolar.png)
 
 ### HA Energy Tab
 
-[<img src="https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png" width="200">](https://user-images.githubusercontent.com/1471841/135556872-ff5b51ac-699e-4ea5-869c-f9b0d0c5b815.png)
+[<img src=".github/SCREENSHOTS/solar_production.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png)
 
 ### Dampening Configuration
 
 New in v4.0.8 is the option to configure hourly dampening values.
 
-[<img src=".github/SCREENSHOTS/reconfig.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/reconfig.png)
+[<img src=".github/SCREENSHOTS/reconfig.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/reconfig.png)
 
-[<img src=".github/SCREENSHOTS/damp.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/damp.png)
+[<img src=".github/SCREENSHOTS/damp.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/damp.png)
 
 Here you can change the dampening factor value for any hour. Values from 0.0 - 1.0 are valid. Setting 0.95 will dampen each Solcast forecast data value by 5%. This is reflected in the sensor values and attributes and also in the Home Assistant Energy dashboard.
 
-[<img src=".github/SCREENSHOTS/dampopt.png" width="200">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/dampopt.png)
+[<img src=".github/SCREENSHOTS/dampopt.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/dampopt.png)
 
 > [!TIP]
 > Most users of dampening configuration do not enter values in the configuration settings directly. Rather, they build automations to set values that are appropriate for their location at different days or seasons, and these call the `solcast_solar.set_dampening` service.
@@ -413,7 +413,7 @@ These are the services for this integration: ([Configuration](#configuration))
 
 The following YAML produces a graph of today's PV generation, PV forecast and PV10 forecast. Requires [Apex Charts](https://github.com/RomRider/apexcharts-card) to be installed.
 
-[<img src=".github/SCREENSHOTS/forecast_today.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/forecast_today.png)
+[<img src=".github/SCREENSHOTS/forecast_today.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/forecast_today.png)
 
 Customise with appropriate Home Assistant sensors for today's total solar generation and solar panel PV power output.
 
@@ -1027,7 +1027,7 @@ Integration contains
   - Peak Time Today         (date/time)
   - Peak Time Tomorrow      (date/time)
 
-![demo](https://user-images.githubusercontent.com/1471841/172541966-cb3f84a9-66bd-4f0f-99de-6d3e52cfd2ba.png)
+[<img src=".github/SCREENSHOTS/SolcastService.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolcastService.png)
 
 ## Credits
 
