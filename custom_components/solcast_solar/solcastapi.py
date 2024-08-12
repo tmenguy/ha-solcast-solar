@@ -822,7 +822,6 @@ class SolcastApi:
                     if math.copysign(1.0, self.fc_remaining['all'][_data_field][i]) < 0: self.fc_remaining['all'][_data_field][i] = 0.0 # Suppress negative values
                     if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining['all'][_data_field][i] > round(y[k],4): self.fc_remaining['all'][_data_field][i] = y[k] # Suppress spline bounce
                 self.fc_remaining['all'][_data_field] = ([self.fc_remaining['all'][_data_field][0]]*3) + self.fc_remaining['all'][_data_field] # Shift right by fifteen minutes because 30-minute averages, padding
-                _LOGGER.debug(self.fc_remaining['all'][_data_field])
             else: # The list slice was not found, so zero the remainings
                 self.fc_remaining['all'][_data_field] = [0] * (len(self._spline_period) * 6)
         if self.options.attr_brk_site:
