@@ -128,7 +128,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
  [<img src=".github/SCREENSHOTS/Setupanewintegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png)
 
 1. Enter your `Solcast API Key`, and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_NB: this goes against Solcast T&C's by having more than one account_).
-1. Create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast within Home Assistant.
+1. Create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
 1. Set up HA Energy Dashboard settings.
 1. To change other configuration options after installation, select the integration in `Devices & services` then `CONFIGURE`.
 
@@ -144,8 +144,7 @@ Make sure you use your `API Key` and not your rooftop id created in Solcast. You
 > Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
 
 ### HA Automation to poll for data
-Create a new automation and setup your prefered trigger times to poll for new Solcast forecast data. 
-These are examples, so alter these or create your own to fit your own needs.
+Create a new automation and setup your prefered trigger times to poll for new Solcast forecast data. These are examples, so alter these or create your own to fit your needs.
 
 **Recommended**
 
@@ -542,6 +541,13 @@ series:
 If a hard limit or dampening factors are set then the individual sites breakdown attributes will not be limited by these factors. The only way to implement this would be to have separate hard limits and dampening factors for each site, and this would become overly complex.
 
 ## Changes
+
+v4.1.1
+* Fifteen minute shift, because 30-minute averages by @autoSteve
+* Increase forecast fetch attempts to ten by @autoSteve
+* Move images to screenshots by @BJReplay
+
+**Full Changelog**: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.0...v4.1.1
 
 v4.1
 * First major release since v4.0.31 that wasn't tagged as a pre-release
