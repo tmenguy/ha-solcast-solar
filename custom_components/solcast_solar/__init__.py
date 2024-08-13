@@ -163,7 +163,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
-    _LOGGER.info(f"Solcast API data UTC times are converted to {hass.config.time_zone}")
+    _LOGGER.debug(f"UTC times are converted to {hass.config.time_zone}")
 
     if options.hard_limit < 100:
         _LOGGER.info(

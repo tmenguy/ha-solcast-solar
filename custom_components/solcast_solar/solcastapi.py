@@ -772,6 +772,7 @@ class SolcastApi:
                     if math.copysign(1.0, self.fc_moment['all'][_data_field][i]) < 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress negative values
                     k = int(math.floor(j/1800))
                     if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment['all'][_data_field][i] = 0.0 # Suppress spline bounce
+                self.fc_moment['all'][_data_field] = ([0]*3) + self.fc_moment['all'][_data_field] # Shift right by fifteen minutes because 30-minute averages, padding
             else: # The list slice was not found, so zero the moments
                 self.fc_moment['all'][_data_field] = [0] * (len(self._spline_period) * 6)
         if self.options.attr_brk_site:
@@ -788,6 +789,7 @@ class SolcastApi:
                             if math.copysign(1.0, self.fc_moment[site['resource_id']][_data_field][i]) < 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
                             k = int(math.floor(j/1800))
                             if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0: self.fc_moment[site['resource_id']][_data_field][i] = 0.0 # Suppress spline bounce
+                        self.fc_moment[site['resource_id']][_data_field] = ([0]*3) + self.fc_moment[site['resource_id']][_data_field] # Shift right by fifteen minutes because 30-minute averages, padding
                     else: # The list slice was not found, so zero the moments
                         self.fc_moment[site['resource_id']][_data_field] = [0] * (len(self._spline_period) * 6)
 
@@ -819,6 +821,7 @@ class SolcastApi:
                     k = int(math.floor(j/1800))
                     if math.copysign(1.0, self.fc_remaining['all'][_data_field][i]) < 0: self.fc_remaining['all'][_data_field][i] = 0.0 # Suppress negative values
                     if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining['all'][_data_field][i] > round(y[k],4): self.fc_remaining['all'][_data_field][i] = y[k] # Suppress spline bounce
+                self.fc_remaining['all'][_data_field] = ([self.fc_remaining['all'][_data_field][0]]*3) + self.fc_remaining['all'][_data_field] # Shift right by fifteen minutes because 30-minute averages, padding
             else: # The list slice was not found, so zero the remainings
                 self.fc_remaining['all'][_data_field] = [0] * (len(self._spline_period) * 6)
         if self.options.attr_brk_site:
@@ -835,6 +838,7 @@ class SolcastApi:
                             k = int(math.floor(j/1800))
                             if math.copysign(1.0, self.fc_remaining[site['resource_id']][_data_field][i]) < 0: self.fc_remaining[site['resource_id']][_data_field][i] = 0.0 # Suppress negative values
                             if k+1 <= len(y)-1 and y[k] == y[k+1] and self.fc_remaining[site['resource_id']][_data_field][i] > round(y[k],4): self.fc_remaining[site['resource_id']][_data_field][i] = y[k] # Suppress spline bounce
+                        self.fc_remaining[site['resource_id']][_data_field] = ([self.fc_remaining[site['resource_id']][_data_field][0]]*3) + self.fc_remaining[site['resource_id']][_data_field] # Shift right by fifteen minutes because 30-minute averages, padding
                     else: # The list slice was not found, so zero the remainings
                         self.fc_remaining[site['resource_id']][_data_field] = [0] * (len(self._spline_period) * 6)
 
@@ -1285,10 +1289,10 @@ class SolcastApi:
     def calcForecastStartIndex(self):
         midnight_utc = self.get_day_start_utc()
         # Search in reverse (less to iterate) and find the interval just before midnight
-        # Not stop at midnight as some sensors might need the previous interval
+        # (Doesn't stop at midnight because some sensors may need the previous interval)
         for idx in range(len(self._data_forecasts)-1, -1, -1):
             if self._data_forecasts[idx]["period_start"] < midnight_utc: break
-        _LOGGER.debug("Calc forecast start index midnight utc: %s, idx %s, len %s", midnight_utc, idx, len(self._data_forecasts))
+        _LOGGER.debug("Calc forecast start index midnight: %s UTC, idx %s, len %s", midnight_utc.strftime('%Y-%m-%d %H:%M:%S'), idx, len(self._data_forecasts))
         return idx
 
 
