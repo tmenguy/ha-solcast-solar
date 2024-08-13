@@ -970,6 +970,11 @@ class SolcastApi:
                 result = await self.http_data_call(self.get_api_usage_cache_filename(site['apikey']), site['resource_id'], site['apikey'], dopast)
                 if not result:
                     failure = True
+                    if len(self.sites) > sitesAttempted:
+                        _LOGGER.warning('Forecast update for site %s failed, so not getting remaining sites', site['resource_id'])
+                    else:
+                        _LOGGER.warning('Forecast update for the last site queued failed (%s), so not getting remaining sites - API use count will look odd', site['resource_id'])
+                    break
 
             if sitesAttempted > 0 and not failure:
                 self._data["last_updated"] = dt.now(timezone.utc).isoformat()
@@ -1115,7 +1120,7 @@ class SolcastApi:
             url=f"{self.options.host}/rooftop_sites/{site}/{path}"
             _LOGGER.debug(f"Fetch data url: {url}")
 
-            async with async_timeout.timeout(600):
+            async with async_timeout.timeout(1800):
                 apiCacheFileName = self.configDir + '/' + cachedname + "_" + site + ".json"
                 if self.apiCacheEnabled and file_exists(apiCacheFileName):
                     status = 404
@@ -1125,7 +1130,7 @@ class SolcastApi:
                         _LOGGER.debug(f"Got cached file data for site {site}")
                 else:
                     if self._api_used[apikey] < self._api_limit[apikey]:
-                        tries = 5
+                        tries = 10
                         counter = 0
                         backoff = 30 # On every retry the back-off increases by (at least) thirty seconds more than the previous back-off
                         while True:
@@ -1190,7 +1195,7 @@ class SolcastApi:
         except ClientConnectionError as e:
             _LOGGER.error("Connection error in fetch_data(): %s", str(e))
         except asyncio.TimeoutError:
-            _LOGGER.error("Connection error in fetch_data(): Timed out connectng to Solcast API server")
+            _LOGGER.error("Connection error in fetch_data(): Timed out connecting to Solcast API server")
         except Exception as e:
             _LOGGER.error("Exception in fetch_data(): %s", traceback.format_exc())
 
