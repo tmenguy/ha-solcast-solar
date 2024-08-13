@@ -542,12 +542,15 @@ If a hard limit or dampening factors are set then the individual sites breakdown
 
 ## Changes
 
-v4.1.1
+v4.1.2
 * Fifteen minute shift, because 30-minute averages by @autoSteve
 * Increase forecast fetch attempts to ten by @autoSteve
 * Move images to screenshots by @BJReplay
+* Fix readme images not displaying in HACS frontend
 
-Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.0...v4.1.1
+Replaces v4.1.1
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.0...v4.1.2
 
 v4.1
 * First major release since v4.0.31 that wasn't tagged as a pre-release
