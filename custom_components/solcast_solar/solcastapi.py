@@ -970,7 +970,7 @@ class SolcastApi:
                 result = await self.http_data_call(self.get_api_usage_cache_filename(site['apikey']), site['resource_id'], site['apikey'], dopast)
                 if not result:
                     failure = True
-                    if len(self.sites) > sitesAttempted:
+                    if len(self._sites) > sitesAttempted:
                         _LOGGER.warning('Forecast update for site %s failed, so not getting remaining sites', site['resource_id'])
                     else:
                         _LOGGER.warning('Forecast update for the last site queued failed (%s), so not getting remaining sites - API use count will look odd', site['resource_id'])
@@ -1140,8 +1140,9 @@ class SolcastApi:
                                 url=url, params=params, ssl=False
                             )
                             status = resp.status
-                            if status == 200: break
-                            if status == 429:
+                            if status == 200:
+                                break
+                            elif status == 429:
                                 if counter >= tries:
                                     status = 999 # All retries have been exhausted
                                     break
@@ -1149,6 +1150,8 @@ class SolcastApi:
                                 delay = (counter * backoff) + random.randrange(0,30)
                                 _LOGGER.warning(f"The Solcast API is busy, pausing {delay} seconds before retry")
                                 await asyncio.sleep(delay)
+                            else:
+                                break
 
                         if status == 200:
                             _LOGGER.debug(f"Fetch successful")
