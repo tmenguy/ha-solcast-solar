@@ -111,6 +111,7 @@ class ConnectionOptions:
     attr_brk_site: bool
     attr_brk_halfhourly: bool
     attr_brk_hourly: bool
+    attr_brk_site_detailed: bool
 
 
 class SolcastApi:
@@ -816,10 +817,34 @@ class SolcastApi:
         """Return forecast data for the Nth day ahead."""
         no_data_error = True
 
+        def build_hourly(t):
+            ht = []
+            for index in range(0,len(tup),2):
+                if len(tup) > 0:
+                    try:
+                        x1 = round((t[index]["pv_estimate"] + t[index+1]["pv_estimate"]) / 2, 4)
+                        x2 = round((t[index]["pv_estimate10"] + t[index+1]["pv_estimate10"]) / 2, 4)
+                        x3 = round((t[index]["pv_estimate90"] + t[index+1]["pv_estimate90"]) / 2, 4)
+                        ht.append({"period_start":t[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
+                    except IndexError:
+                        x1 = round((t[index]["pv_estimate"]), 4)
+                        x2 = round((t[index]["pv_estimate10"]), 4)
+                        x3 = round((t[index]["pv_estimate90"]), 4)
+                        ht.append({"period_start":t[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
+                    except Exception as e:
+                        _LOGGER.error("Exception in get_forecast_day(): %s", e)
+                        _LOGGER.error(traceback.format_exc())
+            return ht
+
         start_utc = self.get_day_start_utc() + timedelta(days=futureday)
         end_utc = start_utc + timedelta(days=1)
         st_i, end_i = self.get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
-        h = self._data_forecasts[st_i:end_i]
+        if self.options.attr_brk_halfhourly:
+            h = self._data_forecasts[st_i:end_i]
+            if self.options.attr_brk_site_detailed:
+                hs = {}
+                for site in self.sites:
+                    hs[site['resource_id']] = self._site_data_forecasts[site['resource_id']][st_i:end_i]
 
         if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
             "Get forecast day: %d st %s end %s st_i %d end_i %d h.len %d",
@@ -828,27 +853,22 @@ class SolcastApi:
             st_i, end_i, len(h)
         )
 
-        tup = tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
+        if self.options.attr_brk_halfhourly:
+            tup = tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
+            if self.options.attr_brk_site_detailed:
+                tups = {}
+                for site in self.sites:
+                    tups[site['resource_id']] = tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in hs[site['resource_id']] )
 
         if len(tup) < 48:
             no_data_error = False
 
-        hourlytup = []
-        for index in range(0,len(tup),2):
-            if len(tup) > 0:
-                try:
-                    x1 = round((tup[index]["pv_estimate"] + tup[index+1]["pv_estimate"]) /2, 4)
-                    x2 = round((tup[index]["pv_estimate10"] + tup[index+1]["pv_estimate10"]) /2, 4)
-                    x3 = round((tup[index]["pv_estimate90"] + tup[index+1]["pv_estimate90"]) /2, 4)
-                    hourlytup.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
-                except IndexError:
-                    x1 = round((tup[index]["pv_estimate"]), 4)
-                    x2 = round((tup[index]["pv_estimate10"]), 4)
-                    x3 = round((tup[index]["pv_estimate90"]), 4)
-                    hourlytup.append({"period_start":tup[index]["period_start"], "pv_estimate":x1, "pv_estimate10":x2, "pv_estimate90":x3})
-                except Exception as e:
-                    _LOGGER.error("Exception in get_forecast_day(): %s", e)
-                    _LOGGER.error(traceback.format_exc())
+        if self.options.attr_brk_hourly:
+            hourlytup = build_hourly(tup)
+            if self.options.attr_brk_site_detailed:
+                hourlytups = {}
+                for site in self.sites:
+                    hourlytups[site['resource_id']] = build_hourly(tups[site['resource_id']])
 
         res = {
             "dayname": start_utc.astimezone(self._tz).strftime("%A"),
@@ -856,8 +876,14 @@ class SolcastApi:
         }
         if self.options.attr_brk_halfhourly:
             res["detailedForecast"] = tup
+            if self.options.attr_brk_site_detailed:
+                for site in self.sites:
+                    res[f"detailedForecast-{site['resource_id']}"] = tups[site['resource_id']]
         if self.options.attr_brk_hourly:
             res["detailedHourly"] = hourlytup
+            if self.options.attr_brk_site_detailed:
+                for site in self.sites:
+                    res[f"detailedHourly-{site['resource_id']}"] = hourlytups[site['resource_id']]
         return res
 
     def get_forecast_n_hour(self, n_hour, site=None, _use_data_field=None) -> int:

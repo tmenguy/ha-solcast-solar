@@ -11,14 +11,14 @@ from homeassistant.const import CONF_API_KEY
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant import config_entries
-from .const import DOMAIN, TITLE, API_QUOTA, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK_ESTIMATE10, BRK_ESTIMATE90, BRK_SITE, BRK_HALFHOURLY, BRK_HOURLY, CONFIG_DAMP
+from .const import DOMAIN, TITLE, API_QUOTA, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK_ESTIMATE10, BRK_ESTIMATE90, BRK_SITE, BRK_HALFHOURLY, BRK_HOURLY, BRK_SITE_DETAILED, CONFIG_DAMP
 
 
 @config_entries.HANDLERS.register(DOMAIN)
 class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle the config flow."""
 
-    VERSION = 9 #v5 started 4.0.8, #6 started 4.0.15, #7 started 4.0.16, #8 started 4.0.39, #9 started 4.1.3
+    VERSION = 10 #v5 started 4.0.8, #6 started 4.0.15, #7 started 4.0.16, #8 started 4.0.39, #9 started 4.1.3, #10 started 4.1.7
 
     @staticmethod
     @callback
@@ -73,6 +73,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                     BRK_SITE: True,
                     BRK_HALFHOURLY: True,
                     BRK_HOURLY: True,
+                    BRK_SITE_DETAILED: False,
                 },
             )
 
@@ -108,6 +109,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         site_breakdown = self.config_entry.options[BRK_SITE]
         half_hourly = self.config_entry.options[BRK_HALFHOURLY]
         hourly = self.config_entry.options[BRK_HOURLY]
+        site_detailed = self.config_entry.options[BRK_SITE_DETAILED]
 
         if user_input is not None:
             try:
@@ -142,12 +144,14 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 site_breakdown = user_input[BRK_SITE]
                 half_hourly = user_input[BRK_HALFHOURLY]
                 hourly = user_input[BRK_HOURLY]
+                site_detailed = user_input[BRK_SITE_DETAILED]
                 all_config_data[BRK_ESTIMATE] = estimate_breakdown
                 all_config_data[BRK_ESTIMATE10] = estimate_breakdown10
                 all_config_data[BRK_ESTIMATE90] = estimate_breakdown90
                 all_config_data[BRK_SITE] = site_breakdown
                 all_config_data[BRK_HALFHOURLY] = half_hourly
                 all_config_data[BRK_HOURLY] = hourly
+                all_config_data[BRK_SITE_DETAILED] = site_detailed
 
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
@@ -168,16 +172,15 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 {
                     vol.Required(CONF_API_KEY, default=api_key,): str,
                     vol.Required(API_QUOTA, default=api_quota,): str,
-                    #vol.Required(CUSTOM_HOUR_SENSOR, description={"suggested_value": customhoursensor}):
-                    #        vol.All(vol.Coerce(int), vol.Range(min=1,max=144)),
                     vol.Required(CUSTOM_HOUR_SENSOR, default=customhoursensor,): int,
-                    vol.Optional(BRK_ESTIMATE10, description={"suggested_value": estimate_breakdown10}): bool,
-                    vol.Optional(BRK_ESTIMATE, description={"suggested_value": estimate_breakdown}): bool,
-                    vol.Optional(BRK_ESTIMATE90, description={"suggested_value": estimate_breakdown90}): bool,
-                    vol.Optional(BRK_SITE, description={"suggested_value": site_breakdown}): bool,
-                    vol.Optional(BRK_HALFHOURLY, description={"suggested_value": half_hourly}): bool,
-                    vol.Optional(BRK_HOURLY, description={"suggested_value": hourly}): bool,
-                    vol.Optional(CONFIG_DAMP, default=False): vol.All(vol.Coerce(bool)),
+                    vol.Optional(BRK_ESTIMATE10, default=estimate_breakdown10): bool,
+                    vol.Optional(BRK_ESTIMATE, default=estimate_breakdown): bool,
+                    vol.Optional(BRK_ESTIMATE90, default=estimate_breakdown90): bool,
+                    vol.Optional(BRK_SITE, default=site_breakdown): bool,
+                    vol.Optional(BRK_HALFHOURLY, default=half_hourly): bool,
+                    vol.Optional(BRK_HOURLY, default=hourly): bool,
+                    vol.Optional(BRK_SITE_DETAILED, default=site_detailed): bool,
+                    vol.Optional(CONFIG_DAMP, default=False): bool, #vol.All(vol.Coerce(bool)),
                 }
             ),
             errors=errors

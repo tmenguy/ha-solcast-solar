@@ -33,6 +33,7 @@ from .const import (
     BRK_SITE,
     BRK_HALFHOURLY,
     BRK_HOURLY,
+    BRK_SITE_DETAILED,
     CUSTOM_HOUR_SENSOR,
     DOMAIN,
     KEY_ESTIMATE,
@@ -128,6 +129,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.options.get(BRK_SITE, True),
         entry.options.get(BRK_HALFHOURLY, True),
         entry.options.get(BRK_HOURLY, True),
+        entry.options.get(BRK_SITE_DETAILED, False),
     )
 
     solcast = SolcastApi(aiohttp_client.async_get_clientsession(hass), options)
@@ -360,7 +362,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     The present version (e.g. `VERSION = 9`) is specified in `config_flow.py`.
     """
     def upgraded():
-        _LOGGER.debug("Upgraded to options version %s", config_entry.version)
+        _LOGGER.info("Upgraded to options version %s", config_entry.version)
 
     try:
         _LOGGER.debug("Options version %s", config_entry.version)
@@ -464,6 +466,20 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 config_entry.version = 9
+                hass.config_entries.async_update_entry(config_entry, options=new_options)
+                upgraded()
+            else:
+                raise
+
+    if config_entry.version < 10:
+        new = {**config_entry.options}
+        if new.get(BRK_SITE_DETAILED) is None: new[BRK_SITE_DETAILED] = False
+        try:
+            hass.config_entries.async_update_entry(config_entry, options=new, version=10)
+            upgraded()
+        except Exception as e:
+            if "unexpected keyword argument 'version'" in e:
+                config_entry.version = 10
                 hass.config_entries.async_update_entry(config_entry, options=new_options)
                 upgraded()
             else:
