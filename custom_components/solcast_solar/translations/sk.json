@@ -26,7 +26,7 @@
                     "attr_brk_site": "Povoliť atribúty senzora rozdelenia stránok",
                     "attr_brk_halfhourly": "Povoliť polhodinové podrobné atribúty prognózy",
                     "attr_brk_hourly": "Povoliť hodinové podrobné atribúty prognózy",
-                    "attr_brk_detailed": "Povoliť rozdelenie stránok pre polhodinové/hodinové atribúty podrobností (funkčné iba vtedy, keď je aktivované členenie stránok pre senzory)",
+                    "attr_brk_detailed": "Povoliť členenie stránok pre polhodinové/hodinové atribúty podrobností (Poznámka: členenie stránok pre senzory musí byť povolené a môžu sa zobraziť upozornenia denníka záznamníka)",
                     "config_damp": "Upravte hodinové faktory tlmenia (po kliknutí na odoslať)"
                 },
                 "description": "Solcast možnosti konfigurácie"
