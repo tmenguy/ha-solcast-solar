@@ -26,7 +26,7 @@
                     "attr_brk_site": "Activer les attributs du capteur de panne de site",
                     "attr_brk_halfhourly": "Activer les attributs de détail des prévisions demi-horaires",
                     "attr_brk_hourly": "Activer les attributs de détail horaire des prévisions",
-                    "attr_brk_detailed": "Activer la répartition du site pour les attributs de détail demi-horaires/horaires (Remarque : la répartition du site pour les capteurs doit être activée et les avertissements du journal de l'enregistreur peuvent être vus)",
+                    "attr_brk_detailed": "Activer la répartition du site pour les attributs de détail demi-horaires/horaires (fonctionnel uniquement lorsque la répartition du site pour les capteurs est activée)",
                     "config_damp": "Modifier les facteurs d'amortissement horaires (après avoir cliqué sur soumettre)"
                 },
                 "description": "Options de configuration Solcast"

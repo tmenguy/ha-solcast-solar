@@ -23,6 +23,7 @@ from homeassistant.const import (
     ATTR_MODEL,
     ATTR_NAME,
     ATTR_SW_VERSION,
+    MATCH_ALL,
     UnitOfEnergy,
     UnitOfPower,
 )
@@ -298,6 +299,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
 
     _attr_attribution = ATTRIBUTION
     _attr_has_entity_name = True
+    _unrecorded_attributes = frozenset({MATCH_ALL})
 
     def __init__(
         self,
