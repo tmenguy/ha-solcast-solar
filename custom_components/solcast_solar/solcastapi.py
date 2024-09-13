@@ -1103,7 +1103,7 @@ class SolcastApi:
         if self.options.attr_brk_site:
             for site in self.sites:
                 variant[site['resource_id']] = {}
-                self.get_spline(variant[site['resource_id']], st, xx, self._data_forecasts, df, reducing=reducing)
+                self.get_spline(variant[site['resource_id']], st, xx, self._sites_data_forecasts[site['resource_id']], df, reducing=reducing)
 
     async def spline_moments(self) -> None:
         """Build the moments splines."""
