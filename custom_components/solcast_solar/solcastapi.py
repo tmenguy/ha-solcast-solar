@@ -151,7 +151,6 @@ class SolcastApi:
         self._spline_period = list(range(0, 90000, 1800))
         self._forecasts_moment = {}
         self._forecasts_remaining = {}
-        self._forecasts_start_idx = 0
         self._loaded_data = False
         self._serialize_lock = asyncio.Lock()
         self._use_data_field = f"pv_{options.key_estimate}"
@@ -1039,7 +1038,8 @@ class SolcastApi:
         crt_i = -1
         st_i = -1
         end_i = len(_data)
-        for crt_i in range(0 if search_past else self._forecasts_start_idx, end_i):
+        _forecasts_start_idx = self.calc_forecast_start_index(_data)
+        for crt_i in range(0 if search_past else _forecasts_start_idx, end_i):
             d = _data[crt_i]
             d1 = d['period_start']
             d2 = d1 + timedelta(seconds=1800)
@@ -1096,24 +1096,28 @@ class SolcastApi:
         """Build cubic splines for interpolated inter-interval momentary or reducing estimates."""
         df = ['pv_estimate'] + (['pv_estimate10'] if self.options.attr_brk_estimate10 else []) + (['pv_estimate90'] if self.options.attr_brk_estimate90 else [])
         xx = [ i for i in range(0, 1800*len(self._spline_period), 300) ]
-        st, _ = self.get_forecast_list_slice(self._data_forecasts, self.get_day_start_utc()) # Get start of day index.
 
         variant['all'] = {}
+        st, _ = self.get_forecast_list_slice(self._data_forecasts, self.get_day_start_utc()) # Get start of day index.
         self.get_spline(variant['all'], st, xx, self._data_forecasts, df, reducing=reducing)
         if self.options.attr_brk_site:
             for site in self.sites:
                 variant[site['resource_id']] = {}
-                self.get_spline(variant[site['resource_id']], st, xx, self._sites_data_forecasts[site['resource_id']], df, reducing=reducing)
+                st, _ = self.get_forecast_list_slice(self._site_data_forecasts[site['resource_id']], self.get_day_start_utc()) # Get start of day index.
+                self.get_spline(variant[site['resource_id']], st, xx, self._site_data_forecasts[site['resource_id']], df, reducing=reducing)
 
     async def spline_moments(self) -> None:
         """Build the moments splines."""
         try:
             self.build_splines(self._forecasts_moment)
-        except Exception as e:
-            _LOGGER.debug('Exception in spline_moments(): %s', e)
+        except:
+            _LOGGER.debug('Exception in spline_moments(): %s', traceback.format_exc())
 
     def get_moment(self, site, _data_field, t) -> float:
-        """Get a time value from a moment spline, with times needing to be for today, and also on five-minute boundaries."""
+        """Get a time value from a moment spline.
+
+        t: Minute of the day.
+        """
         try:
             return self._forecasts_moment['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(t / 300)]
         except Exception as e:
@@ -1124,8 +1128,8 @@ class SolcastApi:
         """Build the descending splines."""
         try:
             self.build_splines(self._forecasts_remaining, reducing=True)
-        except Exception as e:
-            _LOGGER.debug('Exception in spline_remaining(): %s', e)
+        except:
+            _LOGGER.debug('Exception in spline_remaining(): %s', traceback.format_exc())
 
     def get_remaining(self, site, _data_field, t) -> float:
         """Get a time value from a reducing spline, with times needing to be for today, and also on five-minute boundaries."""
@@ -1610,8 +1614,6 @@ class SolcastApi:
 
             self._data_forecasts = sorted(_fcasts_dict.values(), key=itemgetter("period_start"))
 
-            self._forecasts_start_idx = self.calc_forecast_start_index()
-
             self._data_energy = {"wh_hours": self.makeenergydict()}
 
             await self.check_data_records()
@@ -1628,17 +1630,18 @@ class SolcastApi:
             return False
 
 
-    def calc_forecast_start_index(self):
+    def calc_forecast_start_index(self, _data_forecasts):
         """Get the start of forecasts as-at just before midnight.
 
         Doesn't stop at midnight because some sensors may need the previous interval,
         and searches in reverse because less to iterate.
         """
         midnight_utc = self.get_day_start_utc()
-        for idx in range(len(self._data_forecasts)-1, -1, -1):
-            if self._data_forecasts[idx]["period_start"] < midnight_utc:
+        for idx in range(len(_data_forecasts)-1, -1, -1):
+            if _data_forecasts[idx]["period_start"] < midnight_utc:
                 break
-        _LOGGER.debug("Calc forecast start index midnight: %s UTC, idx %d, len %d", midnight_utc.strftime('%Y-%m-%d %H:%M:%S'), idx, len(self._data_forecasts))
+        if SENSOR_DEBUG_LOGGING:
+            _LOGGER.debug("Calc forecast start index midnight: %s UTC, idx %d, len %d", midnight_utc.strftime('%Y-%m-%d %H:%M:%S'), idx, len(_data_forecasts))
         return idx
 
 
