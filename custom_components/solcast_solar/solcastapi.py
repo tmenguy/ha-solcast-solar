@@ -24,11 +24,11 @@ from os.path import exists as file_exists
 from os.path import dirname
 from typing import Any, Dict, cast
 
-import async_timeout
-import aiofiles
-from aiohttp import ClientConnectionError, ClientSession
-from aiohttp.client_reqrep import ClientResponse
-from isodate import parse_datetime
+import async_timeout # type: ignore
+import aiofiles # type: ignore
+from aiohttp import ClientConnectionError, ClientSession # type: ignore
+from aiohttp.client_reqrep import ClientResponse # type: ignore
+from isodate import parse_datetime # type: ignore
 
 from .spline import cubic_interp
 

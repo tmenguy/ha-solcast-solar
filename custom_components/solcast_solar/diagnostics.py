@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry # type: ignore
+from homeassistant.const import CONF_API_KEY # type: ignore
+from homeassistant.core import HomeAssistant # type: ignore
 
 from .const import DOMAIN
 from .coordinator import SolcastUpdateCoordinator

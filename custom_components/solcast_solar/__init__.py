@@ -9,21 +9,21 @@ import os
 import json
 from datetime import timedelta
 from typing import Final
-import aiofiles
+import aiofiles # type: ignore
 
-import voluptuous as vol
-from homeassistant import loader
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_KEY, Platform
-from homeassistant.core import (HomeAssistant,
+import voluptuous as vol # type: ignore
+from homeassistant import loader # type: ignore
+from homeassistant.config_entries import ConfigEntry # type: ignore
+from homeassistant.const import CONF_API_KEY, Platform # type: ignore
+from homeassistant.core import (HomeAssistant, # type: ignore
                                 ServiceCall,
                                 ServiceResponse,
                                 SupportsResponse,)
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import aiohttp_client, intent
-from homeassistant.helpers.device_registry import async_get as device_registry
-from homeassistant.util import dt as dt_util
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError # type: ignore
+from homeassistant.helpers import config_validation as cv # type: ignore
+from homeassistant.helpers import aiohttp_client, intent # type: ignore
+from homeassistant.helpers.device_registry import async_get as device_registry # type: ignore
+from homeassistant.util import dt as dt_util # type: ignore
 
 from .const import (
     API_QUOTA,

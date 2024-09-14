@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant # type: ignore
 
 from . import SolcastUpdateCoordinator
 from .const import DOMAIN

@@ -9,14 +9,14 @@ import traceback
 from dataclasses import dataclass
 from enum import Enum
 
-from homeassistant.components.sensor import (
+from homeassistant.components.sensor import ( # type: ignore
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
+from homeassistant.config_entries import ConfigEntry # type: ignore
+from homeassistant.const import ( # type: ignore
     ATTR_CONFIGURATION_URL,
     ATTR_IDENTIFIERS,
     ATTR_MANUFACTURER,
@@ -27,11 +27,11 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.core import HomeAssistant, callback # type: ignore
+from homeassistant.helpers.device_registry import DeviceEntryType # type: ignore
+from homeassistant.helpers.entity import EntityCategory # type: ignore
+from homeassistant.helpers.entity_platform import AddEntitiesCallback # type: ignore
+from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
 
 from .const import DOMAIN, ATTR_ENTRY_TYPE, ATTRIBUTION
 from .coordinator import SolcastUpdateCoordinator

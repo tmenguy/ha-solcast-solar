@@ -6,10 +6,10 @@ import logging
 
 from enum import IntEnum
 
-from homeassistant.components.select import SelectEntity, SelectEntityDescription
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.const import (
+from homeassistant.components.select import SelectEntity, SelectEntityDescription # type: ignore
+from homeassistant.config_entries import ConfigEntry # type: ignore
+from homeassistant.helpers.device_registry import DeviceEntryType # type: ignore
+from homeassistant.const import ( # type: ignore
     EntityCategory,
     ATTR_CONFIGURATION_URL,
     ATTR_IDENTIFIERS,
@@ -18,8 +18,8 @@ from homeassistant.const import (
     ATTR_NAME,
     ATTR_SW_VERSION,
 )
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import HomeAssistant # type: ignore
+from homeassistant.helpers.entity_platform import AddEntitiesCallback # type: ignore
 
 from .const import ATTRIBUTION, DOMAIN, KEY_ESTIMATE, ATTR_ENTRY_TYPE
 from .coordinator import SolcastUpdateCoordinator

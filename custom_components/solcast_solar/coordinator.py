@@ -11,10 +11,10 @@ from typing import Any, Dict
 import logging
 import traceback
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_track_utc_time_change
+from homeassistant.core import HomeAssistant # type: ignore
+from homeassistant.helpers.event import async_track_utc_time_change # type: ignore
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
 
 from .const import DOMAIN
 from .solcastapi import SolcastApi

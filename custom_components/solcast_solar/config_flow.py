@@ -5,12 +5,12 @@
 from __future__ import annotations
 from typing import Any
 
-import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
-from homeassistant.const import CONF_API_KEY
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant import config_entries
+import voluptuous as vol # type: ignore
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow # type: ignore
+from homeassistant.const import CONF_API_KEY # type: ignore
+from homeassistant.core import callback # type: ignore
+from homeassistant.data_entry_flow import FlowResult # type: ignore
+from homeassistant import config_entries # type: ignore
 from .const import DOMAIN, TITLE, API_QUOTA, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK_ESTIMATE10, BRK_ESTIMATE90, BRK_SITE, BRK_HALFHOURLY, BRK_HOURLY, BRK_SITE_DETAILED, CONFIG_DAMP
 
 

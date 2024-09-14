@@ -6,7 +6,7 @@
 import asyncio
 import logging
 import traceback
-from aiohttp import ClientSession
+from aiohttp import ClientSession # type: ignore
 
 from .const import SOLCAST_URL
 
@@ -39,7 +39,8 @@ async def test():
             True,
             True,
             True,
-            True
+            True,
+            False,
         )
 
         async with ClientSession() as session:
