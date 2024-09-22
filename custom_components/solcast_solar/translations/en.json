@@ -103,6 +103,10 @@
                 "damp_factor": {
                     "name": "Dampening string",
                     "description": "String of hourly dampening factor values comma seperated."
+                },
+                "site": {
+                    "name": "Site ID",
+                    "description": "Optional site ID to break down dampening. (Note: Omitting site will clear all individual site dampening.)"
                 }
             }
         },

@@ -24,6 +24,8 @@ set_dampening:
   name: Set forecasts dampening
   description: Set the hourly forecast dampening factor
   fields:
+    site:
+      example: "1234-5678-9012-3456"
     damp_factor:
       example: "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1"
 

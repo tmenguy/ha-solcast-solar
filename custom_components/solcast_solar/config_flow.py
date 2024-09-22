@@ -18,20 +18,34 @@ from .const import DOMAIN, TITLE, API_QUOTA, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, B
 class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle the config flow."""
 
-    VERSION = 10 #v5 started 4.0.8, #6 started 4.0.15, #7 started 4.0.16, #8 started 4.0.39, #9 started 4.1.3, #10 started 4.1.7
+    VERSION = 10 #v5 started 4.0.8, #6 started 4.0.15, #7 started 4.0.16, #8 started 4.0.39, #9 started 4.1.3, #10 started 4.1.8
 
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: ConfigEntry,
+        entry: ConfigEntry,
     ) -> SolcastSolarOptionFlowHandler:
-        """Get the options flow for this handler."""
-        return SolcastSolarOptionFlowHandler(config_entry)
+        """Get the options flow for this handler.
+
+        Arguments:
+            entry (ConfigEntry): The integration entry instance, contains the configuration.
+
+        Returns:
+            (SolcastSolarOptionFlowHandler): The congig flow handler instance.
+        """
+        return SolcastSolarOptionFlowHandler(entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle a flow initiated by the user."""
+        """Handle a flow initiated by the user.
+
+        Arguments:
+            user_input (dict[str, Any] | None, optional): The config submitted by a user. Defaults to None.
+
+        Returns:
+            FlowResult: The form to show.
+        """
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
@@ -91,13 +105,24 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
 class SolcastSolarOptionFlowHandler(OptionsFlow):
     """Handle options."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
-        self.options = dict(config_entry.options)
+    def __init__(self, entry: ConfigEntry):
+        """Initialize options flow.
 
-    async def async_step_init(self, user_input=None) -> Any:
-        """Initialise steps."""
+        Arguments:
+            entry (ConfigEntry): The integration entry instance, contains the configuration.
+        """
+        self.config_entry = entry
+        self.options = dict(self.config_entry.options)
+
+    async def async_step_init(self, user_input: dict=None) -> Any:
+        """Initialise main dialogue step.
+
+        Arguments:
+            user_input (dict, optional): The input provided by the user. Defaults to None.
+
+        Returns:
+            (Any): Either an error, or the configuration dialogue results.
+        """
 
         errors = {}
         api_key = self.config_entry.options.get(CONF_API_KEY)
@@ -187,7 +212,14 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         )
 
     async def async_step_dampen(self, user_input: dict[str, Any] | None = None) -> FlowResult: #user_input=None):
-        """Manage the hourly factor options."""
+        """Manage the hourly dampening factors sub-option.
+
+        Arguments:
+            user_input (dict[str, Any] | None): The input provided by the user. Defaults to None.
+
+        Returns:
+            (FlowResult): The configuration dialogue results.
+        """
 
         errors = {}
 

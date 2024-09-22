@@ -91,6 +91,34 @@
                     "description": "Endzeitpunkt der Prognosedaten."
                 }
             }
+        },
+        "set_dampening": {
+            "name": "Setzen Sie dämpfende Prognosen",
+            "description": "Stellen Sie den prognostizierten Dämpfungsfaktor pro Stunde ein.",
+            "fields": {
+                "damp_factor": {
+                    "name": "Dämpfungssaite",
+                    "description": "Zeichenfolge mit stündlichen Dämpfungsfaktorwerten, durch Kommas getrennt."
+                },
+                "site": {
+                    "name": "Site-ID",
+                    "description": "Optionale Standort-ID zur Aufschlüsselung der Dämpfung. (Hinweis: Wenn Sie „Site“ weglassen, werden alle einzelnen Site-Dämpfungen gelöscht.)"
+                }
+            }
+        },
+        "set_hard_limit": {
+            "name": "Legen Sie den harten Grenzwert für die Wechselrichterprognose fest",
+            "description": "Vermeiden Sie, dass die prognostizierten Werte höher sind, als der Wechselrichter erzeugen kann.",
+            "fields": {
+                "hard_limit": {
+                    "name": "Grenzwert in Watt",
+                    "description": "Stellen Sie den maximalen Wert in Watt ein, den der Wechselrichter erzeugen kann."
+                }
+            }
+        },
+        "remove_hard_limit": {
+            "name": "Entfernen Sie die harte Grenze der Wechselrichterprognose",
+            "description": "Eingestelltes Limit entfernen."
         }
     },
     "entity": {

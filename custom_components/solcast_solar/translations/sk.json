@@ -103,9 +103,27 @@
                 "damp_factor": {
                     "name": "Tlmiaci reťazec",
                     "description": "Reťazec hodnôt hodinového faktora tlmenia oddelený čiarkou."
+                },
+                "site": {
+                    "name": "ID lokality",
+                    "description": "Voliteľný identifikátor lokality na nastavenie rozdelenia. (Poznámka: Vynechaním lokality sa vymažú všetky tlmenia jednotlivých lokalít.)"
                 }
+            },
+            "set_hard_limit": {
+                "name": "Nastavte pevný limit predpovede meniča",
+                "description": "Zabráňte tomu, aby boli predpovedané hodnoty vyššie, ako dokáže menič produkovať.",
+                "fields": {
+                    "hard_limit": {
+                        "name": "Limitná hodnota vo wattoch",
+                        "description": "Nastavte maximálnu hodnotu vo wattoch, ktorú môže menič produkovať."
+                    }
+                }
+            },
+            "remove_hard_limit": {
+                "name": "Odstráňte pevný limit predpovede meniča",
+                "description": "Odstráňte nastavený limit."
             }
-        }
+            }
     },
     "entity": {
         "sensor": {

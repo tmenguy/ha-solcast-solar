@@ -2,4 +2,5 @@
 .vscode/settings.json
 .vscode
 .vs
+Thumbs.db
 __pycache__

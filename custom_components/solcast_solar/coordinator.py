@@ -24,15 +24,19 @@ _LOGGER = logging.getLogger(__name__)
 class SolcastUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data."""
 
-    def __init__(self, hass: HomeAssistant, solcast: SolcastApi, version: str) -> None:
+    def __init__(self, hass: HomeAssistant, solcast: SolcastApi, version: str):
         """Initialisation.
 
-        Public variables at the top, protected variables (those prepended with _ after)
+        Public variables at the top, protected variables (those prepended with _ after).
+
+        Arguments:
+            hass (HomeAssistant): The Home Assistant instance.
+            solcast (SolcastApi): The Solcast API instance.
+            version (str): The integration version from manifest.json.
         """
         self.solcast = solcast
 
         self._hass = hass
-        self._previousenergy = None
         self._version = version
         self._last_day = None
         self._date_changed = False
@@ -48,13 +52,15 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
 
     async def _async_update_data(self):
-        """Update data via library."""
+        """Update data via library.
+
+        Returns:
+            (list): Dampened forecast detail list of the sum of all site forecasts.
+        """
         return self.solcast.get_data()
 
-    async def setup(self) -> None:
+    async def setup(self):
         """Set up time change tracking."""
-        d={}
-        self._previousenergy = d
         self._last_day = dt.now(self.solcast.options.tz).day
         try:
             async_track_utc_time_change(self._hass, self.update_utcmidnight_usage_sensor_data, hour=0, minute=0, second=0)
@@ -63,7 +69,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Exception in Solcast coordinator setup: %s", traceback.format_exc())
 
 
-    async def update_integration_listeners(self, *args) -> None:
+    async def update_integration_listeners(self, *args):
         """Get updated sensor values."""
         try:
             now = dt.now().replace(microsecond=0)
@@ -82,7 +88,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             #_LOGGER.error("update_integration_listeners: %s", traceback.format_exc())
             pass
 
-    async def update_utcmidnight_usage_sensor_data(self, *args) -> None:
+    async def update_utcmidnight_usage_sensor_data(self, *args):
         """Resets tracked API usage at midnight UTC."""
         try:
             now = dt.now().replace(microsecond=0)
@@ -95,27 +101,25 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             #_LOGGER.error("Exception in update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
             pass
 
-    async def update_midnight_spline_recalc(self, *args) -> None:
+    async def update_midnight_spline_recalc(self, *args):
         """Re-calculates splines at midnight local time."""
         try:
-            _LOGGER.debug("Recalculating splines")
-            await self.solcast.spline_moments()
-            await self.solcast.spline_remaining()
+            await self.solcast.recalculate_splines()
         except:
             _LOGGER.error("Exception in update_midnight_spline_recalc(): %s", traceback.format_exc())
 
-    async def service_event_update(self, *args) -> None:
+    async def service_event_update(self, *args):
         """Get updated forecast data when requested by a service call."""
         try:
             #await self.solcast.sites_weather()
-            await self.solcast.http_data(dopast=False)
+            await self.solcast.get_forecast_update(do_past=False)
             self._data_updated = True
             await self.update_integration_listeners()
             self._data_updated = False
         except:
             _LOGGER.error("Exception in service_event_update(): %s", traceback.format_exc())
 
-    async def service_event_delete_old_solcast_json_file(self, *args) -> None:
+    async def service_event_delete_old_solcast_json_file(self, *args):
         """Delete the solcast.json file when requested by a service call."""
         await self.solcast.delete_solcast_file()
 
@@ -124,27 +128,43 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         return await self.solcast.get_forecast_list(*args)
 
     def get_solcast_sites(self) -> dict[str, Any]:
-        """Return the active solcast sites."""
+        """Return the active solcast sites.
+
+        Returns:
+            dict[str, Any]: The presently known solcast.com sites
+        """
         return self.solcast.sites
 
-    def get_previousenergy(self) -> dict[str, Any]:
-        """Return the prior energy dictionary."""
-        return self._previousenergy
-
     def get_energy_tab_data(self) -> dict[str, Any]:
-        """Return an energy page compatible dictionary."""
+        """Return an energy dictionary.
+
+        Returns:
+            (dict): A Home Assistant energy dashboard compatible data set.
+        """
         return self.solcast.get_energy_data()
 
     def get_data_updated(self) -> bool:
-        """Return whether all data has updated, which will trigger all sensor values to update."""
+        """Returns True if data has been updated, which will trigger all sensor values to update.
+
+        Returns:
+            (bool): Whether the forecast data has been updated.
+        """
         return self._data_updated
 
-    def set_data_updated(self, updated) -> bool:
-        """Set whether all data has updated"""
+    def set_data_updated(self, updated):
+        """Set the state of the data updated flag.
+
+        Arguments:
+            updated (bool): The state to set the _data_updated forecast updated flag to.
+        """
         self._data_updated = updated
 
     def get_date_changed(self) -> bool:
-        """Return whether rolled over to tomorrow, which will trigger all sensor values to update."""
+        """Returns True if a roll-over to tomorrow has occurred, which will trigger all sensor values to update.
+
+        Returns:
+            (bool): Whether a date roll-over has occurred.
+        """
         return self._date_changed
 
     def get_sensor_value(self, key="") -> (int | dt | float | Any | str | bool | None):

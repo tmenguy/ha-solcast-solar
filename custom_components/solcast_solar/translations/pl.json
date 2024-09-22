@@ -103,6 +103,10 @@
                 "damp_factor": {
                     "name": "Ciąg tłumienia",
                     "description": "Ciąg wartości współczynnika tłumienia godzinowego, oddzielany przecinkiem."
+                },
+                "site": {
+                    "name": "Identyfikator witryny",
+                    "description": "Opcjonalny identyfikator miejsca w celu rozbicia tłumienia. (Uwaga: pominięcie miejsca spowoduje usunięcie wszystkich zawilgoceń poszczególnych miejsc.)"
                 }
             }
         },

@@ -19,7 +19,18 @@ CONFIG_DAMP = "config_damp"
 CUSTOM_HOUR_SENSOR = "customhoursensor"
 DOMAIN = "solcast_solar"
 ENTRY_TYPE_SERVICE: Final = "service"
+INIT_MSG = """This is a custom integration. When troubleshooting a problem, after
+reviewing open and closed issues, and the discussions, check the
+required automation is functioning correctly and try enabling debug
+logging to see more. Troubleshooting tips available at:
+https://github.com/BJReplay/ha-solcast-solar/discussions/38
+
+Beta versions may also have addressed issues so look at those.
+
+If all else fails, then open an issue and our community will try to
+help: https://github.com/BJReplay/ha-solcast-solar/issues"""
 KEY_ESTIMATE = "key_estimate"
+MANUFACTURER = "BJReplay"
 SERVICE_CLEAR_DATA = "clear_all_solcast_data"
 SERVICE_QUERY_FORECAST_DATA = "query_forecast_data"
 SERVICE_REMOVE_HARD_LIMIT = "remove_hard_limit"

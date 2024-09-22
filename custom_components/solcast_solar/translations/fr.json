@@ -103,8 +103,26 @@
                 "damp_factor": {
                     "name": "Chaîne de coefficient d’amortissement",
                     "description": "Chaîne de valeurs horaires du facteur d’amortissement séparées par des virgules."
+                },
+                "site": {
+                    "name": "Identifiant du site",
+                    "description": "ID de site facultatif pour décomposer l’amortissement. (Remarque : l'omission du site supprimera tous les amortissements de sites individuels.)"
                 }
             }
+        },
+        "set_hard_limit": {
+            "name": "Définir la limite stricte de prévision de l'onduleur",
+            "description": "Évitez que les valeurs prévues soient supérieures à ce que l'onduleur peut produire.",
+            "fields": {
+                "hard_limit": {
+                    "name": "Valeur limite en Watts",
+                    "description": "Définissez la valeur maximale en watts que l'onduleur peut produire."
+                }
+            }
+        },
+        "remove_hard_limit": {
+            "name": "Supprimer la limite stricte de prévision de l'onduleur",
+            "description": "Supprimer la limite définie."
         }
     },
     "entity": {
