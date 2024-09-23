@@ -1127,7 +1127,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): An optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (int) - A forecast for an hour period as kW (either used for a sensor or its attributes).
+            (int) - A forecast for an hour period as Wh (either used for a sensor or its attributes).
         """
         start_utc = self.__get_hour_start_utc() + timedelta(hours=n_hour)
         end_utc = start_utc + timedelta(hours=1)
@@ -1164,7 +1164,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (int) - A forecast for a multiple hour period as kWh (either used for a sensor or its attributes).
+            (int) - A forecast for a multiple hour period as Wh (either used for a sensor or its attributes).
         """
         start_utc = self.__get_now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
@@ -1201,7 +1201,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (int): A power forecast in N minutes as kW (either used for a sensor or its attributes).
+            (int): A power forecast in N minutes as W (either used for a sensor or its attributes).
         """
         time_utc = self.__get_now_utc() + timedelta(minutes=n_mins)
         return round(1000 * self.__get_forecast_pv_moment(time_utc, site=site, _use_data_field=_use_data_field))
