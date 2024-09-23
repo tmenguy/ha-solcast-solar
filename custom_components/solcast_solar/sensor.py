@@ -317,7 +317,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
 
     _attr_attribution = ATTRIBUTION
     _attr_has_entity_name = True
-    _unrecorded_attributes = frozenset({MATCH_ALL})
+    #_unrecorded_attributes = frozenset({MATCH_ALL}) # Large attributes now excluded dynamically in async_added_to_hass()
 
     def __init__(
         self,
@@ -367,6 +367,20 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
         }
 
 
+    async def async_added_to_hass(self):
+        """Entity about to be added to hass, so set recorder excluded attributes."""
+        if (
+            self.entity_id.startswith('sensor.solcast_pv_forecast_forecast_today') or
+            self.entity_id.startswith('sensor.solcast_pv_forecast_forecast_tomorrow') or
+            self.entity_id.startswith('sensor.solcast_pv_forecast_forecast_day')
+        ):
+            exclude = ['detailedForecast', 'detailedHourly']
+            if self.coordinator.solcast.options.attr_brk_site_detailed:
+                for s in self.coordinator.solcast.sites:
+                    exclude.append('detailedForecast-' + s['resource_id'])
+                    exclude.append('detailedHourly-' + s['resource_id'])
+            self._state_info["unrecorded_attributes"] = self._state_info["unrecorded_attributes"] | frozenset(exclude)
+
     @property
     def extra_state_attributes(self) -> (Dict[str, Any] | None):
         """Return the state extra attributes of the sensor.
@@ -391,7 +405,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def should_poll(self) -> bool:
-        """Return wheter the sensor should poll.
+        """Return whether the sensor should poll.
 
         Returns:
             (bool): Always returns False, as sensors are not polled.
@@ -534,7 +548,7 @@ class RooftopSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def should_poll(self) -> bool:
-        """Return wheter the sensor should poll.
+        """Return whether the sensor should poll.
 
         Returns:
             (bool): Always returns False, as sensors are not polled.

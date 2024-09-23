@@ -1115,8 +1115,8 @@ class SolcastApi: # pylint: disable=R0904
         start_utc = self.__get_day_start_utc() + timedelta(days=futureday)
         end_utc = start_utc + timedelta(days=1)
         st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
+        h = self._data_forecasts[st_i:end_i]
         if self.options.attr_brk_halfhourly:
-            h = self._data_forecasts[st_i:end_i]
             if self.options.attr_brk_site_detailed:
                 hs = {}
                 for site in self.sites:
@@ -1129,8 +1129,8 @@ class SolcastApi: # pylint: disable=R0904
             st_i, end_i, len(h)
         )
 
+        tup = tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
         if self.options.attr_brk_halfhourly:
-            tup = tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
             if self.options.attr_brk_site_detailed:
                 tups = {}
                 for site in self.sites:

@@ -452,7 +452,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
     """Reconfigure the integration when options get updated.
 
-    * Changing API key or limit results in a restart.
+    * Changing API key or limit, or turning detailed site breakdown on results in a restart.
     * Setting dampening results in forecast recalculation.
     * Other alterations simply refresh sensor values and attributes.
 
@@ -467,6 +467,11 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         if hass.data[DOMAIN]['entry_options'].get(CONF_API_KEY) != entry.options.get(CONF_API_KEY):
             reload = True
         if hass.data[DOMAIN]['entry_options'][API_QUOTA] != entry.options[API_QUOTA]:
+            reload = True
+        if (
+            entry.options[BRK_SITE_DETAILED] and
+            (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
+        ):
             reload = True
         for i in range(0,24):
             if hass.data[DOMAIN]['entry_options'][f"damp{i:02}"] != entry.options[f"damp{i:02}"]:
