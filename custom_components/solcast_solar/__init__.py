@@ -159,6 +159,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         init_msg = INIT_MSG
 
     try:
+        version = ''
+        integration = await loader.async_get_integration(hass, DOMAIN)
+        version = str(integration.version)
+    except loader.IntegrationNotFound:
+        pass
+
+    try:
         await solcast.get_sites_and_usage()
     except Exception as e:
         raise ConfigEntryNotReady(f"Getting sites data failed: {e}") from e
@@ -166,18 +173,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not solcast.sites_loaded:
         raise ConfigEntryNotReady('Sites data could not be retrieved')
 
+    _LOGGER.debug('Successful init')
+
+    _LOGGER.info(
+        '%sSolcast integration version: %s%s%s',
+        ('\n' + '-'*67 + '\n') if init_msg != '' else '',
+        version,
+        ('\n\n' + init_msg) if init_msg != '' else '',('\n' + '-'*67) if init_msg != '' else '',
+    )
+
     status = await solcast.load_saved_data()
     if status != '':
         raise ConfigEntryNotReady(status)
 
     await solcast.site_dampening_data()
-
-    try:
-        version = ''
-        integration = await loader.async_get_integration(hass, DOMAIN)
-        version = str(integration.version)
-    except loader.IntegrationNotFound:
-        pass
 
     coordinator = SolcastUpdateCoordinator(hass, solcast, version)
 
@@ -197,14 +206,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if options.hard_limit < 100:
             _LOGGER.info("Solcast inverter hard limit value has been set. If the forecasts and graphs are not as you expect, remove this setting")
 
-        # if previously loaded then the entire version info message is suppressed, not just the extra nag.
-        _LOGGER.info(
-            '%sSolcast integration version: %s%s%s',
-            ('\n' + '-'*67 + '\n') if init_msg != '' else '',
-            version,
-            ('\n\n' + init_msg) if init_msg != '' else '',('\n' + '-'*67) if init_msg != '' else '',
-        )
-        hass.data[DOMAIN]['has_loaded'] = True
+    hass.data[DOMAIN]['has_loaded'] = True
 
     # If the integration has been failed for some time and then is restarted retrieve forecasts (i.e Home Assistant down).
     if solcast.is_stale_data():
@@ -490,11 +492,11 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 
             hass.data[DOMAIN]['entry_options'] = entry.options
         else:
-            await hass.config_entries.async_reload(entry.entry_id)
+            await hass.config_entries.async_schedule_reload(entry.entry_id)
     except:
         _LOGGER.debug(traceback.format_exc())
         # Restart on exception
-        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.config_entries.async_schedule_reload(entry.entry_id)
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Upgrade configuration.
