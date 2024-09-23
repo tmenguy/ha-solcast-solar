@@ -31,6 +31,18 @@ from aiohttp.client_reqrep import ClientResponse # type: ignore
 from isodate import parse_datetime # type: ignore
 
 from .spline import cubic_interp
+from .const import (
+    BRK_ESTIMATE,
+    BRK_ESTIMATE10,
+    BRK_ESTIMATE90,
+    BRK_SITE,
+    BRK_HALFHOURLY,
+    BRK_HOURLY,
+    BRK_SITE_DETAILED,
+    CUSTOM_HOUR_SENSOR,
+    HARD_LIMIT,
+    KEY_ESTIMATE,
+)
 
 """Return the function name at a specified caller depth.
 
@@ -210,6 +222,38 @@ class SolcastApi: # pylint: disable=R0904
         self._api_cache_enabled = api_cache_enabled # For offline development.
 
         _LOGGER.debug("Configuration directory is %s", self._config_dir)
+
+    def set_options(self, options: dict):
+        """Set the class option variables (used by __init__ to avoid an integration reload).
+
+        Args:
+            options (dict): The data field to use for sensor values
+        """
+        self.damp = {str(i): options[f"damp{i:02}"] for i in range(0,24)}
+        self.options = ConnectionOptions(
+            self.options.api_key,
+            self.options.api_quota,
+            self.options.host,
+            self.options.file_path,
+            self.options.tz,
+            self.damp,
+            options[CUSTOM_HOUR_SENSOR],
+            options[KEY_ESTIMATE],
+            self.options.hard_limit,
+            options[BRK_ESTIMATE],
+            options[BRK_ESTIMATE10],
+            options[BRK_ESTIMATE90],
+            options[BRK_SITE],
+            options[BRK_HALFHOURLY],
+            options[BRK_HOURLY],
+            options[BRK_SITE_DETAILED],
+        )
+        self._use_data_field = f"pv_{self.options.key_estimate}"
+        self._estimate_set = {
+            'pv_estimate': options[BRK_ESTIMATE],
+            'pv_estimate10': options[BRK_ESTIMATE10],
+            'pv_estimate90': options[BRK_ESTIMATE90],
+        }
 
     def get_data(self) -> dict[str, Any]:
         """Return the data dictionary.

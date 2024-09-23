@@ -19,6 +19,7 @@ CONFIG_DAMP = "config_damp"
 CUSTOM_HOUR_SENSOR = "customhoursensor"
 DOMAIN = "solcast_solar"
 ENTRY_TYPE_SERVICE: Final = "service"
+HARD_LIMIT = "hard_limit"
 INIT_MSG = """This is a custom integration. When troubleshooting a problem, after
 reviewing open and closed issues, and the discussions, check the
 required automation is functioning correctly and try enabling debug

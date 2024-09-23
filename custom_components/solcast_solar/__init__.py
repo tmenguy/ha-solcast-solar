@@ -35,6 +35,7 @@ from .const import (
     BRK_SITE_DETAILED,
     CUSTOM_HOUR_SENSOR,
     DOMAIN,
+    HARD_LIMIT,
     INIT_MSG,
     KEY_ESTIMATE,
     SERVICE_CLEAR_DATA,
@@ -55,7 +56,6 @@ DAMP_FACTOR = "damp_factor"
 SITE = "site"
 EVENT_END_DATETIME = "end_date_time"
 EVENT_START_DATETIME = "start_date_time"
-HARD_LIMIT = "hard_limit"
 PLATFORMS = [Platform.SENSOR, Platform.SELECT,]
 SERVICE_DAMP_SCHEMA: Final = vol.All(
     {
@@ -149,6 +149,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if not hass.data.get(DOMAIN):
         hass.data[DOMAIN] = {}
+
+    hass.data[DOMAIN]['entry_options'] = entry.options
+
     if hass.data[DOMAIN].get('has_loaded', False):
         init_msg = '' # if the integration has already successfully loaded previously then do not display the full version nag on reload.
         solcast.previously_loaded = True
@@ -447,13 +450,46 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
     return True
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
-    """Reload the integration.
+    """Reconfigure the integration when options get updated.
+
+    * Changing API key or limit results in a restart.
+    * Setting dampening results in forecast recalculation.
+    * Other alterations simply refresh sensor values and attributes.
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
         entry (ConfigEntry): The integration entry instance, contains the configuration.
     """
-    await hass.config_entries.async_reload(entry.entry_id)
+    try:
+        reload = False
+        recalc = False
+        # Config changes which will cause a reload.
+        if hass.data[DOMAIN]['entry_options'].get(CONF_API_KEY) != entry.options.get(CONF_API_KEY):
+            reload = True
+        if hass.data[DOMAIN]['entry_options'][API_QUOTA] != entry.options[API_QUOTA]:
+            reload = True
+        for i in range(0,24):
+            if hass.data[DOMAIN]['entry_options'][f"damp{i:02}"] != entry.options[f"damp{i:02}"]:
+                recalc = True
+
+        if not reload:
+            coordinator = hass.data[DOMAIN][entry.entry_id]
+
+            coordinator.solcast.set_options(entry.options)
+
+            if recalc:
+                await coordinator.solcast.build_forecast_data()
+            coordinator.set_data_updated(True)
+            await coordinator.update_integration_listeners()
+            coordinator.set_data_updated(False)
+
+            hass.data[DOMAIN]['entry_options'] = entry.options
+        else:
+            await hass.config_entries.async_reload(entry.entry_id)
+    except:
+        _LOGGER.debug(traceback.format_exc())
+        # Restart on exception
+        await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Upgrade configuration.
