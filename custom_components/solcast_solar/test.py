@@ -31,6 +31,7 @@ async def test():
             "/config",
             "Australia/Sydney",
             False,
+            False,
             optdamp,
             1,
             "estimate",

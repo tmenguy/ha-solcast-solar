@@ -12,7 +12,7 @@ import logging
 import traceback
 
 from homeassistant.core import HomeAssistant # type: ignore
-from homeassistant.helpers.event import async_track_utc_time_change # type: ignore
+from homeassistant.helpers.event import async_track_utc_time_change, async_track_point_in_utc_time # type: ignore
 from homeassistant.helpers.sun import get_astral_event_next # type: ignore
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
@@ -41,19 +41,16 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """
         self.solcast = solcast
 
-        self._hass = hass
-        self._version = version
-        self._last_day = None
-        self._date_changed = False
-        self._data_updated = False
-        self.__get_sun_rise_set()
-        self.__calculate_forecast_updates()
+        self._hass: HomeAssistant = hass
+        self._version: str = version
+        self._last_day: dt = None
+        self._date_changed: bool = False
+        self._data_updated: bool = False
+        self._sunrise: dt = None
+        self._sunset: dt = None
+        self._intervals: list[dt] = []
 
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-        )
+        super().__init__(hass, _LOGGER, name=DOMAIN)
 
 
     async def _async_update_data(self):
@@ -70,6 +67,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         try:
             async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
             async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data, hour=0, minute=0, second=0)
+
+            self.__auto_update_setup()
         except:
             _LOGGER.error("Exception in Solcast coordinator setup: %s", traceback.format_exc())
 
@@ -85,6 +84,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             if self._date_changed:
                 self._last_day = current_day
                 await self.__update_midnight_spline_recalc()
+                self.__auto_update_setup()
 
             await self.async_update_listeners()
         except:
@@ -95,11 +95,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Resets tracked API usage at midnight UTC."""
         try:
             await self.solcast.reset_api_usage()
-            self.__get_sun_rise_set()
-            self.__calculate_forecast_updates()
         except:
-            #_LOGGER.error("Exception in __update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
-            pass
+            _LOGGER.error("Exception in __update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
 
     async def __update_midnight_spline_recalc(self, *args):
         """Re-calculates splines at midnight local time."""
@@ -108,6 +105,20 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             await self.solcast.recalculate_splines()
         except:
             _LOGGER.error("Exception in __update_midnight_spline_recalc(): %s", traceback.format_exc())
+
+    def __auto_update_setup(self):
+        """Daily set up of auto-updates."""
+        try:
+            if self.solcast.options.auto_update:
+                if not self.solcast.options.auto_24_hour:
+                    self.__get_sun_rise_set()
+                else:
+                    self._sunrise = self.solcast.get_day_start_utc()
+                    self._sunset = self.solcast.get_day_start_utc() + timedelta(hours=24)
+                self.__calculate_forecast_updates()
+                self.__schedule_auto_update(self.solcast.get_now_utc())
+        except:
+            _LOGGER.error("Exception in __auto_update_setup(): %s", traceback.format_exc())
 
     def __get_sun_rise_set(self):
         """Get the sunrise and sunset times today"""
@@ -121,14 +132,27 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
         This is an even spread between sunrise and sunset.
         """
-        seconds = int((self._sunset - self._sunrise).total_seconds())
-        divisions = int(self.solcast.get_api_limit() / round(len(self.solcast.sites) / len(self.solcast.options.api_key.split(",")), 0))
-        interval = int(seconds / divisions)
-        intervals = [(self._sunrise + timedelta(seconds=interval) * i) for i in range(0,divisions)]
-        _LOGGER.debug('Auto update: Total seconds %d, divisions: %d, interval: %d seconds', seconds, divisions, interval)
-        for i in intervals:
-            if i > self.solcast.get_now_utc():
-                _LOGGER.debug('Scheduling forecast update at %s', i.strftime('%Y-%m-%d %H:%M:%S UTC'))
+        try:
+            seconds = int((self._sunset - self._sunrise).total_seconds())
+            divisions = int(self.solcast.get_api_limit() / round(len(self.solcast.sites) / len(self.solcast.options.api_key.split(",")), 0))
+            interval = int(seconds / divisions)
+            self._intervals = [(self._sunrise + timedelta(seconds=interval) * i) for i in range(0,divisions)]
+            _LOGGER.debug('Auto update: Total seconds %d, divisions: %d, interval: %d seconds', seconds, divisions, interval)
+            for i in self._intervals:
+                if i > self.solcast.get_now_utc():
+                    _LOGGER.debug('Scheduled forecast update at %s', i.strftime('%Y-%m-%d %H:%M:%S UTC'))
+        except:
+            _LOGGER.error("Exception in __calculate_forecast_updates(): %s", traceback.format_exc())
+
+    def __schedule_auto_update(self, for_time):
+        try:
+            for interval in self._intervals:
+                if interval > for_time:
+                    _LOGGER.debug('Scheduling next forecast update at %s', interval.strftime('%Y-%m-%d %H:%M:%S UTC'))
+                    async_track_point_in_utc_time(self._hass, self.service_event_update(), interval)
+                    break
+        except:
+            _LOGGER.error("Exception in __schedule_auto_update(): %s", traceback.format_exc())
 
     async def service_event_update(self, *args):
         """Get updated forecast data when requested by a service call."""
@@ -138,6 +162,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self._data_updated = True
             await self.update_integration_listeners()
             self._data_updated = False
+            if self.solcast.options.auto_update:
+                self.__schedule_auto_update(self.solcast.get_now_utc() + timedelta(seconds=1))
         except:
             _LOGGER.error("Exception in service_event_update(): %s", traceback.format_exc())
 

@@ -27,6 +27,7 @@ from homeassistant.util import dt as dt_util # type: ignore
 from .const import (
     API_QUOTA,
     AUTO_UPDATE,
+    AUTO_24_HOUR,
     BRK_ESTIMATE,
     BRK_ESTIMATE10,
     BRK_ESTIMATE90,
@@ -131,7 +132,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SOLCAST_URL,
         hass.config.path(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json"),
         tz,
-        entry.options.get(AUTO_UPDATE, False),
+        entry.options.get(AUTO_UPDATE, True),
+        entry.options.get(AUTO_24_HOUR, False),
         optdamp,
         entry.options.get(CUSTOM_HOUR_SENSOR, 1),
         entry.options.get(KEY_ESTIMATE, "estimate"),
@@ -496,11 +498,11 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 
             hass.data[DOMAIN]['entry_options'] = entry.options
         else:
-            await hass.config_entries.async_schedule_reload(entry.entry_id)
+            await hass.config_entries.async_reload(entry.entry_id)
     except:
         _LOGGER.debug(traceback.format_exc())
         # Restart on exception
-        await hass.config_entries.async_schedule_reload(entry.entry_id)
+        await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Upgrade configuration.
