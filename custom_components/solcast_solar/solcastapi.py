@@ -236,6 +236,7 @@ class SolcastApi: # pylint: disable=R0904
             self.options.host,
             self.options.file_path,
             self.options.tz,
+            self.options.auto_update,
             self.damp,
             options[CUSTOM_HOUR_SENSOR],
             options[KEY_ESTIMATE],
@@ -269,7 +270,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             (bool): True for stale, False if updated recently.
         """
-        return self.get_api_used_count() == 0 and self.get_last_updated_datetime() < self.__get_day_start_utc() - timedelta(days=1)
+        return self.get_api_used_count() == 0 and self.get_last_updated_datetime() < self.get_day_start_utc() - timedelta(days=1)
 
     def __redact_api_key(self, api_key) -> str:
         """Obfuscate API key.
@@ -1040,7 +1041,7 @@ class SolcastApi: # pylint: disable=R0904
             if ret[key] is None: ret.pop(key, None)
         return ret
 
-    def __get_day_start_utc(self) -> dt:
+    def get_day_start_utc(self) -> dt:
         """Datetime helper.
 
         Returns:
@@ -1056,7 +1057,7 @@ class SolcastApi: # pylint: disable=R0904
         """
         return dt.now().astimezone(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def __get_now_utc(self) -> dt:
+    def get_now_utc(self) -> dt:
         """Datetime helper.
 
         Returns:
@@ -1112,7 +1113,7 @@ class SolcastApi: # pylint: disable=R0904
                         _LOGGER.error(traceback.format_exc())
             return ht
 
-        start_utc = self.__get_day_start_utc() + timedelta(days=futureday)
+        start_utc = self.get_day_start_utc() + timedelta(days=futureday)
         end_utc = start_utc + timedelta(days=1)
         st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
         h = self._data_forecasts[st_i:end_i]
@@ -1210,7 +1211,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             (int) - A forecast for a multiple hour period as Wh (either used for a sensor or its attributes).
         """
-        start_utc = self.__get_now_utc()
+        start_utc = self.get_now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
         res = round(1000 * self.__get_forecast_pv_remaining(start_utc, end_utc=end_utc, site=site, _use_data_field=_use_data_field))
         return res
@@ -1247,7 +1248,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             (int): A power forecast in N minutes as W (either used for a sensor or its attributes).
         """
-        time_utc = self.__get_now_utc() + timedelta(minutes=n_mins)
+        time_utc = self.get_now_utc() + timedelta(minutes=n_mins)
         return round(1000 * self.__get_forecast_pv_moment(time_utc, site=site, _use_data_field=_use_data_field))
 
     def get_sites_power_n_mins(self, n_mins) -> Dict[str, Any]:
@@ -1283,7 +1284,7 @@ class SolcastApi: # pylint: disable=R0904
             (int): An expected peak generation for a given day as Watts.
         """
         _data_field = self._use_data_field if _use_data_field is None else _use_data_field
-        start_utc = self.__get_day_start_utc() + timedelta(days=n_day)
+        start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
         res = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, _use_data_field=_data_field)
         return 0 if res is None else round(1000 * res[_data_field])
@@ -1320,7 +1321,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             (datetime): The date and time of expected peak generation for a given day.
         """
-        start_utc = self.__get_day_start_utc() + timedelta(days=n_day)
+        start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
         res = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, _use_data_field=_use_data_field)
         return res if res is None else res["period_start"]
@@ -1356,8 +1357,8 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             (float): The expected remaining solar generation for the current day as kWh.
         """
-        start_utc = self.__get_now_utc()
-        end_utc = self.__get_day_start_utc() + timedelta(days=1)
+        start_utc = self.get_now_utc()
+        end_utc = self.get_day_start_utc() + timedelta(days=1)
         res = round(self.__get_forecast_pv_remaining(start_utc, end_utc=end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
@@ -1390,7 +1391,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             (float): The forecast total solar generation for a given day as kWh.
         """
-        start_utc = self.__get_day_start_utc() + timedelta(days=n_day)
+        start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
         res = round(0.5 * self.__get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
@@ -1516,12 +1517,12 @@ class SolcastApi: # pylint: disable=R0904
         xx = list(range(0, 1800*len(self._spline_period), 300))
 
         variant['all'] = {}
-        st, _ = self.__get_forecast_list_slice(self._data_forecasts, self.__get_day_start_utc()) # Get start of day index.
+        st, _ = self.__get_forecast_list_slice(self._data_forecasts, self.get_day_start_utc()) # Get start of day index.
         self.__get_spline(variant['all'], st, xx, self._data_forecasts, df, reducing=reducing)
         if self.options.attr_brk_site:
             for site in self.sites:
                 variant[site['resource_id']] = {}
-                st, _ = self.__get_forecast_list_slice(self._site_data_forecasts[site['resource_id']], self.__get_day_start_utc()) # Get start of day index.
+                st, _ = self.__get_forecast_list_slice(self._site_data_forecasts[site['resource_id']], self.get_day_start_utc()) # Get start of day index.
                 self.__get_spline(variant[site['resource_id']], st, xx, self._site_data_forecasts[site['resource_id']], df, reducing=reducing)
 
     async def __spline_moments(self):
@@ -1592,7 +1593,7 @@ class SolcastApi: # pylint: disable=R0904
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
             start_utc = start_utc.replace(minute = math.floor(start_utc.minute / 5) * 5)
             st_i, end_i = self.__get_forecast_list_slice(_data, start_utc, end_utc) # Get start and end indexes for the requested range.
-            day_start = self.__get_day_start_utc()
+            day_start = self.get_day_start_utc()
             res = self.__get_remaining(site, _data_field, (start_utc - day_start).total_seconds())
             if end_utc is not None:
                 end_utc = end_utc.replace(minute = math.floor(end_utc.minute / 5) * 5)
@@ -1677,7 +1678,7 @@ class SolcastApi: # pylint: disable=R0904
         """
         try:
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
-            day_start = self.__get_day_start_utc()
+            day_start = self.get_day_start_utc()
             time_utc = time_utc.replace(minute = math.floor(time_utc.minute / 5) * 5)
             res = self.__get_moment(site, _data_field, (time_utc - day_start).total_seconds())
             if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
@@ -1815,8 +1816,8 @@ class SolcastApi: # pylint: disable=R0904
             (bool): A flag incicating success or failure
         """
         try:
-            lastday = self.__get_day_start_utc() + timedelta(days=8)
-            numhours = math.ceil((lastday - self.__get_now_utc()).total_seconds() / 3600)
+            lastday = self.get_day_start_utc() + timedelta(days=8)
+            numhours = math.ceil((lastday - self.get_now_utc()).total_seconds() / 3600)
             _LOGGER.debug('Polling API for site %s lastday %s numhours %d', site, lastday.strftime('%Y-%m-%d'), numhours)
 
             _data = []
@@ -2172,7 +2173,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             (int): The starting index of the data structure just prior to midnight local time.
         """
-        midnight_utc = self.__get_day_start_utc()
+        midnight_utc = self.get_day_start_utc()
         for idx in range(len(_data)-1, -1, -1):
             if _data[idx]["period_start"] < midnight_utc:
                 break
@@ -2184,7 +2185,7 @@ class SolcastApi: # pylint: disable=R0904
     async def __check_data_records(self):
         """Verify that all records are present for each day."""
         for i in range(0, 8):
-            start_utc = self.__get_day_start_utc() + timedelta(days=i)
+            start_utc = self.get_day_start_utc() + timedelta(days=i)
             end_utc = start_utc + timedelta(days=1)
             st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
             num_rec = end_i - st_i
