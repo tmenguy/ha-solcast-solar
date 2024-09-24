@@ -40,8 +40,10 @@ from .const import (
     BRK_HOURLY,
     BRK_SITE_DETAILED,
     CUSTOM_HOUR_SENSOR,
-    HARD_LIMIT,
+    FORECAST_DEBUG_LOGGING,
     KEY_ESTIMATE,
+    SENSOR_DEBUG_LOGGING,
+    SPLINE_DEBUG_LOGGING,
 )
 
 """Return the function name at a specified caller depth.
@@ -52,10 +54,7 @@ from .const import (
 """
 currentFuncName = lambda n=0: sys._getframe(n + 1).f_code.co_name # pylint: disable=C3001, W0212
 
-FORECAST_DEBUG_LOGGING = False
 JSON_VERSION = 4
-SENSOR_DEBUG_LOGGING = False
-SPLINE_DEBUG_LOGGING = False
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,6 +119,7 @@ class ConnectionOptions:
     host: str
     file_path: str
     tz: timezone
+    auto_update: bool
     dampening: dict
     custom_hour_sensor: int
     key_estimate: str

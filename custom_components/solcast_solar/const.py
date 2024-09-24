@@ -5,9 +5,16 @@
 from __future__ import annotations
 from typing import Final
 
+# Development flags
+FORECAST_DEBUG_LOGGING = False
+SENSOR_DEBUG_LOGGING = False
+SPLINE_DEBUG_LOGGING = False
+
+# Integration constants
 API_QUOTA = "api_quota"
 ATTR_ENTRY_TYPE: Final = "entry_type"
 ATTRIBUTION: Final = "Data retrieved from Solcast"
+AUTO_UPDATE = "auto_update"
 BRK_ESTIMATE = "attr_brk_estimate"
 BRK_ESTIMATE10 = "attr_brk_estimate10"
 BRK_ESTIMATE90 = "attr_brk_estimate90"

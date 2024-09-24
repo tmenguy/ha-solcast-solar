@@ -30,6 +30,7 @@ async def test():
             'solcast.json',
             "/config",
             "Australia/Sydney",
+            False,
             optdamp,
             1,
             "estimate",

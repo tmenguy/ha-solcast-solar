@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 from datetime import datetime as dt
-from datetime import timedelta
 
 from typing import Any, Dict
 
@@ -16,7 +15,11 @@ from homeassistant.helpers.event import async_track_utc_time_change # type: igno
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    SENSOR_DEBUG_LOGGING,
+)
+
 from .solcastapi import SolcastApi
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,8 +44,6 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._last_day = None
         self._date_changed = False
         self._data_updated = False
-        self._updated_listeners = dt.now() - timedelta(minutes=1)
-        self._updated_usage = dt.now() - timedelta(minutes=1)
 
         super().__init__(
             hass,
@@ -72,10 +73,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     async def update_integration_listeners(self, *args):
         """Get updated sensor values."""
         try:
-            now = dt.now().replace(microsecond=0)
-            if self._updated_listeners == now: # Work around a possible HA scheduling bug
-                return
-            self._updated_listeners = now
+            if SENSOR_DEBUG_LOGGING:
+                _LOGGER.debug('Update listeners')
 
             current_day = dt.now(self.solcast.options.tz).day
             self._date_changed = current_day != self._last_day
@@ -83,7 +82,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 self._last_day = current_day
                 await self.update_midnight_spline_recalc()
 
-            self.async_update_listeners()
+            await self.async_update_listeners()
         except:
             #_LOGGER.error("update_integration_listeners: %s", traceback.format_exc())
             pass
@@ -91,11 +90,6 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     async def update_utcmidnight_usage_sensor_data(self, *args):
         """Resets tracked API usage at midnight UTC."""
         try:
-            now = dt.now().replace(microsecond=0)
-            if self._updated_usage == now: # Work around a possible HA scheduling bug
-                return
-            self._updated_usage = now
-
             await self.solcast.reset_api_usage()
         except:
             #_LOGGER.error("Exception in update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
@@ -104,6 +98,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     async def update_midnight_spline_recalc(self, *args):
         """Re-calculates splines at midnight local time."""
         try:
+            _LOGGER.debug("Recalculating splines")
             await self.solcast.recalculate_splines()
         except:
             _LOGGER.error("Exception in update_midnight_spline_recalc(): %s", traceback.format_exc())

@@ -11,7 +11,20 @@ from homeassistant.const import CONF_API_KEY # type: ignore
 from homeassistant.core import callback # type: ignore
 from homeassistant.data_entry_flow import FlowResult # type: ignore
 from homeassistant import config_entries # type: ignore
-from .const import DOMAIN, TITLE, API_QUOTA, CUSTOM_HOUR_SENSOR, BRK_ESTIMATE, BRK_ESTIMATE10, BRK_ESTIMATE90, BRK_SITE, BRK_HALFHOURLY, BRK_HOURLY, BRK_SITE_DETAILED, CONFIG_DAMP
+from .const import (
+    BRK_ESTIMATE,
+    BRK_ESTIMATE10,
+    BRK_ESTIMATE90,
+    BRK_HALFHOURLY,
+    BRK_HOURLY,
+    API_QUOTA,
+    BRK_SITE,
+    BRK_SITE_DETAILED,
+    CONFIG_DAMP,
+    CUSTOM_HOUR_SENSOR,
+    DOMAIN,
+    TITLE,
+)
 
 
 @config_entries.HANDLERS.register(DOMAIN)

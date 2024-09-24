@@ -26,6 +26,7 @@ from homeassistant.util import dt as dt_util # type: ignore
 
 from .const import (
     API_QUOTA,
+    AUTO_UPDATE,
     BRK_ESTIMATE,
     BRK_ESTIMATE10,
     BRK_ESTIMATE90,
@@ -130,6 +131,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SOLCAST_URL,
         hass.config.path(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json"),
         tz,
+        entry.options.get(AUTO_UPDATE, False),
         optdamp,
         entry.options.get(CUSTOM_HOUR_SENSOR, 1),
         entry.options.get(KEY_ESTIMATE, "estimate"),
@@ -207,6 +209,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.info("Solcast inverter hard limit value has been set. If the forecasts and graphs are not as you expect, remove this setting")
 
     hass.data[DOMAIN]['has_loaded'] = True
+
+    # Schedule sunrise/sunset update at midnight, and also execute it now
 
     # If the integration has been failed for some time and then is restarted retrieve forecasts (i.e Home Assistant down).
     if solcast.is_stale_data():
