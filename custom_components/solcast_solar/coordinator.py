@@ -67,6 +67,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._last_day = dt.now(self.solcast.options.tz).day
         try:
             async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
+            async_track_utc_time_change(self._hass, self.__check_forecast_fetch, minute=range(0, 60, 5), second=0)
             async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data, hour=0, minute=0, second=0)
 
             self.__auto_update_setup()
@@ -87,17 +88,22 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 await self.__update_midnight_spline_recalc()
                 self.__auto_update_setup()
 
+            await self.async_update_listeners()
+        except:
+            #_LOGGER.error("update_integration_listeners(): %s", traceback.format_exc())
+            pass
+
+    async def __check_forecast_fetch(self, *args):
+        """Check for an auto forecast update event."""
+        try:
             if self.solcast.options.auto_update:
                 if len(self._intervals) > 0 and self._intervals[0] <= self.solcast.get_now_utc():
                     self._intervals = self._intervals[1:]
                     await self.forecast_update()
                     if len(self._intervals) > 0:
                         _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime('%Y-%m-%d %H:%M:%S UTC'))
-
-            await self.async_update_listeners()
         except:
-            #_LOGGER.error("update_integration_listeners: %s", traceback.format_exc())
-            pass
+            _LOGGER.error("__check_forecast_fetch(): %s", traceback.format_exc())
 
     async def __update_utcmidnight_usage_sensor_data(self, *args):
         """Resets tracked API usage at midnight UTC."""
