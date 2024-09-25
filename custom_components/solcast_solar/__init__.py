@@ -26,8 +26,8 @@ from homeassistant.util import dt as dt_util # type: ignore
 
 from .const import (
     API_QUOTA,
-    AUTO_UPDATE,
     AUTO_24_HOUR,
+    AUTO_UPDATE,
     BRK_ESTIMATE,
     BRK_ESTIMATE10,
     BRK_ESTIMATE90,
@@ -41,11 +41,12 @@ from .const import (
     INIT_MSG,
     KEY_ESTIMATE,
     SERVICE_CLEAR_DATA,
-    SERVICE_UPDATE,
+    SERVICE_FORCE_UPDATE,
     SERVICE_QUERY_FORECAST_DATA,
     SERVICE_SET_DAMPENING,
     SERVICE_SET_HARD_LIMIT,
     SERVICE_REMOVE_HARD_LIMIT,
+    SERVICE_UPDATE,
     SOLCAST_URL,
 )
 
@@ -218,7 +219,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if solcast.is_stale_data():
         try:
             _LOGGER.info('First start, or integration has been failed for some time, retrieving forecasts (or your update automation has not been running - see readme)')
-            await coordinator.service_event_update()
+            await coordinator.service_event_force_update()
         except Exception as e:
             _LOGGER.error("Exception force fetching data on stale/initial start: %s", e)
             _LOGGER.error(traceback.format_exc())
@@ -231,6 +232,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """
         _LOGGER.info("Service call: %s", SERVICE_UPDATE)
         await coordinator.service_event_update()
+
+    async def handle_service_force_update_forecast(call: ServiceCall):
+        """Handle service call.
+
+        Arguments:
+            call (ServiceCall): Not used.
+        """
+        _LOGGER.info("Service call: %s", SERVICE_UPDATE)
+        await coordinator.service_event_force_update()
 
     async def handle_service_clear_solcast_data(call: ServiceCall):
         """Handle service call.
@@ -394,6 +404,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(
         DOMAIN, SERVICE_UPDATE, handle_service_update_forecast
+    )
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_FORCE_UPDATE, handle_service_force_update_forecast
     )
 
     hass.services.async_register(

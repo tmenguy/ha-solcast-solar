@@ -77,11 +77,15 @@
         "update_forecasts": {
             "name": "Aktualizácia",
             "description": "Načítava najnovšie predpovede zo Solcastu."
-            },
+        },
+        "force_update_forecasts": {
+            "name": "Vynútiť Aktualizácia",
+            "description": "Force načítava najnovšie predpovede zo Solcastu."
+        },
         "clear_all_solcast_data": {
             "name": "Vymažte všetky uložené údaje Solcast",
             "description": "Odstráni súbor solcast.json a odstráni všetky aktuálne údaje lokality solcast."
-            },
+        },
         "query_forecast_data": {
             "name": "Dopytujte údaje predpovede",
             "description": "Vráti množinu údajov alebo hodnotu pre daný dotaz.",

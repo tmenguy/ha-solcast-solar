@@ -77,11 +77,15 @@
         "update_forecasts": {
             "name": "Update",
             "description": "Fetches the latest forecasts data from Solcast."
-            },
+        },
+        "force_update_forecasts": {
+            "name": "Force Update",
+            "description": "Force fetches the latest forecasts data from Solcast."
+        },
         "clear_all_solcast_data": {
             "name": "Clear all saved Solcast data",
             "description": "Deletes the solcast.json file to remove all current solcast site data."
-            },
+        },
         "query_forecast_data": {
             "name": "Query forecast data",
             "description": "Return a data set for a given query.",

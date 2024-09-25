@@ -1749,7 +1749,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.error(traceback.format_exc())
             return None
 
-    async def get_forecast_update(self, do_past=False) -> str:
+    async def get_forecast_update(self, do_past=False, force=False) -> str:
         """Request forecast data for all sites.
 
         Arguments:
@@ -1770,7 +1770,7 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 sites_attempted += 1
                 _LOGGER.info("Getting forecast update for Solcast site %s", site['resource_id'])
-                result = await self.__http_data_call(site=site['resource_id'], api_key=site['apikey'], do_past=do_past)
+                result = await self.__http_data_call(site=site['resource_id'], api_key=site['apikey'], do_past=do_past, force=force)
                 if not result:
                     failure = True
                     if len(self.sites) > 1:
@@ -1806,7 +1806,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.error(traceback.format_exc())
         return status
 
-    async def __http_data_call(self, site=None, api_key=None, do_past=False) -> bool:
+    async def __http_data_call(self, site=None, api_key=None, do_past=False, force=False) -> bool:
         """Request forecast data via the Solcast API.
 
         Arguments:
@@ -1828,7 +1828,7 @@ class SolcastApi: # pylint: disable=R0904
             if do_past:
                 # Run once, for a new install or if the solcast.json file is deleted. This will use up api call quota.
                 ae = None
-                resp_dict = await self.__fetch_data(168, path="estimated_actuals", site=site, api_key=api_key, cachedname="actuals")
+                resp_dict = await self.__fetch_data(168, path="estimated_actuals", site=site, api_key=api_key, cachedname="actuals", force=force)
                 if not isinstance(resp_dict, dict):
                     _LOGGER.error('No data was returned for estimated_actuals so this WILL cause issues. Your API limit may be exhaused, or Solcast has a problem...')
                     raise TypeError(f"Solcast API did not return a json object. Returned {resp_dict}")
@@ -1858,7 +1858,7 @@ class SolcastApi: # pylint: disable=R0904
                             }
                         )
 
-            resp_dict = await self.__fetch_data(numhours, path="forecasts", site=site, api_key=api_key, cachedname="forecasts")
+            resp_dict = await self.__fetch_data(numhours, path="forecasts", site=site, api_key=api_key, cachedname="forecasts", force=force)
             if resp_dict is None:
                 return False
 
@@ -1931,7 +1931,7 @@ class SolcastApi: # pylint: disable=R0904
         return False
 
 
-    async def __fetch_data(self, hours, path="error", site="", api_key="", cachedname="forecasts") -> Optional[dict[str, Any]]:
+    async def __fetch_data(self, hours, path="error", site="", api_key="", cachedname="forecasts", force=False) -> Optional[dict[str, Any]]:
         """Fetch forecast data.
         
         One site is fetched, and retries ensure that the site is actually fetched.
@@ -1966,7 +1966,7 @@ class SolcastApi: # pylint: disable=R0904
                             status = 200
                             _LOGGER.debug("Offline cached mode enabled, loaded data for site %s", site)
                 else:
-                    if self._api_used[api_key] < self._api_limit[api_key]:
+                    if self._api_used[api_key] < self._api_limit[api_key] or force:
                         url = f"{self.options.host}/rooftop_sites/{site}/{path}"
                         params = {"format": "json", "api_key": api_key, "hours": hours}
                         _LOGGER.debug("Fetch data url: %s", url)

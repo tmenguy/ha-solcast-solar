@@ -13,6 +13,7 @@ import traceback
 
 from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.event import async_track_utc_time_change, async_track_point_in_utc_time # type: ignore
+from homeassistant.exceptions import HomeAssistantError # type: ignore
 from homeassistant.helpers.sun import get_astral_event_next # type: ignore
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
@@ -86,6 +87,13 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 await self.__update_midnight_spline_recalc()
                 self.__auto_update_setup()
 
+            if self.solcast.options.auto_update:
+                if len(self._intervals) > 0 and self._intervals[0] <= self.solcast.get_now_utc():
+                    self._intervals = self._intervals[1:]
+                    await self.forecast_update()
+                    if len(self._intervals) > 0:
+                        _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime('%Y-%m-%d %H:%M:%S UTC'))
+
             await self.async_update_listeners()
         except:
             #_LOGGER.error("update_integration_listeners: %s", traceback.format_exc())
@@ -116,7 +124,6 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                     self._sunrise = self.solcast.get_day_start_utc()
                     self._sunset = self.solcast.get_day_start_utc() + timedelta(hours=24)
                 self.__calculate_forecast_updates()
-                self.__schedule_auto_update(self.solcast.get_now_utc())
         except:
             _LOGGER.error("Exception in __auto_update_setup(): %s", traceback.format_exc())
 
@@ -137,35 +144,35 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             divisions = int(self.solcast.get_api_limit() / round(len(self.solcast.sites) / len(self.solcast.options.api_key.split(",")), 0))
             interval = int(seconds / divisions)
             self._intervals = [(self._sunrise + timedelta(seconds=interval) * i) for i in range(0,divisions)]
-            _LOGGER.debug('Auto update: Total seconds %d, divisions: %d, interval: %d seconds', seconds, divisions, interval)
+            self._intervals = [i.replace(minute=int(i.minute/5)*5, second=0) for i in self._intervals if i > self.solcast.get_now_utc()]
+            _LOGGER.debug('Auto update: Total seconds %d, divisions: %d updates, interval: %d seconds', seconds, divisions, interval)
             for i in self._intervals:
-                if i > self.solcast.get_now_utc():
-                    _LOGGER.debug('Scheduled forecast update at %s', i.strftime('%Y-%m-%d %H:%M:%S UTC'))
+                _LOGGER.debug('Scheduled forecast update at %s', i.strftime('%Y-%m-%d %H:%M:%S UTC'))
         except:
             _LOGGER.error("Exception in __calculate_forecast_updates(): %s", traceback.format_exc())
 
-    def __schedule_auto_update(self, for_time):
-        try:
-            for interval in self._intervals:
-                if interval > for_time:
-                    _LOGGER.debug('Scheduling next forecast update at %s', interval.strftime('%Y-%m-%d %H:%M:%S UTC'))
-                    async_track_point_in_utc_time(self._hass, self.service_event_update(), interval)
-                    break
-        except:
-            _LOGGER.error("Exception in __schedule_auto_update(): %s", traceback.format_exc())
+    async def forecast_update(self, force=False):
+        """Get updated forecast data."""
+        #await self.solcast.sites_weather()
+        await self.solcast.get_forecast_update(do_past=False, force=force)
+        self._data_updated = True
+        await self.update_integration_listeners()
+        self._data_updated = False
 
     async def service_event_update(self, *args):
         """Get updated forecast data when requested by a service call."""
+        if self.solcast.options.auto_update:
+            raise HomeAssistantError("Auto-update is enabled, ignoring service event for forecast update, use Solcast PV Forecast: Force Update instead.")
+        else:
+            await self.forecast_update()
+
+    async def service_event_force_update(self, *args):
+        """Force the update of forecast data when requested by a service call. Ignores API usage/limit counts."""
         try:
-            #await self.solcast.sites_weather()
-            await self.solcast.get_forecast_update(do_past=False)
-            self._data_updated = True
-            await self.update_integration_listeners()
-            self._data_updated = False
-            if self.solcast.options.auto_update:
-                self.__schedule_auto_update(self.solcast.get_now_utc() + timedelta(seconds=1))
-        except:
-            _LOGGER.error("Exception in service_event_update(): %s", traceback.format_exc())
+            await self.forecast_update(force=True)
+        except Exception as e:
+            _LOGGER.error("Exception in service_event_force_update(): %s", traceback.format_exc())
+            raise HomeAssistantError(f"Force update failed: {e}.") from e
 
     async def service_event_delete_old_solcast_json_file(self, *args):
         """Delete the solcast.json file when requested by a service call."""

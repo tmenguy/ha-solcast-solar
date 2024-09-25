@@ -72,7 +72,11 @@
     "services": {
         "update_forecasts": {
             "name": "Aktualisieren",
-            "description": "Lade die neusten Prognosedaten von Solcast herunter."
+            "description": "Ruft die neuesten Prognosedaten von Solcast ab."
+        },
+        "force_update_forecasts": {
+            "name": "Aktualisierung erzwingen",
+            "description": "Force ruft die neuesten Prognosedaten von Solcast ab."
         },
         "clear_all_solcast_data": {
             "name": "Solcast-Daten zurücksetzen",

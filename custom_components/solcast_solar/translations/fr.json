@@ -78,6 +78,10 @@
             "name": "Mise à jour",
             "description": "Récupère les dernières données de prévisions de Solcast."
         },
+        "force_update_forecasts": {
+            "name": "Forcer la mise à jour",
+            "description": "Force récupère les dernières données de prévisions de Solcast."
+        },
         "clear_all_solcast_data": {
             "name": "Effacer toutes les données Solcast enregistrées",
             "description": "Supprime le fichier solcast.json pour supprimer toutes les données actuelles du site solcast."

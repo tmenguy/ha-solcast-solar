@@ -78,6 +78,10 @@
             "name": "Aktualizuj",
             "description": "Pobierz najnowsze dane prognoz Solcast."
         },
+        "force_update_forecasts": {
+            "name": "Wymuś aktualizuj",
+            "description": "Force pobiera najnowsze dane prognoz Solcast."
+        },
         "clear_all_solcast_data": {
             "name": "Wyczyść wszystkie zapisane dane Solcast",
             "description": "Usuwa plik solcast.json, aby usunąć wszystkie aktualne dane witryny Solcast."
