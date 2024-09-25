@@ -48,8 +48,6 @@ This custom component integrates the Solcast Hobby PV Forecast API into Home Ass
 >
 > Solcast now only offer new account creators a limit of 10 API calls per day (used to be 50). 
 > Old account users still have 50 API calls.
-> 
-> The integration currently no longer includes auto API polling. Users now need to create their own automations to call the update solcast service to poll for new data. Keep in mind your API poll limit.
 
 ## Solcast Requirements:
 Sign up for an API key (https://solcast.com/).
@@ -133,8 +131,8 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
  
  [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png)
 
-1. Enter your `Solcast API Key`, `API limit` and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_NB: this goes against Solcast T&C's by having more than one account_). If the API limit is the same for multiple accounts then enter a single value, or both values separated by a comma.
-1. Create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
+1. Enter your `Solcast API Key`, `API limit`, desired auto-update settings and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_NB: this goes against Solcast T&C's by having more than one account_). If the API limit is the same for multiple accounts then enter a single value, or both values separated by a comma.
+1. If auto-update was not selected then create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
 1. Set up HA Energy Dashboard settings.
 1. To change other configuration options after installation, select the integration in `Devices & services` then `CONFIGURE`.
 
@@ -149,10 +147,17 @@ Make sure you use your `API Key` and not your rooftop id created in Solcast. You
 >
 > Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
 
-### HA Automation to poll for data
-Create a new automation and setup your prefered trigger times to poll for new Solcast forecast data. These are examples, so alter these or create your own to fit your needs.
+### Auto-update of forecasts
+Using auto-update will schedule forecast updates that get automatically spread across hours when the sun is up. It calculates the number of daily updates that will occur according to the number of Solcast sites and the API limit that is configured.
 
-**Recommended**
+Should it be desired to fetch an update ouside of these hours, then the API limit in the integration configuration may be reduced, and an automation may then be set up to call the service `solcast_solar.force_update_forecasts` at the desired time of day. (Note that calling the service `solcast_solar.update_forecasts` will be refused if auto-update is enabled, so use force update instead.)
+
+For example, to update just after midnight, as well as take advantage of auto-update, create the desired automation to force update, then reduce the API limit configured in the automation accordingly. (For this exmple, if the API key has ten total calls allowed per day and two rooftop sites, reduce the API limit to eight because two updates will be used when the automation runs.)
+
+### Using an HA Automation to poll for data
+If auto-update is not enabled then create a new automation (or automations) and set up your prefered trigger times to poll for new Solcast forecast data. Use the service `solcast_solar.update_forecasts`. Examples are provided, so alter these or create your own to fit your needs.
+
+<details><summary><i>Click here for the examples</i><p/></summary>
 
 To make the most of the available API calls per day, you can have the automation call the API using an interval calculated by the number of daytime hours divided by the number of total API calls a day you can make.
 
@@ -196,9 +201,6 @@ mode: single
 >
 > 
 > If you have two arrays on your roof then two api calls will be made for each update, effectively reducing the number of updates to five per day. For this case, change to: `api_request_limit = 5`
-
-### Additional automation examples
-<details><summary><i>Click here for more ideas</i><p/></summary>
 
 The next automation also includes a randomisation so that calls aren't made at precisely the same time, hopefully avoiding the likelihood that the Solcast servers are inundated by multiple calls at the same time, but it triggers every four hours between sunrise and sunset:
 
@@ -253,7 +255,7 @@ mode: single
 >
 > Log capture instructions are in the Bug Issue Template - you will see them if you start creating a new issue - make sure you include these logs if you want the assistance of the repository constributors.
 >
-> An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should ten consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` service call, or wait for your next scheduled automation run.
+> An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should ten consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` service call (or if auto-update is enabled use `solcast_solar.force_update_forecasts`), or wait for the next scheduled update.
 >
 > Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration cannot start correctly, and it will retry continuously.
 
@@ -291,7 +293,7 @@ Click the Forecast option button and select the Solcast Solar option. Click SAVE
 
 ### Dampening Configuration
 
-It is possible to configure hourly dampening values to account for shading.
+It is possible to configure hourly dampening values to account for shading. This may be configured by automation or the integration configuration for total dampening. Per-site dampening is possible using service calls only.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/reconfig.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/reconfig.png)
 
@@ -308,6 +310,23 @@ Here you can change the dampening factor value for any hour. Values from 0.0 - 1
 >
 > 
 > Factors causing dampening to be appropriate might be when different degrees of shading occur at the start or end of a day in Winter only, where the sun is closer to the horizon and might cause nearby buildings or trees to cast a longer shadow than in other seasons.
+
+#### Per-site dampening
+
+Setting dampening for individual Solcast sites requires use of the `solcast_solar.set_dampening` service.
+
+This service call accepts a string of hourly dampening factors, and also an optional site identifier.
+
+```
+action: solcast_solar.set_dampening
+data:
+  site: 1234-5678-9012-3456
+  damp_factor: 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+```
+
+If a site is not specified then per-site dampening will be removed, and the overall configured dampening will apply to all sites.
+
+If per-site dampening is configured for a single site in a multi-site set up then dampening will only apply to the forecasts for that site. Other sites will not be dampened. Dampening for all individual sites may of course be set.
 
 ### Sensor Attributes Configuration
 
@@ -354,7 +373,8 @@ These are the services for this integration: ([Configuration](#configuration))
 
 | Service | Action |
 | --- | --- |
-| `solcast_solar.update_forecasts` | Updates the future forecast data only |
+| `solcast_solar.update_forecasts` | Updates the forecast data (refused if auto-update is enabled) |
+| `solcast_solar.force_update_forecasts` | Force updates the forecast data (performs an update regardless of API usage tracking or auto-update setting) |
 | `solcast_solar.clear_all_solcast_data` | Deletes the `solcast.json` cached file |
 | `solcast_solar.query_forecast_data` | Returns a list of forecast data using a datetime range start - end |
 | `solcast_solar.set_dampening` | Updates the hourly dampening factors |
@@ -573,9 +593,17 @@ series:
 
 ## Known issues
 
-* If a hard limit or dampening factors are set then the individual sites breakdown attributes will not be affected by these factors. The only way to implement this would be to have separate hard limits and dampening factors for each site, and this would become overly complex.
+* None
 
 ## Changes
+
+v4.1.8
+* Automated forecast updates that do not require an automation by @autoSteve and @BJReplay
+* Add per-site dampening by @autoSteve
+* Add site breakdown option for detailed forecasts by @autoSteve
+* Suppress integration reload when many configuration options are changed by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.7...v4.1.8
 
 v4.1.7
 * Fix issues with site breakdown for sites added at a later date by @autoSteve
