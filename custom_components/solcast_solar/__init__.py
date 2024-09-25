@@ -133,7 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SOLCAST_URL,
         hass.config.path(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json"),
         tz,
-        entry.options.get(AUTO_UPDATE, True),
+        entry.options.get(AUTO_UPDATE, False),
         entry.options.get(AUTO_24_HOUR, False),
         optdamp,
         entry.options.get(CUSTOM_HOUR_SENSOR, 1),
@@ -490,6 +490,10 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             reload = True
         if hass.data[DOMAIN]['entry_options'][API_QUOTA] != entry.options[API_QUOTA]:
             reload = True
+        if hass.data[DOMAIN]['entry_options'][AUTO_UPDATE] != entry.options[AUTO_UPDATE]:
+            reload = True
+        if hass.data[DOMAIN]['entry_options'][AUTO_24_HOUR] != entry.options[AUTO_24_HOUR]:
+            reload = True
         if (
             entry.options[BRK_SITE_DETAILED] and
             (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
@@ -661,6 +665,21 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if new.get(BRK_SITE_DETAILED) is None: new[BRK_SITE_DETAILED] = False
         try:
             hass.config_entries.async_update_entry(entry, options=new, version=10)
+            upgraded()
+        except Exception as e:
+            if "unexpected keyword argument 'version'" in e:
+                entry.version = 10
+                hass.config_entries.async_update_entry(entry, options=new_options)
+                upgraded()
+            else:
+                raise
+
+    if entry.version < 11:
+        new = {**entry.options}
+        if new.get(AUTO_UPDATE) is None: new[AUTO_UPDATE] = False
+        if new.get(AUTO_24_HOUR) is None: new[AUTO_24_HOUR] = False
+        try:
+            hass.config_entries.async_update_entry(entry, options=new, version=11)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:

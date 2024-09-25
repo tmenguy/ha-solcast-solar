@@ -7,7 +7,9 @@
             "user": {
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
-                    "api_quota": "API limit (optionally comma separate multiple values for each key)"
+                    "api_quota": "API limit (optionally comma separate multiple values for each key)",
+                    "auto_update": "Auto-update (if unchecked then an automation is required to get forecast updates - see the integration documentation)",
+                    "auto_24_hour": "Spread forecast auto updates over 24 hours (not from sunrise to sunset)"
                 },
                 "description": "Solcast Account Details"
             }
@@ -19,6 +21,8 @@
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
                     "api_quota": "API limit (optionally comma separate multiple values for each key)",
+                    "auto_update": "Auto-update (if unchecked then an automation must be used instead)",
+                    "auto_24_hour": "Spread forecast auto updates over 24 hours (not from sunrise to sunset)",
                     "customhoursensor": "Custom Next X Hour Sensor (min=1, max=144)",
                     "attr_brk_estimate10": "Enable estimate 10 sensor attributes",
                     "attr_brk_estimate": "Enable estimate 50 sensor attributes",

@@ -12,6 +12,8 @@ from homeassistant.core import callback # type: ignore
 from homeassistant.data_entry_flow import FlowResult # type: ignore
 from homeassistant import config_entries # type: ignore
 from .const import (
+    AUTO_24_HOUR,
+    AUTO_UPDATE,
     BRK_ESTIMATE,
     BRK_ESTIMATE10,
     BRK_ESTIMATE90,
@@ -31,7 +33,7 @@ from .const import (
 class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     """Handle the config flow."""
 
-    VERSION = 10 #v5 started 4.0.8, #6 started 4.0.15, #7 started 4.0.16, #8 started 4.0.39, #9 started 4.1.3, #10 started 4.1.8
+    VERSION = 11 #v5 started 4.0.8, #6 started 4.0.15, #7 started 4.0.16, #8 started 4.0.39, #9 started 4.1.3, #10 unreleased, #11 started 4.1.8
 
     @staticmethod
     @callback
@@ -68,7 +70,10 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 data = {},
                 options={
                     CONF_API_KEY: user_input[CONF_API_KEY],
-                    API_QUOTA: "10",
+                    API_QUOTA: user_input[API_QUOTA],
+                    AUTO_UPDATE: user_input[AUTO_UPDATE],
+                    AUTO_24_HOUR: user_input[AUTO_24_HOUR],
+                    # Remaining options set to default
                     "damp00":1.0,
                     "damp01":1.0,
                     "damp02":1.0,
@@ -110,6 +115,8 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_API_KEY, default=""): str,
                     vol.Required(API_QUOTA, default="10"): str,
+                    vol.Optional(AUTO_UPDATE, default=False): bool,
+                    vol.Optional(AUTO_24_HOUR, default=False): bool,
                 }
             ),
         )
@@ -140,6 +147,8 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         errors = {}
         api_key = self.config_entry.options.get(CONF_API_KEY)
         api_quota = self.config_entry.options[API_QUOTA]
+        auto_update = self.config_entry.options[AUTO_UPDATE]
+        auto_24_hour = self.config_entry.options[AUTO_24_HOUR]
         customhoursensor = self.config_entry.options[CUSTOM_HOUR_SENSOR]
         estimate_breakdown = self.config_entry.options[BRK_ESTIMATE]
         estimate_breakdown10 = self.config_entry.options[BRK_ESTIMATE10]
@@ -171,24 +180,21 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 api_quota = ','.join(api_quota)
                 all_config_data[API_QUOTA] = api_quota
 
+                all_config_data[AUTO_UPDATE] = user_input[AUTO_UPDATE]
+                all_config_data[AUTO_24_HOUR] = user_input[AUTO_24_HOUR]
+
                 customhoursensor = user_input[CUSTOM_HOUR_SENSOR]
                 if customhoursensor < 1 or customhoursensor > 144:
                     return self.async_abort(reason="Custom sensor not between 1 and 144!")
                 all_config_data[CUSTOM_HOUR_SENSOR] = customhoursensor
 
-                estimate_breakdown = user_input[BRK_ESTIMATE]
-                estimate_breakdown10 = user_input[BRK_ESTIMATE10]
-                estimate_breakdown90 = user_input[BRK_ESTIMATE90]
-                site_breakdown = user_input[BRK_SITE]
-                half_hourly = user_input[BRK_HALFHOURLY]
-                hourly = user_input[BRK_HOURLY]
+                all_config_data[BRK_ESTIMATE] = user_input[BRK_ESTIMATE]
+                all_config_data[BRK_ESTIMATE10] = user_input[BRK_ESTIMATE10]
+                all_config_data[BRK_ESTIMATE90] = user_input[BRK_ESTIMATE90]
+                all_config_data[BRK_SITE] = user_input[BRK_SITE]
+                all_config_data[BRK_HALFHOURLY] = user_input[BRK_HALFHOURLY]
+                all_config_data[BRK_HOURLY] = user_input[BRK_HOURLY]
                 site_detailed = user_input[BRK_SITE_DETAILED]
-                all_config_data[BRK_ESTIMATE] = estimate_breakdown
-                all_config_data[BRK_ESTIMATE10] = estimate_breakdown10
-                all_config_data[BRK_ESTIMATE90] = estimate_breakdown90
-                all_config_data[BRK_SITE] = site_breakdown
-                all_config_data[BRK_HALFHOURLY] = half_hourly
-                all_config_data[BRK_HOURLY] = hourly
                 all_config_data[BRK_SITE_DETAILED] = site_detailed if site_breakdown else False
 
                 self.hass.config_entries.async_update_entry(
@@ -210,6 +216,8 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 {
                     vol.Required(CONF_API_KEY, default=api_key,): str,
                     vol.Required(API_QUOTA, default=api_quota,): str,
+                    vol.Optional(AUTO_UPDATE, default=auto_update): bool,
+                    vol.Optional(AUTO_24_HOUR, default=auto_24_hour): bool,
                     vol.Required(CUSTOM_HOUR_SENSOR, default=customhoursensor,): int,
                     vol.Optional(BRK_ESTIMATE10, default=estimate_breakdown10): bool,
                     vol.Optional(BRK_ESTIMATE, default=estimate_breakdown): bool,

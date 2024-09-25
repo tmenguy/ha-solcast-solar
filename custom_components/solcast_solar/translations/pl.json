@@ -7,7 +7,9 @@
             "user": {
                 "data": {
                     "api_key": "Klucz API (wielokrotne wartości oddzielane przecinkiem)",
-                    "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)"
+                    "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
+                    "auto_update": "Automatyczna aktualizacja (jeśli odznaczone, do uzyskania aktualizacji prognoz wymagana jest automatyzacja - zobacz dokumentację integracji)",
+                    "auto_24_hour": "Rozłóż automatyczne aktualizacje prognoz na 24 godziny (nie od wschodu do zachodu słońca)"
                 },
                 "description": "Dane konta Solcast"
             }
@@ -19,6 +21,8 @@
                 "data": {
                     "api_key": "Klucz API (wielokrotne wartości oddzielane przecinkiem)",
                     "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
+                    "auto_update": "Automatyczna aktualizacja (jeśli odznaczone, zamiast tego należy zastosować automatyzację)",
+                    "auto_24_hour": "Rozłóż automatyczne aktualizacje prognoz na 24 godziny (nie od wschodu do zachodu słońca)",
                     "customhoursensor": "Niestandardowy czujnik następnej godziny X (min.=1, maks.=144)",
                     "attr_brk_estimate10": "Włącz oszacowanie 10 atrybutów czujnika",
                     "attr_brk_estimate": "Włącz oszacowanie 50 atrybutów czujnika",

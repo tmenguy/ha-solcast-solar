@@ -7,7 +7,9 @@
             "user": {
                 "data": {
                     "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
-                    "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)"
+                    "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
+                    "auto_update": "Automatická aktualizácia (ak nie je začiarknuté, na získanie aktualizácií prognózy je potrebná automatizácia – pozrite si integračnú dokumentáciu)",
+                    "auto_24_hour": "Rozložiť automatické aktualizácie predpovede na 24 hodín (nie od východu do západu slnka)"
                 },
                 "description": "Podrobnosti o účte Solcast"
             }
@@ -19,6 +21,8 @@
                 "data": {
                     "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
                     "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
+                    "auto_update": "Automatická aktualizácia (ak nie je začiarknuté, musíte namiesto toho použiť automatizáciu)",
+                    "auto_24_hour": "Rozložiť automatické aktualizácie predpovede na 24 hodín (nie od východu do západu slnka)",
                     "customhoursensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
                     "attr_brk_estimate10": "Povoliť odhad 10 atribútov senzora",
                     "attr_brk_estimate": "Povoliť odhad 50 atribútov senzora",
