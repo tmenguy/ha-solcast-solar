@@ -483,6 +483,13 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         entry (ConfigEntry): The integration entry instance, contains the configuration.
     """
     try:
+        coordinator = hass.data[DOMAIN][entry.entry_id]
+
+        def timers_cancel():
+            for timer, cancel in coordinator.timer_cancel.items():
+                _LOGGER.debug('Cancel timer %s', timer)
+                cancel()
+
         reload = False
         recalc = False
         # Config changes which will cause a reload.
@@ -504,8 +511,6 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                 recalc = True
 
         if not reload:
-            coordinator = hass.data[DOMAIN][entry.entry_id]
-
             coordinator.solcast.set_options(entry.options)
 
             if recalc:
@@ -516,10 +521,12 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 
             hass.data[DOMAIN]['entry_options'] = entry.options
         else:
+            timers_cancel()
             await hass.config_entries.async_reload(entry.entry_id)
     except:
         _LOGGER.debug(traceback.format_exc())
         # Restart on exception
+        timers_cancel()
         await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

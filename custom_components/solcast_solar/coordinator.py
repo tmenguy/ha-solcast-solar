@@ -50,6 +50,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._sunrise: dt = None
         self._sunset: dt = None
         self._intervals: list[dt] = []
+        self.timer_cancel = {}
 
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
@@ -66,9 +67,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Set up time change tracking."""
         self._last_day = dt.now(self.solcast.options.tz).day
         try:
-            async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
-            async_track_utc_time_change(self._hass, self.__check_forecast_fetch, minute=range(0, 60, 5), second=0)
-            async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data, hour=0, minute=0, second=0)
+            self.timer_cancel['listeners'] = async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
+            self.timer_cancel['check_fetch'] = async_track_utc_time_change(self._hass, self.__check_forecast_fetch, minute=range(0, 60, 5), second=0)
+            self.timer_cancel['midnight_update'] = async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data,  hour=0, minute=0, second=0)
+            for timer, _ in self.timer_cancel.items():
+                _LOGGER.debug('Setup timer %s', timer)
 
             self.__auto_update_setup()
         except:
