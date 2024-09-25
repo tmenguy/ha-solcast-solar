@@ -81,8 +81,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     async def update_integration_listeners(self, *args):
         """Get updated sensor values."""
         try:
-            if SENSOR_DEBUG_LOGGING:
-                _LOGGER.debug('Update listeners')
+            #if SENSOR_DEBUG_LOGGING:
+            _LOGGER.debug('Update listeners')
 
             current_day = dt.now(self.solcast.options.tz).day
             self._date_changed = current_day != self._last_day
