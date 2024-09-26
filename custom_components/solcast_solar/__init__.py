@@ -486,7 +486,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         coordinator = hass.data[DOMAIN][entry.entry_id]
 
         def tasks_cancel():
-            # Terminate coordinator tasks
+            # Terminate coordinator tasks in progress
             for task, cancel in coordinator.tasks.items():
                 _LOGGER.debug('Canceled coordinator task %s', task)
                 cancel()
