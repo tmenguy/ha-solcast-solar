@@ -5,6 +5,8 @@
 from __future__ import annotations
 from typing import Any
 
+import os
+from os.path import exists as file_exists
 import voluptuous as vol # type: ignore
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow # type: ignore
 from homeassistant.const import CONF_API_KEY # type: ignore
@@ -109,13 +111,15 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 },
             )
 
+        solcast_json_exists = file_exists(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json")
+
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY, default=""): str,
                     vol.Required(API_QUOTA, default="10"): str,
-                    vol.Optional(AUTO_UPDATE, default=False): bool,
+                    vol.Optional(AUTO_UPDATE, default=not solcast_json_exists): bool,
                     vol.Optional(AUTO_24_HOUR, default=False): bool,
                 }
             ),
