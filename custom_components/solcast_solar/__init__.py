@@ -488,18 +488,19 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         def tasks_cancel():
             # Terminate coordinator tasks in progress
             for task, cancel in coordinator.tasks.items():
-                _LOGGER.debug('Canceled coordinator task %s', task)
+                _LOGGER.debug('Cancelled coordinator task %s', task)
                 cancel()
             coordinator.tasks = {}
             # Terminate solcastapi tasks in progress
             for task, cancel in coordinator.solcast.tasks.items():
-                _LOGGER.debug('Canceled solcastapi task %s', task)
+                _LOGGER.debug('Cancelled solcastapi task %s', task)
                 cancel()
             coordinator.solcast.tasks = {}
 
         reload = False
         recalc = False
-        # Config changes which will cause a reload.
+
+        # Config changes, which when changed will cause a reload.
         if hass.data[DOMAIN]['entry_options'].get(CONF_API_KEY) != entry.options.get(CONF_API_KEY):
             reload = True
         if hass.data[DOMAIN]['entry_options'][API_QUOTA] != entry.options[API_QUOTA]:
@@ -513,6 +514,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
         ):
             reload = True
+
+        # Config changes, which when changed will cause a forecast recalculation only, without reload.
         for i in range(0,24):
             if hass.data[DOMAIN]['entry_options'][f"damp{i:02}"] != entry.options[f"damp{i:02}"]:
                 recalc = True
