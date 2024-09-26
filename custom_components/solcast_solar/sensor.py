@@ -430,9 +430,6 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
         forecast update or when the date changes.
         """
 
-        if self._update_policy == SensorUpdatePolicy.EVERY_TIME_INTERVAL and self._coordinator.get_data_updated():
-            return
-
         if self._update_policy == SensorUpdatePolicy.DEFAULT and not (self._coordinator.get_date_changed() or self._coordinator.get_data_updated()) :
             return
 
