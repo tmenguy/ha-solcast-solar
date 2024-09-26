@@ -199,6 +199,7 @@ class SolcastApi: # pylint: disable=R0904
         self.sites = []
         self.sites_loaded = False
         self.previously_loaded = False
+        self.active_fetch = None
 
         self._aiohttp_session = aiohttp_session
         self._data = {'siteinfo': {}, 'last_updated': dt.fromtimestamp(0, timezone.utc).isoformat()}
@@ -1828,7 +1829,11 @@ class SolcastApi: # pylint: disable=R0904
             if do_past:
                 # Run once, for a new install or if the solcast.json file is deleted. This will use up api call quota.
                 ae = None
-                resp_dict = await self.__fetch_data(168, path="estimated_actuals", site=site, api_key=api_key, cachedname="actuals", force=force)
+                self.active_fetch = asyncio.create_task(self.__fetch_data(168, path="estimated_actuals", site=site, api_key=api_key, cachedname="actuals", force=force))
+                await self.active_fetch
+                resp_dict = self.active_fetch.result()
+                self.active_fetch = None
+                #resp_dict = await self.__fetch_data(168, path="estimated_actuals", site=site, api_key=api_key, cachedname="actuals", force=force)
                 if not isinstance(resp_dict, dict):
                     _LOGGER.error('No data was returned for estimated_actuals so this WILL cause issues. Your API limit may be exhaused, or Solcast has a problem...')
                     raise TypeError(f"Solcast API did not return a json object. Returned {resp_dict}")
@@ -1858,7 +1863,11 @@ class SolcastApi: # pylint: disable=R0904
                             }
                         )
 
-            resp_dict = await self.__fetch_data(numhours, path="forecasts", site=site, api_key=api_key, cachedname="forecasts", force=force)
+            self.active_fetch = asyncio.create_task(self.__fetch_data(numhours, path="forecasts", site=site, api_key=api_key, cachedname="forecasts", force=force))
+            await self.active_fetch
+            resp_dict = self.active_fetch.result()
+            self.active_fetch = None
+            #resp_dict = await self.__fetch_data(numhours, path="forecasts", site=site, api_key=api_key, cachedname="forecasts", force=force)
             if resp_dict is None:
                 return False
 

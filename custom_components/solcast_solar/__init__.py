@@ -485,10 +485,18 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
     try:
         coordinator = hass.data[DOMAIN][entry.entry_id]
 
-        def timers_cancel():
+        def tasks_cancel():
+            # Terminate timers
             for timer, cancel in coordinator.timer_cancel.items():
-                _LOGGER.debug('Cancel timer %s', timer)
+                _LOGGER.debug('Canceled timer %s', timer)
                 cancel()
+            # Terminate up-coming forecast fetch
+            if coordinator.fetch_task:
+                coordinator.fetch_task.cancel()
+            # Terminate any fetch in progress
+            if coordinator.solcast.active_fetch:
+                _LOGGER.debug('Canceled forecast update')
+                coordinator.solcast.active_fetch.cancel()
 
         reload = False
         recalc = False
@@ -521,12 +529,12 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 
             hass.data[DOMAIN]['entry_options'] = entry.options
         else:
-            timers_cancel()
+            tasks_cancel()
             await hass.config_entries.async_reload(entry.entry_id)
     except:
         _LOGGER.debug(traceback.format_exc())
         # Restart on exception
-        timers_cancel()
+        tasks_cancel()
         await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

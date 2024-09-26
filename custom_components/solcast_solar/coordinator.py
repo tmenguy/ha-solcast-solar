@@ -11,6 +11,8 @@ from typing import Any, Dict
 import logging
 import traceback
 
+import asyncio
+
 from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.event import async_track_utc_time_change, async_track_point_in_utc_time # type: ignore
 from homeassistant.exceptions import HomeAssistantError # type: ignore
@@ -51,6 +53,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._sunset: dt = None
         self._intervals: list[dt] = []
         self.timer_cancel = {}
+        self.fetch_task = None
 
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
@@ -71,9 +74,10 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self.timer_cancel['check_fetch'] = async_track_utc_time_change(self._hass, self.__check_forecast_fetch, minute=range(0, 60, 5), second=0)
             self.timer_cancel['midnight_update'] = async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data,  hour=0, minute=0, second=0)
             for timer, _ in self.timer_cancel.items():
-                _LOGGER.debug('Setup timer %s', timer)
+                _LOGGER.debug('Timer running %s', timer)
 
             self.__auto_update_setup()
+            await self.__check_forecast_fetch()
         except:
             _LOGGER.error("Exception in Solcast coordinator setup: %s", traceback.format_exc())
 
@@ -100,11 +104,20 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Check for an auto forecast update event."""
         try:
             if self.solcast.options.auto_update:
-                if len(self._intervals) > 0 and self._intervals[0] <= self.solcast.get_now_utc():
-                    self._intervals = self._intervals[1:]
-                    await self.forecast_update()
-                    if len(self._intervals) > 0:
-                        _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime('%Y-%m-%d %H:%M:%S UTC'))
+                if len(self._intervals) > 0 and self._intervals[0] <= self.solcast.get_now_utc() + timedelta(minutes=5):
+                    update_in = (self._intervals[0] - self.solcast.get_now_utc()).total_seconds()
+                    _LOGGER.debug('Forecast will update in %d seconds', update_in)
+                    async def wait_for_fetch():
+                        try:
+                            await asyncio.sleep(update_in)
+                            self._intervals = self._intervals[1:]
+                            await self.forecast_update()
+                            if len(self._intervals) > 0:
+                                _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime('%Y-%m-%d %H:%M:%S UTC'))
+                            self.fetch_task = None
+                        except asyncio.CancelledError:
+                            _LOGGER.debug('Cancelled next scheduled update')
+                    self.fetch_task = asyncio.create_task(wait_for_fetch())
         except:
             _LOGGER.error("__check_forecast_fetch(): %s", traceback.format_exc())
 
@@ -153,7 +166,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             divisions = int(self.solcast.get_api_limit() / round(len(self.solcast.sites) / len(self.solcast.options.api_key.split(",")), 0))
             interval = int(seconds / divisions)
             self._intervals = [(self._sunrise + timedelta(seconds=interval) * i) for i in range(0,divisions)]
-            self._intervals = [i.replace(minute=int(i.minute/5)*5, second=0) for i in self._intervals if i > self.solcast.get_now_utc()]
+            #self._intervals = [i.replace(minute=int(i.minute/5)*5, second=0) for i in self._intervals if i > self.solcast.get_now_utc()]
+            self._intervals = [i for i in self._intervals if i > self.solcast.get_now_utc()]
             _LOGGER.debug('Auto update: Total seconds %d, divisions: %d updates, interval: %d seconds', seconds, divisions, interval)
             for i in self._intervals:
                 _LOGGER.debug('Scheduled forecast update at %s', i.strftime('%Y-%m-%d %H:%M:%S UTC'))
