@@ -103,7 +103,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         try:
             if self.solcast.options.auto_update:
                 if len(self._intervals) > 0 and self._intervals[0] < self.solcast.get_now_utc() + timedelta(minutes=5):
-                    if self.tasks['pending_update'] is not None:
+                    if self.tasks.get('pending_update') is not None:
                         # An update is already tasked
                         return
                     update_in = (self._intervals[0] - self.solcast.get_now_utc()).total_seconds()
