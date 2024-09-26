@@ -156,8 +156,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Get the sunrise and sunset times today"""
         self._sunrise = get_astral_event_next(self._hass, "sunrise", self.solcast.get_day_start_utc()).replace(microsecond=0)
         self._sunset = get_astral_event_next(self._hass, "sunset", self.solcast.get_day_start_utc()).replace(microsecond=0)
-        _LOGGER.debug('Sunrise today: %s', self._sunrise)
-        _LOGGER.debug('Sunset today: %s', self._sunset)
+        _LOGGER.debug('Sunrise today: %s', self._sunrise.strftime('%Y-%m-%d %H:%M:%S UTC'))
+        _LOGGER.debug('Sunset today: %s', self._sunset.strftime('%Y-%m-%d %H:%M:%S UTC'))
 
     def __calculate_forecast_updates(self):
         """Calculate all automated forecast update UTC events for the day.
