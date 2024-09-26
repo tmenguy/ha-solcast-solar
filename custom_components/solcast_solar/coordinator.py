@@ -14,7 +14,7 @@ import traceback
 import asyncio
 
 from homeassistant.core import HomeAssistant # type: ignore
-from homeassistant.helpers.event import async_track_utc_time_change, async_track_point_in_utc_time # type: ignore
+from homeassistant.helpers.event import async_track_utc_time_change # type: ignore
 from homeassistant.exceptions import HomeAssistantError # type: ignore
 from homeassistant.helpers.sun import get_astral_event_next # type: ignore
 
@@ -22,7 +22,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # typ
 
 from .const import (
     DOMAIN,
-    SENSOR_DEBUG_LOGGING,
 )
 
 from .solcastapi import SolcastApi
@@ -43,6 +42,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             version (str): The integration version from manifest.json.
         """
         self.solcast = solcast
+        self.tasks = {}
 
         self._hass: HomeAssistant = hass
         self._version: str = version
@@ -52,8 +52,6 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._sunrise: dt = None
         self._sunset: dt = None
         self._intervals: list[dt] = []
-        self.timer_cancel = {}
-        self.fetch_task = None
 
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
@@ -70,11 +68,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Set up time change tracking."""
         self._last_day = dt.now(self.solcast.options.tz).day
         try:
-            self.timer_cancel['listeners'] = async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
-            self.timer_cancel['check_fetch'] = async_track_utc_time_change(self._hass, self.__check_forecast_fetch, minute=range(0, 60, 5), second=0)
-            self.timer_cancel['midnight_update'] = async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data,  hour=0, minute=0, second=0)
-            for timer, _ in self.timer_cancel.items():
-                _LOGGER.debug('Timer running %s', timer)
+            self.tasks['listeners'] = async_track_utc_time_change(self._hass, self.update_integration_listeners, minute=range(0, 60, 5), second=0)
+            self.tasks['check_fetch'] = async_track_utc_time_change(self._hass, self.__check_forecast_fetch, minute=range(0, 60, 5), second=0)
+            self.tasks['midnight_update'] = async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data,  hour=0, minute=0, second=0)
+            for timer, _ in self.tasks.items():
+                _LOGGER.debug('Started coordinator task %s', timer)
 
             self.__auto_update_setup()
             await self.__check_forecast_fetch()
@@ -114,10 +112,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                             await self.forecast_update()
                             if len(self._intervals) > 0:
                                 _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime('%Y-%m-%d %H:%M:%S UTC'))
-                            self.fetch_task = None
                         except asyncio.CancelledError:
                             _LOGGER.debug('Cancelled next scheduled update')
-                    self.fetch_task = asyncio.create_task(wait_for_fetch())
+                    self.tasks['pending_update'] = asyncio.create_task(wait_for_fetch())
+                    await self.tasks['pending_update']
+                    self.tasks.pop('pending_update')
         except:
             _LOGGER.error("__check_forecast_fetch(): %s", traceback.format_exc())
 

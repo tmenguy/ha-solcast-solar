@@ -486,17 +486,16 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         coordinator = hass.data[DOMAIN][entry.entry_id]
 
         def tasks_cancel():
-            # Terminate timers
-            for timer, cancel in coordinator.timer_cancel.items():
-                _LOGGER.debug('Canceled timer %s', timer)
+            # Terminate coordinator tasks
+            for task, cancel in coordinator.tasks.items():
+                _LOGGER.debug('Canceled coordinator task %s', task)
                 cancel()
-            # Terminate up-coming forecast fetch
-            if coordinator.fetch_task:
-                coordinator.fetch_task.cancel()
-            # Terminate any fetch in progress
-            if coordinator.solcast.active_fetch:
-                _LOGGER.debug('Canceled forecast update')
-                coordinator.solcast.active_fetch.cancel()
+            coordinator.tasks = {}
+            # Terminate solcastapi tasks in progress
+            for task, cancel in coordinator.solcast.tasks.items():
+                _LOGGER.debug('Canceled solcastapi task %s', task)
+                cancel()
+            coordinator.solcast.tasks = {}
 
         reload = False
         recalc = False
