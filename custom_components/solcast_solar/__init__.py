@@ -518,6 +518,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
         ):
             reload = True
+        if hass.data[DOMAIN]['entry_options'][HARD_LIMIT] != entry.options[HARD_LIMIT]:
+            reload = True
 
         # Config changes, which when changed will cause a forecast recalculation only, without reload.
         for i in range(0,24):
