@@ -2084,20 +2084,18 @@ class SolcastApi: # pylint: disable=R0904
             lastk = -1
             for v in self._data_forecasts:
                 d = v['period_start'].isoformat()
-                if v[self._use_data_field] == 0.0:
+                value = v[self._use_data_field]
+                if value == 0.0:
                     if lastv > 0.0:
-                        wh_hours[d] = round(v[self._use_data_field] * 500,0)
+                        wh_hours[d] = 0.0
                         wh_hours[lastk] = 0.0
-                    lastk = d
-                    lastv = v[self._use_data_field]
                 else:
                     if lastv == 0.0:
-                        wh_hours[lastk] = round(lastv * 500,0)
+                        wh_hours[lastk] = 0.0
+                    wh_hours[d] = round(value * 500,0)
 
-                    wh_hours[d] = round(v[self._use_data_field] * 500,0)
-
-                    lastk = d
-                    lastv = v[self._use_data_field]
+                lastk = d
+                lastv = value
         except:
             _LOGGER.error("Exception in __make_energy_dict(): %s", traceback.format_exc())
 
