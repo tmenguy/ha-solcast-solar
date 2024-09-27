@@ -24,6 +24,7 @@
                     "auto_update": "Mise à jour automatique (si décochée, une automatisation doit être utilisée à la place)",
                     "auto_24_hour": "Répartissez les mises à jour automatiques des prévisions sur 24 heures (pas du lever au coucher du soleil)",
                     "customhoursensor": "Capteur personnalisé des X prochaines heures (min=1, max=144)",
+                    "hard_limit": "Limite stricte de l'onduleur en Watts (voir la documentation d'intégration)",
                     "attr_brk_estimate10": "Activer l'estimation de 10 attributs de capteur",
                     "attr_brk_estimate": "Activer l'estimation de 50 attributs de capteur",
                     "attr_brk_estimate90": "Activer l'estimation de 90 attributs de capteur",

@@ -14,6 +14,7 @@ from homeassistant.core import callback # type: ignore
 from homeassistant.data_entry_flow import FlowResult # type: ignore
 from homeassistant import config_entries # type: ignore
 from .const import (
+    API_QUOTA,
     AUTO_24_HOUR,
     AUTO_UPDATE,
     BRK_ESTIMATE,
@@ -21,12 +22,12 @@ from .const import (
     BRK_ESTIMATE90,
     BRK_HALFHOURLY,
     BRK_HOURLY,
-    API_QUOTA,
     BRK_SITE,
     BRK_SITE_DETAILED,
     CONFIG_DAMP,
     CUSTOM_HOUR_SENSOR,
     DOMAIN,
+    HARD_LIMIT,
     TITLE,
 )
 
@@ -76,31 +77,32 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                     AUTO_UPDATE: user_input[AUTO_UPDATE],
                     AUTO_24_HOUR: user_input[AUTO_24_HOUR],
                     # Remaining options set to default
-                    "damp00":1.0,
-                    "damp01":1.0,
-                    "damp02":1.0,
-                    "damp03":1.0,
-                    "damp04":1.0,
-                    "damp05":1.0,
-                    "damp06":1.0,
-                    "damp07":1.0,
-                    "damp08":1.0,
-                    "damp09":1.0,
-                    "damp10":1.0,
-                    "damp11":1.0,
-                    "damp12":1.0,
-                    "damp13":1.0,
-                    "damp14":1.0,
-                    "damp15":1.0,
-                    "damp16":1.0,
-                    "damp17":1.0,
-                    "damp18":1.0,
-                    "damp19":1.0,
-                    "damp20":1.0,
-                    "damp21":1.0,
-                    "damp22":1.0,
-                    "damp23":1.0,
-                    "customhoursensor":1,
+                    "damp00": 1.0,
+                    "damp01": 1.0,
+                    "damp02": 1.0,
+                    "damp03": 1.0,
+                    "damp04": 1.0,
+                    "damp05": 1.0,
+                    "damp06": 1.0,
+                    "damp07": 1.0,
+                    "damp08": 1.0,
+                    "damp09": 1.0,
+                    "damp10": 1.0,
+                    "damp11": 1.0,
+                    "damp12": 1.0,
+                    "damp13": 1.0,
+                    "damp14": 1.0,
+                    "damp15": 1.0,
+                    "damp16": 1.0,
+                    "damp17": 1.0,
+                    "damp18": 1.0,
+                    "damp19": 1.0,
+                    "damp20": 1.0,
+                    "damp21": 1.0,
+                    "damp22": 1.0,
+                    "damp23": 1.0,
+                    "customhoursensor": 1,
+                    HARD_LIMIT: 100000,
                     BRK_ESTIMATE: True,
                     BRK_ESTIMATE10: True,
                     BRK_ESTIMATE90: True,
@@ -154,6 +156,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         auto_update = self.config_entry.options[AUTO_UPDATE]
         auto_24_hour = self.config_entry.options[AUTO_24_HOUR]
         customhoursensor = self.config_entry.options[CUSTOM_HOUR_SENSOR]
+        hard_limit = self.config_entry.options.get(HARD_LIMIT, 100000) # Has a get with default because may not feature in an existing user entry config.
         estimate_breakdown = self.config_entry.options[BRK_ESTIMATE]
         estimate_breakdown10 = self.config_entry.options[BRK_ESTIMATE10]
         estimate_breakdown90 = self.config_entry.options[BRK_ESTIMATE90]
@@ -189,8 +192,13 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
                 customhoursensor = user_input[CUSTOM_HOUR_SENSOR]
                 if customhoursensor < 1 or customhoursensor > 144:
-                    return self.async_abort(reason="Custom sensor not between 1 and 144!")
+                    return self.async_abort(reason="Custom sensor not between 1 and 144")
                 all_config_data[CUSTOM_HOUR_SENSOR] = customhoursensor
+
+                hard_limit = user_input[HARD_LIMIT]
+                if hard_limit < 1:
+                    return self.async_abort(reason="Hard limit must be a positive number")
+                all_config_data[HARD_LIMIT] = hard_limit
 
                 all_config_data[BRK_ESTIMATE] = user_input[BRK_ESTIMATE]
                 all_config_data[BRK_ESTIMATE10] = user_input[BRK_ESTIMATE10]
@@ -223,6 +231,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     vol.Optional(AUTO_UPDATE, default=auto_update): bool,
                     vol.Optional(AUTO_24_HOUR, default=auto_24_hour): bool,
                     vol.Required(CUSTOM_HOUR_SENSOR, default=customhoursensor,): int,
+                    vol.Required(HARD_LIMIT, default=hard_limit,): int,
                     vol.Optional(BRK_ESTIMATE10, default=estimate_breakdown10): bool,
                     vol.Optional(BRK_ESTIMATE, default=estimate_breakdown): bool,
                     vol.Optional(BRK_ESTIMATE90, default=estimate_breakdown90): bool,

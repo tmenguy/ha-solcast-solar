@@ -24,6 +24,7 @@
                     "auto_update": "Auto-update (if unchecked then an automation must be used instead)",
                     "auto_24_hour": "Spread forecast auto updates over 24 hours (not from sunrise to sunset)",
                     "customhoursensor": "Custom Next X Hour Sensor (min=1, max=144)",
+                    "hard_limit": "Inverter hard limit in Watts (see integration documentation)",
                     "attr_brk_estimate10": "Enable estimate 10 sensor attributes",
                     "attr_brk_estimate": "Enable estimate 50 sensor attributes",
                     "attr_brk_estimate90": "Enable estimate 90 sensor attributes",

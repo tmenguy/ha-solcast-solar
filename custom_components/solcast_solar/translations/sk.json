@@ -24,6 +24,7 @@
                     "auto_update": "Automatická aktualizácia (ak nie je začiarknuté, musíte namiesto toho použiť automatizáciu)",
                     "auto_24_hour": "Rozložiť automatické aktualizácie predpovede na 24 hodín (nie od východu do západu slnka)",
                     "customhoursensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
+                    "hard_limit": "Pevný limit meniča vo wattoch (pozri integračnú dokumentáciu)",
                     "attr_brk_estimate10": "Povoliť odhad 10 atribútov senzora",
                     "attr_brk_estimate": "Povoliť odhad 50 atribútov senzora",
                     "attr_brk_estimate90": "Povoliť odhad 90 atribútov senzora",

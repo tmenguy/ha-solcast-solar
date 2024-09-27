@@ -518,7 +518,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
         ):
             reload = True
-        if hass.data[DOMAIN]['entry_options'][HARD_LIMIT] != entry.options[HARD_LIMIT]:
+        if hass.data[DOMAIN]['entry_options'].get(HARD_LIMIT) != entry.options.get(HARD_LIMIT):
             reload = True
 
         # Config changes, which when changed will cause a forecast recalculation only, without reload.
@@ -701,12 +701,13 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         new = {**entry.options}
         if new.get(AUTO_UPDATE) is None: new[AUTO_UPDATE] = False
         if new.get(AUTO_24_HOUR) is None: new[AUTO_24_HOUR] = False
+        if new.get(HARD_LIMIT) is None: new[HARD_LIMIT] = 100000
         try:
             hass.config_entries.async_update_entry(entry, options=new, version=11)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
-                entry.version = 10
+                entry.version = 11
                 hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
