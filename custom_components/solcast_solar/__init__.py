@@ -147,6 +147,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.options.get(BRK_HOURLY, True),
         entry.options.get(BRK_SITE_DETAILED, False),
     )
+    _LOGGER.debug('Auto-update options: %s', {k: v for k, v in entry.options.items() if k.startswith('auto_')})
+    _LOGGER.debug('Attribute options: %s', {k: v for k, v in entry.options.items() if k.startswith('attr_')})
+    _LOGGER.debug('Custom sensor options: %s', {k: v for k, v in entry.options.items() if k.startswith('custom')})
+    _LOGGER.debug('Hard limit: %s', {k: v for k, v in entry.options.items() if k.startswith('hard_')})
 
     solcast = SolcastApi(aiohttp_client.async_get_clientsession(hass), options)
 

@@ -21,6 +21,8 @@ from homeassistant.helpers.sun import get_astral_event_next # type: ignore
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
 
 from .const import (
+    DATE_FORMAT,
+    DATE_FORMAT_UTC,
     DOMAIN,
     SENSOR_DEBUG_LOGGING,
 )
@@ -115,12 +117,12 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                             self._intervals = self._intervals[1:]
                             await self.forecast_update()
                             if len(self._intervals) > 0:
-                                _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime('%Y-%m-%d %H:%M:%S UTC'))
+                                _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime(DATE_FORMAT_UTC))
                         except asyncio.CancelledError:
                             _LOGGER.debug('Cancelled next scheduled update')
+                        finally:
+                            self.tasks.pop('pending_update')
                     self.tasks['pending_update'] = asyncio.create_task(wait_for_fetch())
-                    await self.tasks['pending_update']
-                    self.tasks.pop('pending_update')
         except:
             _LOGGER.error("__check_forecast_fetch(): %s", traceback.format_exc())
 
@@ -134,7 +136,6 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     async def __update_midnight_spline_recalc(self, *args):
         """Re-calculates splines at midnight local time."""
         try:
-            _LOGGER.debug("Recalculating splines")
             await self.solcast.recalculate_splines()
         except:
             _LOGGER.error("Exception in __update_midnight_spline_recalc(): %s", traceback.format_exc())
@@ -156,8 +157,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Get the sunrise and sunset times today"""
         self._sunrise = get_astral_event_next(self._hass, "sunrise", self.solcast.get_day_start_utc()).replace(microsecond=0)
         self._sunset = get_astral_event_next(self._hass, "sunset", self.solcast.get_day_start_utc()).replace(microsecond=0)
-        _LOGGER.debug('Sunrise today: %s', self._sunrise.strftime('%Y-%m-%d %H:%M:%S UTC'))
-        _LOGGER.debug('Sunset today: %s', self._sunset.strftime('%Y-%m-%d %H:%M:%S UTC'))
+        _LOGGER.debug('Sunrise today: %s', self._sunrise.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
+        _LOGGER.debug('Sunset today: %s', self._sunset.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
 
     def __calculate_forecast_updates(self):
         """Calculate all automated forecast update UTC events for the day.
@@ -172,8 +173,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             #self._intervals = [i.replace(minute=int(i.minute/5)*5, second=0) for i in self._intervals if i > self.solcast.get_now_utc()]
             self._intervals = [i for i in self._intervals if i > self.solcast.get_now_utc()]
             _LOGGER.debug('Auto update: Total seconds %d, divisions: %d updates, interval: %d seconds', seconds, divisions, interval)
+            _LOGGER.info('Auto-update will update forecasts %d times %s', divisions, 'over 24 hours' if self.solcast.options.auto_24_hour else 'between sunrise and sunset')
             for i in self._intervals:
-                _LOGGER.debug('Scheduled forecast update at %s', i.strftime('%Y-%m-%d %H:%M:%S UTC'))
+                _LOGGER.debug('Scheduled forecast update at %s', i.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
         except:
             _LOGGER.error("Exception in __calculate_forecast_updates(): %s", traceback.format_exc())
 

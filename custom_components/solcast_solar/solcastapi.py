@@ -40,6 +40,8 @@ from .const import (
     BRK_HOURLY,
     BRK_SITE_DETAILED,
     CUSTOM_HOUR_SENSOR,
+    DATE_FORMAT,
+    DATE_FORMAT_UTC,
     FORECAST_DEBUG_LOGGING,
     KEY_ESTIMATE,
     SENSOR_DEBUG_LOGGING,
@@ -76,7 +78,7 @@ class JSONDecoder(json.JSONDecoder):
         """Required hook."""
         ret = {}
         for key, value in obj.items():
-            if key in {'period_start'}:
+            if key in {'period_start', 'reset'}:
                 ret[key] = dt.fromisoformat(value)
             else:
                 ret[key] = value
@@ -623,13 +625,14 @@ class SolcastApi: # pylint: disable=R0904
                         self._api_limit[api_key] = usage.get("daily_limit", None)
                         self._api_used[api_key] = usage.get("daily_limit_consumed", None)
                         self._api_used_reset[api_key] = usage.get("reset", None)
-                        if self._api_used_reset[api_key] is not None:
-                            try:
-                                self._api_used_reset[api_key] = parse_datetime(self._api_used_reset[api_key]).astimezone(timezone.utc)
-                            except:
-                                _LOGGER.error("Internal error parsing datetime from usage cache, continuing")
-                                _LOGGER.error(traceback.format_exc())
-                                self._api_used_reset[api_key] = None
+                        _LOGGER.debug("Usage cache for %s last reset %s", self.__redact_api_key(api_key), self._api_used_reset[api_key].strftime(DATE_FORMAT_UTC))
+                        #if self._api_used_reset[api_key] is not None:
+                        #    try:
+                        #        self._api_used_reset[api_key] = parse_datetime(self._api_used_reset[api_key]).astimezone(timezone.utc)
+                        #    except:
+                        #        _LOGGER.error("Internal error parsing datetime from usage cache, continuing")
+                        #        _LOGGER.error(traceback.format_exc())
+                        #        self._api_used_reset[api_key] = None
                         if usage['daily_limit'] != quota[api_key]: # Limit has been adjusted, so rewrite the cache.
                             self._api_limit[api_key] = quota[api_key]
                             await self.__serialise_usage(api_key)
@@ -960,7 +963,7 @@ class SolcastApi: # pylint: disable=R0904
 
             if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                 "Get forecast list: (%ss) st %s end %s st_i %d end_i %d h.len %d",
-                round(time.time()-st_time,4), args[0].strftime('%Y-%m-%d %H:%M:%S UTC'), args[1].strftime('%Y-%m-%d %H:%M:%S UTC'), st_i, end_i, len(h)
+                round(time.time()-st_time,4), args[0].strftime(DATE_FORMAT_UTC), args[1].strftime(DATE_FORMAT_UTC), st_i, end_i, len(h)
             )
 
             return tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
@@ -1131,7 +1134,7 @@ class SolcastApi: # pylint: disable=R0904
         if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
             "Get forecast day: %d st %s end %s st_i %d end_i %d h.len %d",
             futureday,
-            start_utc.strftime('%Y-%m-%d %H:%M:%S UTC'), end_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
+            start_utc.strftime(DATE_FORMAT_UTC), end_utc.strftime(DATE_FORMAT_UTC),
             st_i, end_i, len(h)
         )
 
@@ -1620,8 +1623,8 @@ class SolcastApi: # pylint: disable=R0904
             if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                 "Get estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
                 currentFuncName(1), '' if site is None else ' '+site, _data_field,
-                start_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
-                end_utc.strftime('%Y-%m-%d %H:%M:%S UTC') if end_utc is not None else None,
+                start_utc.strftime(DATE_FORMAT_UTC),
+                end_utc.strftime(DATE_FORMAT_UTC) if end_utc is not None else None,
                 st_i, end_i, round(res,4)
             )
             return res if res > 0 else 0
@@ -1653,16 +1656,16 @@ class SolcastApi: # pylint: disable=R0904
                 if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                     "Get estimate: %s()%s%s st %s end %s st_i %d end_i %d res %s",
                     currentFuncName(1), '' if site is None else ' '+site, '' if _data_field is None else ' '+_data_field,
-                    start_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
-                    end_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
+                    start_utc.strftime(DATE_FORMAT_UTC),
+                    end_utc.strftime(DATE_FORMAT_UTC),
                     st_i, end_i, round(res,4)
                 )
             else:
                 _LOGGER.error(
                     'No forecast data available for %s()%s%s: %s to %s',
                     currentFuncName(1), '' if site is None else ' '+site, '' if _data_field is None else ' '+_data_field,
-                    start_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
-                    end_utc.strftime('%Y-%m-%d %H:%M:%S UTC')
+                    start_utc.strftime(DATE_FORMAT_UTC),
+                    end_utc.strftime(DATE_FORMAT_UTC)
                 )
             return res
         except Exception as e:
@@ -1689,7 +1692,7 @@ class SolcastApi: # pylint: disable=R0904
             if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                 "Get estimate moment: %s()%s %s t %s sec %d res %s",
                 currentFuncName(1), '' if site is None else ' '+site, _data_field,
-                time_utc.strftime('%Y-%m-%d %H:%M:%S UTC'), (time_utc - day_start).total_seconds(), round(res, 4)
+                time_utc.strftime(DATE_FORMAT_UTC), (time_utc - day_start).total_seconds(), round(res, 4)
             )
             return res
         except Exception as e:
@@ -1722,16 +1725,16 @@ class SolcastApi: # pylint: disable=R0904
                 if SENSOR_DEBUG_LOGGING: _LOGGER.debug(
                     "Get max estimate: %s()%s %s st %s end %s st_i %d end_i %d res %s",
                     currentFuncName(1), '' if site is None else ' '+site, _data_field,
-                    start_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
-                    end_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
+                    start_utc.strftime(DATE_FORMAT_UTC),
+                    end_utc.strftime(DATE_FORMAT_UTC),
                     st_i, end_i, res
                 )
             else:
                 _LOGGER.error(
                     'No forecast data available for %s()%s%s: %s to %s',
                     currentFuncName(1), '' if site is None else ' '+site, '' if _data_field is None else ' '+_data_field,
-                    start_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
-                    end_utc.strftime('%Y-%m-%d %H:%M:%S UTC')
+                    start_utc.strftime(DATE_FORMAT_UTC),
+                    end_utc.strftime(DATE_FORMAT_UTC)
                 )
             return res
         except Exception as e:
@@ -2189,7 +2192,7 @@ class SolcastApi: # pylint: disable=R0904
             if _data[idx]["period_start"] < midnight_utc:
                 break
         #if SENSOR_DEBUG_LOGGING:
-        #    _LOGGER.debug("Calc forecast start index midnight: %s, idx %d, len %d", midnight_utc.strftime('%Y-%m-%d %H:%M:%S UTC'), idx, len(_data))
+        #    _LOGGER.debug("Calc forecast start index midnight: %s, idx %d, len %d", midnight_utc.strftime(DATE_FORMAT_UTC), idx, len(_data))
         return idx
 
 
