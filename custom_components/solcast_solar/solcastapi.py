@@ -660,7 +660,7 @@ class SolcastApi: # pylint: disable=R0904
 
         Both the sites and usage are gathered here.
         
-        Additionally, transitions from a multi-API key set up to a singe API key are
+        Additionally, transitions from a multi-API key set up to a single API key are
         tracked at startup, and necessary adjustments are made to file naming.
 
         Single key installations have cache files named like `solcast-sites.json`, while
