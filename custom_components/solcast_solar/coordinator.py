@@ -22,7 +22,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # typ
 
 from .const import (
     DATE_FORMAT,
-    DATE_FORMAT_UTC,
     DOMAIN,
     SENSOR_DEBUG_LOGGING,
 )
@@ -117,7 +116,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                             self._intervals = self._intervals[1:]
                             await self.forecast_update()
                             if len(self._intervals) > 0:
-                                _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].strftime(DATE_FORMAT_UTC))
+                                _LOGGER.debug('Next forecast update scheduled for %s', self._intervals[0].astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
                         except asyncio.CancelledError:
                             _LOGGER.debug('Cancelled next scheduled update')
                         finally:

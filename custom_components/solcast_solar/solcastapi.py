@@ -625,7 +625,7 @@ class SolcastApi: # pylint: disable=R0904
                         self._api_limit[api_key] = usage.get("daily_limit", None)
                         self._api_used[api_key] = usage.get("daily_limit_consumed", None)
                         self._api_used_reset[api_key] = usage.get("reset", None)
-                        _LOGGER.debug("Usage cache for %s last reset %s", self.__redact_api_key(api_key), self._api_used_reset[api_key].strftime(DATE_FORMAT_UTC))
+                        _LOGGER.debug("Usage cache for %s last reset %s", self.__redact_api_key(api_key), self._api_used_reset[api_key].astimezone(self._tz).strftime(DATE_FORMAT))
                         #if self._api_used_reset[api_key] is not None:
                         #    try:
                         #        self._api_used_reset[api_key] = parse_datetime(self._api_used_reset[api_key]).astimezone(timezone.utc)
