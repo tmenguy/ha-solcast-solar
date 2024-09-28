@@ -428,22 +428,35 @@ class SolcastApi: # pylint: disable=R0904
             except Exception as e:
                 _LOGGER.error("Exception writing site sampening for %s: %s", json_file, e)
 
-    async def site_dampening_data(self):
-        """Read the current site dampening file."""
+    async def site_dampening_data(self) -> bool:
+        """Read the current site dampening file.
+
+        Returns:
+            (bool): Per-site dampening in use
+        """
+        ex = False
         try:
             json_file = self.__get_site_dampening_filename()
             if not file_exists(json_file):
                 self.site_damp = {}
+                _LOGGER.debug('Returning False')
+                return False
             else:
                 async with aiofiles.open(json_file) as f:
                     resp_json = json.loads(await f.read())
                     self.site_damp = cast(dict, resp_json)
                     if self.site_damp:
                         _LOGGER.debug("Site dampening: %s", str(self.site_damp))
-                        if not self.previously_loaded:
-                            _LOGGER.info("Site dampening loaded")
+                        return True
+                    else:
+                        return False
         except Exception as e:
             _LOGGER.error("Exception in site_dampening_data(): %s: %s", e, traceback.format_exc())
+            ex = True
+            return False
+        finally:
+            if not self.previously_loaded and self.site_damp != {} and not ex:
+                _LOGGER.info("Site dampening loaded")
 
     async def __sites_data(self):
         """Request site details.

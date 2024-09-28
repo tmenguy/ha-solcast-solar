@@ -47,6 +47,7 @@ from .const import (
     SERVICE_SET_HARD_LIMIT,
     SERVICE_REMOVE_HARD_LIMIT,
     SERVICE_UPDATE,
+    SITE_DAMP,
     SOLCAST_URL,
 )
 
@@ -159,8 +160,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not hass.data.get(DOMAIN):
         hass.data[DOMAIN] = {}
 
-    hass.data[DOMAIN]['entry_options'] = entry.options
-
     if hass.data[DOMAIN].get('has_loaded', False):
         init_msg = '' # if the integration has already successfully loaded previously then do not display the full version nag on reload.
         solcast.previously_loaded = True
@@ -195,7 +194,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if status != '':
         raise ConfigEntryNotReady(status)
 
-    await solcast.site_dampening_data()
+    site_damp = await solcast.site_dampening_data()
+    opt = {**entry.options}
+    opt[SITE_DAMP] = site_damp # Internal per-site dampening set flag
+    hass.config_entries.async_update_entry(entry, options=opt)
+    hass.data[DOMAIN]['entry_options'] = entry.options
 
     coordinator = SolcastUpdateCoordinator(hass, solcast, version)
 
@@ -320,39 +323,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         except:
                             raise HomeAssistantError(f"Error processing {SERVICE_SET_DAMPENING}: Error parsing dampening factor comma separated float values") # pylint: disable=W0707
                         d = {}
-                        option_changed = False
-                        quick_calc = False
+                        opt = {**entry.options}
                         if site is None:
-                            opt = {**entry.options}
                             for i in range(0,24):
                                 f = float(sp[i])
                                 d.update({f"{i}": f})
-                                if opt[f"damp{i:02}"] != f:
-                                    option_changed = True
                                 opt[f"damp{i:02}"] = f
                             solcast.damp = d
                             if solcast.site_damp:
                                 _LOGGER.debug('Clear site dampening')
-                                if not option_changed:
-                                    quick_calc = True
                                 solcast.site_damp = {}
+                                opt['site_damp'] = False
                                 await solcast.serialise_site_dampening()
-                            hass.config_entries.async_update_entry(entry, options=opt)
-                            if option_changed:
-                                quick_calc = False
                         else:
                             for i in range(0,24):
                                 d.update({f"{i}": float(sp[i])})
                             solcast.site_damp[site] = d
                             await solcast.serialise_site_dampening()
-                            quick_calc = True
+                            opt['site_damp'] = True
 
-                        if quick_calc:
-                            # For a site sampening set requrest there is no need to reload, so build dorecast data and update listeners instead.
-                            await solcast.build_forecast_data()
-                            coordinator.set_data_updated(True)
-                            await coordinator.update_integration_listeners()
-                            coordinator.set_data_updated(False)
+                        hass.config_entries.async_update_entry(entry, options=opt)
         except intent.IntentHandleError as err:
             raise HomeAssistantError(f"Error processing {SERVICE_SET_DAMPENING}: {err}") from err
 
@@ -478,29 +468,29 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
     """Reconfigure the integration when options get updated.
 
-    * Changing API key or limit, or turning detailed site breakdown on results in a restart.
-    * Setting dampening results in forecast recalculation.
+    * Changing API key or limit, auto-update or turning detailed site breakdown on results in a restart.
+    * Changing dampening results in forecast recalculation.
     * Other alterations simply refresh sensor values and attributes.
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
         entry (ConfigEntry): The integration entry instance, contains the configuration.
     """
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+
+    def tasks_cancel():
+        # Terminate coordinator tasks in progress
+        for task, cancel in coordinator.tasks.items():
+            _LOGGER.debug('Cancelled coordinator task %s', task)
+            cancel()
+        coordinator.tasks = {}
+        # Terminate solcastapi tasks in progress
+        for task, cancel in coordinator.solcast.tasks.items():
+            _LOGGER.debug('Cancelled solcastapi task %s', task)
+            cancel()
+        coordinator.solcast.tasks = {}
+
     try:
-        coordinator = hass.data[DOMAIN][entry.entry_id]
-
-        def tasks_cancel():
-            # Terminate coordinator tasks in progress
-            for task, cancel in coordinator.tasks.items():
-                _LOGGER.debug('Cancelled coordinator task %s', task)
-                cancel()
-            coordinator.tasks = {}
-            # Terminate solcastapi tasks in progress
-            for task, cancel in coordinator.solcast.tasks.items():
-                _LOGGER.debug('Cancelled solcastapi task %s', task)
-                cancel()
-            coordinator.solcast.tasks = {}
-
         reload = False
         recalc = False
 
@@ -525,6 +515,11 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         for i in range(0,24):
             if hass.data[DOMAIN]['entry_options'][f"damp{i:02}"] != entry.options[f"damp{i:02}"]:
                 recalc = True
+        if hass.data[DOMAIN]['entry_options'][SITE_DAMP] != entry.options[SITE_DAMP]:
+            if not entry.options[SITE_DAMP]:
+                coordinator.solcast.site_damp = {}
+                await coordinator.solcast.serialise_site_dampening()
+            recalc = True
 
         if not reload:
             coordinator.solcast.set_options(entry.options)

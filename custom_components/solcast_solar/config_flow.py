@@ -334,6 +334,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 all_config_data["damp21"] = damp21
                 all_config_data["damp22"] = damp22
                 all_config_data["damp23"] = damp23
+                all_config_data["site_damp"] = False
 
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
