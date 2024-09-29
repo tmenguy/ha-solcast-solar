@@ -216,7 +216,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if not solcast.previously_loaded:
         if options.hard_limit < 100:
-            _LOGGER.info("Solcast inverter hard limit value has been set. If the forecasts and graphs are not as you expect, remove this setting")
+            _LOGGER.info("Inverter hard limit value has been set. If the forecasts and graphs are not as you expect, remove this setting")
 
     hass.data[DOMAIN]['has_loaded'] = True
 
@@ -277,8 +277,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             end = call.data.get(EVENT_END_DATETIME, dt_util.now())
 
             d = await coordinator.service_query_forecast_data(dt_util.as_utc(start), dt_util.as_utc(end))
-        except intent.IntentHandleError as err:
-            raise HomeAssistantError(f"Error processing {SERVICE_QUERY_FORECAST_DATA}: {err}") from err
+        except intent.IntentHandleError as e:
+            raise HomeAssistantError(f"Error processing {SERVICE_QUERY_FORECAST_DATA}: {e}") from e
 
         if call.return_response:
             return {"data": d}
@@ -343,8 +343,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                             opt['site_damp'] = True
 
                         hass.config_entries.async_update_entry(entry, options=opt)
-        except intent.IntentHandleError as err:
-            raise HomeAssistantError(f"Error processing {SERVICE_SET_DAMPENING}: {err}") from err
+        except intent.IntentHandleError as e:
+            raise HomeAssistantError(f"Error processing {SERVICE_SET_DAMPENING}: {e}") from e
 
     async def handle_service_set_hard_limit(call: ServiceCall):
         """Handle service call.
@@ -366,16 +366,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             else:
                 val = int(hl)
                 if val < 0:  # If not a positive int print message and ask for input again.
-                    raise HomeAssistantError(f"Error processing {SERVICE_SET_HARD_LIMIT}: Hard limit value not a positive number")
+                    raise HomeAssistantError(f"Error processing {SERVICE_SET_HARD_LIMIT}: Hard limit value is not a positive number")
 
                 opt = {**entry.options}
                 opt[HARD_LIMIT] = val
                 hass.config_entries.async_update_entry(entry, options=opt)
 
-        except ValueError as err:
-            raise HomeAssistantError(f"Error processing {SERVICE_SET_HARD_LIMIT}: Hard limit value not a positive number") from err
-        except intent.IntentHandleError as err:
-            raise HomeAssistantError(f"Error processing {SERVICE_SET_HARD_LIMIT}: {err}") from err
+        except ValueError as e:
+            raise HomeAssistantError(f"Error processing {SERVICE_SET_HARD_LIMIT}: Hard limit value is not a positive number") from e
+        except intent.IntentHandleError as e:
+            raise HomeAssistantError(f"Error processing {SERVICE_SET_HARD_LIMIT}: {e}") from e
 
     async def handle_service_remove_hard_limit(call: ServiceCall):
         """Handle service call.
@@ -393,8 +393,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             opt[HARD_LIMIT] = 100000
             hass.config_entries.async_update_entry(entry, options=opt)
 
-        except intent.IntentHandleError as err:
-            raise HomeAssistantError(f"Error processing {SERVICE_REMOVE_HARD_LIMIT}: {err}") from err
+        except intent.IntentHandleError as e:
+            raise HomeAssistantError(f"Error processing {SERVICE_REMOVE_HARD_LIMIT}: {e}") from e
 
     hass.services.async_register(
         DOMAIN, SERVICE_UPDATE, handle_service_update_forecast

@@ -79,7 +79,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self.__auto_update_setup(init=True)
             await self.__check_forecast_fetch()
         except:
-            _LOGGER.error("Exception in Solcast coordinator setup: %s", traceback.format_exc())
+            _LOGGER.error("Exception in coordinator setup: %s", traceback.format_exc())
 
     async def __restart_time_track_midnight_update(self):
         """Cancel and restart UTC time change tracker"""
@@ -110,7 +110,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
             await self.async_update_listeners()
         except:
-            #_LOGGER.error("update_integration_listeners(): %s", traceback.format_exc())
+            #_LOGGER.error("Exception in update_integration_listeners(): %s", traceback.format_exc())
             pass
 
     async def __check_forecast_fetch(self, *args):
@@ -136,7 +136,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                             self.tasks.pop('pending_update')
                     self.tasks['pending_update'] = asyncio.create_task(wait_for_fetch())
         except:
-            _LOGGER.error("__check_forecast_fetch(): %s", traceback.format_exc())
+            _LOGGER.error("Exception in __check_forecast_fetch(): %s", traceback.format_exc())
 
     async def __update_utcmidnight_usage_sensor_data(self, *args):
         """Resets tracked API usage at midnight UTC."""
@@ -200,7 +200,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             await self.solcast.reset_usage_cache()
             await self.__restart_time_track_midnight_update()
 
-        #await self.solcast.sites_weather()
+        #await self.solcast.get_weather()
         await self.solcast.get_forecast_update(do_past=False, force=force)
         self._data_updated = True
         await self.update_integration_listeners()
@@ -317,7 +317,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "hard_limit":
                 return False if self.solcast.hard_limit == 100 else f"{round(self.solcast.hard_limit * 1000)}w"
             # case "weather_description":
-            #     return self.solcast.get_weather()
+            #     return self.solcast.get_weather_description()
             case _:
                 return None
 
