@@ -286,7 +286,7 @@ class SolcastApi: # pylint: disable=R0904
         sp = self.options.api_key.split(",")
         for spl in sp:
             api_key = spl.strip()
-            if self._api_used_reset[api_key] < self.__get_real_now_utc() - timedelta(days=1):
+            if self._api_used_reset[api_key] < self.get_day_start_utc():
                 return True
         return False
 
