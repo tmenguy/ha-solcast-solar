@@ -290,13 +290,6 @@ class SolcastApi: # pylint: disable=R0904
                 return True
         return False
 
-    async def reset_usage_cache(self):
-        """Reset all usage caches"""
-        sp = self.options.api_key.split(",")
-        for spl in sp:
-            api_key = spl.strip()
-            await self.__serialise_usage(api_key, reset=True)
-
     def __redact_api_key(self, api_key) -> str:
         """Obfuscate API key.
 
@@ -687,6 +680,13 @@ class SolcastApi: # pylint: disable=R0904
                 _LOGGER.debug("API counter for %s is %d/%d", self.__redact_api_key(api_key), self._api_used[api_key], self._api_limit[api_key])
         except Exception as e:
             _LOGGER.error("Exception in __sites_usage(): %s: %s", e, traceback.format_exc())
+
+    async def reset_usage_cache(self):
+        """Reset all usage caches"""
+        sp = self.options.api_key.split(",")
+        for spl in sp:
+            api_key = spl.strip()
+            await self.__serialise_usage(api_key, reset=True)
 
     async def get_sites_and_usage(self):
         """Get the sites and usage, and validate API key changes against the cache files in use.

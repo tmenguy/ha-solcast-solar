@@ -194,7 +194,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Get updated forecast data."""
         _LOGGER.debug('Checking for stale usage cache')
         if self.solcast.is_stale_usage_cache():
-            _LOGGER.warning('Usage cache reset time is stale, last reset was more than 24-hours ago')
+            _LOGGER.warning('Usage cache reset time is stale, last reset was more than 24-hours ago, resetting API usage')
             await self.solcast.reset_usage_cache()
             await self.__restart_time_track_midnight_update()
 
