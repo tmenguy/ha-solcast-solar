@@ -743,6 +743,7 @@ class SolcastApi: # pylint: disable=R0904
 
     async def reset_api_usage(self):
         """Reset the daily API usage counter."""
+        _LOGGER.debug('Reset API usage')
         for api_key, _ in self._api_used.items():
             self._api_used[api_key] = 0
             await self.__serialise_usage(api_key, reset=True)
