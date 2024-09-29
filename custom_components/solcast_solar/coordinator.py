@@ -148,7 +148,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 else:
                     self._sunrise = self.solcast.get_day_start_utc()
                     self._sunset = self.solcast.get_day_start_utc() + timedelta(hours=24)
-                self.__calculate_forecast_updates(init=int)
+                self.__calculate_forecast_updates(init=init)
         except:
             _LOGGER.error("Exception in __auto_update_setup(): %s", traceback.format_exc())
 
