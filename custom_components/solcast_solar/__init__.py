@@ -508,19 +508,26 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
         ):
             reload = True
-        if hass.data[DOMAIN]['entry_options'].get(HARD_LIMIT) != entry.options.get(HARD_LIMIT):
-            reload = True
 
         # Config changes, which when changed will cause a forecast recalculation only, without reload.
+        # Dampening must be first with the code as-is...
+        d = {}
         for i in range(0,24):
+            d.update({f"{i}": entry.options[f"damp{i:02}"]})
             if hass.data[DOMAIN]['entry_options'][f"damp{i:02}"] != entry.options[f"damp{i:02}"]:
                 recalc = True
+        if recalc:
+            coordinator.solcast.damp = d
         if hass.data[DOMAIN]['entry_options'][SITE_DAMP] != entry.options[SITE_DAMP]:
             if not entry.options[SITE_DAMP]:
                 coordinator.solcast.site_damp = {}
                 await coordinator.solcast.serialise_site_dampening()
             recalc = True
+        if hass.data[DOMAIN]['entry_options'].get(HARD_LIMIT) != entry.options.get(HARD_LIMIT):
+            coordinator.solcast.hard_limit =  entry.options.get(HARD_LIMIT)
+            recalc = True
 
+        _LOGGER.debug('Reload/recalc determination, reload: %s, recalc: %s', reload, recalc)
         if not reload:
             coordinator.solcast.set_options(entry.options)
 
