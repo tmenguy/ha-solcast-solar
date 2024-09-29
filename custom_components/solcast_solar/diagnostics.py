@@ -28,7 +28,7 @@ async def async_get_config_entry_diagnostics(
         entry (ConfigEntry): The integration entry instance, provides access to the coordinator.
 
     Returns:
-        (dict[str, Any]): Diagnostic details to include in a download file.
+        dict[str, Any]: Diagnostic details to include in a download file.
     """
     coordinator: SolcastUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 

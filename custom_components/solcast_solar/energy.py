@@ -23,7 +23,7 @@ async def async_get_solar_forecast(hass: HomeAssistant, config_entry_id: str) ->
         config_entry_id (str): The integration entry ID.
 
     Returns:
-        (dict[str, Any] | None): The Energy Dashboard compatible forecast data
+        dict[str, Any] | None: The Energy Dashboard compatible forecast data
     """
 
     if not hass.data.get(DOMAIN):

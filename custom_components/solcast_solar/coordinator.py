@@ -62,7 +62,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Update data via library.
 
         Returns:
-            (list): Dampened forecast detail list of the sum of all site forecasts.
+            list: Dampened forecast detail list of the sum of all site forecasts.
         """
         return self.solcast.get_data()
 
@@ -241,7 +241,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Return an energy dictionary.
 
         Returns:
-            (dict): A Home Assistant energy dashboard compatible data set.
+            dict: A Home Assistant energy dashboard compatible data set.
         """
         return self.solcast.get_energy_data()
 
@@ -249,7 +249,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Returns True if data has been updated, which will trigger all sensor values to update.
 
         Returns:
-            (bool): Whether the forecast data has been updated.
+            bool: Whether the forecast data has been updated.
         """
         return self._data_updated
 
@@ -265,7 +265,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Returns True if a roll-over to tomorrow has occurred, which will trigger all sensor values to update.
 
         Returns:
-            (bool): Whether a date roll-over has occurred.
+            bool: Whether a date roll-over has occurred.
         """
         return self._date_changed
 

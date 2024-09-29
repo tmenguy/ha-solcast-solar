@@ -259,7 +259,7 @@ def get_sensor_update_policy(key: str) -> SensorUpdatePolicy:
         key (str): The sensor name.
 
     Returns:
-        (SensorUpdatePolicy): The update policy.
+        SensorUpdatePolicy: The update policy.
     """
     match key:
         case (
@@ -395,7 +395,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
         """Return the state extra attributes of the sensor.
 
         Returns:
-            (Dict[str, Any] | None): The current attributes of a sensor.
+            Dict[str, Any] | None: The current attributes of a sensor.
         """
         try:
             return self._coordinator.get_sensor_extra_attributes(self.entity_description.key)
@@ -408,7 +408,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
         """Return the current value of the sensor.
 
         Returns:
-            (int | dt | float | Any | str | bool | None): The current value of a sensor.
+            int | dt | float | Any | str | bool | None: The current value of a sensor.
         """
         return self._sensor_data
 
@@ -417,7 +417,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
         """Return whether the sensor should poll.
 
         Returns:
-            (bool): Always returns False, as sensors are not polled.
+            bool: Always returns False, as sensors are not polled.
         """
         return False
 
@@ -511,7 +511,7 @@ class RooftopSensor(CoordinatorEntity, SensorEntity):
         """Return the name of the device.
 
         Returns:
-            (str): The device name.
+            str: The device name.
         """
         return f"{self.entity_description.name}"
 
@@ -520,7 +520,7 @@ class RooftopSensor(CoordinatorEntity, SensorEntity):
         """Return the friendly name of the device.
 
         Returns:
-            (str): The device friendly name, which is the same as device name.
+            str: The device friendly name, which is the same as device name.
         """
         return self.entity_description.name
 
@@ -529,7 +529,7 @@ class RooftopSensor(CoordinatorEntity, SensorEntity):
         """Return the unique ID of the sensor.
 
         Returns:
-            (str): Unique ID.
+            str: Unique ID.
         """
         return f"solcast_{self._unique_id}"
 
@@ -548,7 +548,7 @@ class RooftopSensor(CoordinatorEntity, SensorEntity):
         """Return the current value of the sensor.
 
         Returns:
-            (int | dt | float | Any | str | bool | None): The current value of a sensor.
+            int | dt | float | Any | str | bool | None: The current value of a sensor.
         """
         return self._sensor_data
 
@@ -557,7 +557,7 @@ class RooftopSensor(CoordinatorEntity, SensorEntity):
         """Return whether the sensor should poll.
 
         Returns:
-            (bool): Always returns False, as sensors are not polled.
+            bool: Always returns False, as sensors are not polled.
         """
         return False
 

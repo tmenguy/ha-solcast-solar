@@ -13,7 +13,7 @@ def cubic_interp(x0, x, y):
         y (list): List of floats to interpolate
 
     Returns:
-        (list): Array of interpolated values.
+        list: Array of interpolated values.
     """
     def diff(lst): # numpy-like diff
         size = len(lst) - 1

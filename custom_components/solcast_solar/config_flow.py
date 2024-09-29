@@ -49,7 +49,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             entry (ConfigEntry): The integration entry instance, contains the configuration.
 
         Returns:
-            (SolcastSolarOptionFlowHandler): The congig flow handler instance.
+            SolcastSolarOptionFlowHandler: The congig flow handler instance.
         """
         return SolcastSolarOptionFlowHandler(entry)
 
@@ -147,7 +147,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             user_input (dict, optional): The input provided by the user. Defaults to None.
 
         Returns:
-            (Any): Either an error, or the configuration dialogue results.
+            Any: Either an error, or the configuration dialogue results.
         """
 
         errors = {}
@@ -252,7 +252,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             user_input (dict[str, Any] | None): The input provided by the user. Defaults to None.
 
         Returns:
-            (FlowResult): The configuration dialogue results.
+            FlowResult: The configuration dialogue results.
         """
 
         errors = {}

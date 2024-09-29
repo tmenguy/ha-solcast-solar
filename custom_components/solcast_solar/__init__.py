@@ -100,7 +100,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ConfigEntryNotReady: Instructs Home Assistant that the integration is not yet ready when a load failure occurrs.
 
     Returns:
-        (bool): Whether setup has completed successfully.
+        bool: Whether setup has completed successfully.
     """
     random.seed()
 
@@ -268,7 +268,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             HomeAssistantError: Notify Home Assistant that an error has occurred.
         
         Returns:
-            (Dict[str, Any] | None): The Solcast data from start to end date/times.
+            Dict[str, Any] | None: The Solcast data from start to end date/times.
         """
         try:
             _LOGGER.info("Service call: %s", SERVICE_QUERY_FORECAST_DATA)
@@ -436,7 +436,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry (ConfigEntry): The integration entry instance, contains the configuration.
 
     Returns:
-        (bool): Whether the unload completed successfully.
+        bool: Whether the unload completed successfully.
     """
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
@@ -460,7 +460,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
         device: The device instance.
 
     Returns:
-        (bool): Whether the removal completed successfully.
+        bool: Whether the removal completed successfully.
     """
     device_registry(hass).async_remove_device(device.id)
     return True
@@ -566,7 +566,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry (ConfigEntry): The integration entry instance, contains the configuration.
 
     Returns:
-        (bool): Whether the config upgrade completed successfully.
+        bool: Whether the config upgrade completed successfully.
     """
     def upgraded():
         _LOGGER.info("Upgraded to options version %s", entry.version)

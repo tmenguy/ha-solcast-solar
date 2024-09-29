@@ -107,7 +107,7 @@ def translate(status) -> str | Any:
         status (int): A HTTP status code.
 
     Returns:
-        (str): Human readable HTTP status.
+        str: Human readable HTTP status.
     """
     return (f"{str(status)}/{__status_translate[status]}") if __status_translate.get(status) else status
 
@@ -265,7 +265,7 @@ class SolcastApi: # pylint: disable=R0904
         """Return the data dictionary.
 
         Returns:
-            (list): Dampened forecast detail list of the sum of all site forecasts.
+            list: Dampened forecast detail list of the sum of all site forecasts.
         """
         return self._data
 
@@ -273,7 +273,7 @@ class SolcastApi: # pylint: disable=R0904
         """Return whether the forecast was last updated some time ago (i.e. is stale).
 
         Returns:
-            (bool): True for stale, False if updated recently.
+            bool: True for stale, False if updated recently.
         """
         return self.get_api_used_count() == 0 and self.get_last_updated_datetime() < self.get_day_start_utc() - timedelta(days=1)
 
@@ -281,7 +281,7 @@ class SolcastApi: # pylint: disable=R0904
         """Return whether the usage cache was last reset over 24-hours ago (i.e. is stale).
 
         Returns:
-            (bool): True for stale, False if reset recently.
+            bool: True for stale, False if reset recently.
         """
         sp = self.options.api_key.split(",")
         for spl in sp:
@@ -297,7 +297,7 @@ class SolcastApi: # pylint: disable=R0904
             api_key (str): An individual Solcast account API key.
 
         Returns:
-            (str): The last six characters of the key, prepended by six asterisks.
+            str: The last six characters of the key, prepended by six asterisks.
         """
         return '*'*6 + api_key[-6:]
 
@@ -309,7 +309,7 @@ class SolcastApi: # pylint: disable=R0904
             api_key (str): An individual Solcast account API key.
 
         Returns:
-            (str): The message, with API key obfuscated.
+            str: The message, with API key obfuscated.
         """
         return msg.replace(api_key, self.__redact_api_key(api_key))
 
@@ -317,7 +317,7 @@ class SolcastApi: # pylint: disable=R0904
         """Test whether multiple API keys are in use.
 
         Returns:
-            (bool): True for multiple API Solcast accounts configured. If configured then separate files will be used for caches.
+            bool: True for multiple API Solcast accounts configured. If configured then separate files will be used for caches.
         """
         return len(self.options.api_key.split(",")) > 1
 
@@ -328,7 +328,7 @@ class SolcastApi: # pylint: disable=R0904
             api_key (str): An individual Solcast account API key.
 
         Returns:
-            (str): A fully qualified cache filename using a simple name or separate files for more than one API key.
+            str: A fully qualified cache filename using a simple name or separate files for more than one API key.
         """
         return f"{self._config_dir}/solcast-usage{'' if not self.__is_multi_key() else '-' + api_key}.json"
 
@@ -339,7 +339,7 @@ class SolcastApi: # pylint: disable=R0904
             api_key (str): An individual Solcast account API key.
 
         Returns:
-            (str): A fully qualified cache filename using a simple name or separate files for more than one API key.
+            str: A fully qualified cache filename using a simple name or separate files for more than one API key.
         """
         return f"{self._config_dir}/solcast-sites{'' if not self.__is_multi_key() else '-' + api_key}.json"
 
@@ -347,7 +347,7 @@ class SolcastApi: # pylint: disable=R0904
         """Build a fully qualified site dampening filename.
 
         Returns:
-            (str): A fully qualified cache filename.
+            str: A fully qualified cache filename.
         """
         return f"{self._config_dir}/solcast-site-dampening.json"
 
@@ -360,7 +360,7 @@ class SolcastApi: # pylint: disable=R0904
         would result in an empty file.
 
         Returns:
-            (bool): Success or failure.
+            bool: Success or failure.
         """
         serialise = True
         try:
@@ -445,7 +445,7 @@ class SolcastApi: # pylint: disable=R0904
         """Read the current site dampening file.
 
         Returns:
-            (bool): Per-site dampening in use
+            bool: Per-site dampening in use
         """
         ex = False
         try:
@@ -889,7 +889,7 @@ class SolcastApi: # pylint: disable=R0904
         This also checks for new API keys and site removal.
 
         Returns:
-            (str): A failure status message, or an empty string.
+            str: A failure status message, or an empty string.
         """
         try:
             status = ''
@@ -987,7 +987,7 @@ class SolcastApi: # pylint: disable=R0904
             args (list): [0] = from timestamp, [1] = to timestamp.
 
         Returns:
-            (tuple(dict, ...)): Forecasts representing the range specified.
+            tuple(dict, ...): Forecasts representing the range specified.
         """
         try:
             st_time = time.time()
@@ -1014,7 +1014,7 @@ class SolcastApi: # pylint: disable=R0904
         API keys will apply.
 
         Returns:
-            (int): The tracked API usage count.
+            int: The tracked API usage count.
         """
         return min(list(self._api_used.values()))
 
@@ -1025,7 +1025,7 @@ class SolcastApi: # pylint: disable=R0904
         higher limit that limit will never be reached.
 
         Returns:
-            (int): The lowest API limit of all configured API keys.
+            int: The lowest API limit of all configured API keys.
         """
         return min(list(self._api_limit.values()))
 
@@ -1037,7 +1037,7 @@ class SolcastApi: # pylint: disable=R0904
         """Return when the data was last updated.
 
         Returns:
-            (datetime): The last successful forecast fetch.
+            datetime: The last successful forecast fetch.
         """
         return dt.fromisoformat(self._data["last_updated"])
 
@@ -1048,7 +1048,7 @@ class SolcastApi: # pylint: disable=R0904
             site (str): A Solcast site ID.
 
         Returns:
-            (float): Total site kW forecast today.
+            float: Total site kW forecast today.
         """
         if self._tally.get(site) is None:
             _LOGGER.warning("Site total kW forecast today is currently unavailable for %s", site)
@@ -1061,7 +1061,7 @@ class SolcastApi: # pylint: disable=R0904
             site (str): An Optional Solcast site ID.
 
         Returns:
-            (dict): Site attributes that have been configured at solcast.com.
+            dict: Site attributes that have been configured at solcast.com.
         """
         g = tuple(d for d in self.sites if d["resource_id"] == site)
         if len(g) != 1:
@@ -1087,7 +1087,7 @@ class SolcastApi: # pylint: disable=R0904
         """Datetime helper.
 
         Returns:
-            (datetime): The UTC date and time representing midnight local time.
+            datetime: The UTC date and time representing midnight local time.
         """
         return dt.now(self._tz).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
 
@@ -1095,7 +1095,7 @@ class SolcastApi: # pylint: disable=R0904
         """Datetime helper.
 
         Returns:
-            (datetime): The UTC date and time representing midnight UTC of the current day.
+            datetime: The UTC date and time representing midnight UTC of the current day.
         """
         return dt.now().astimezone(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -1103,7 +1103,7 @@ class SolcastApi: # pylint: disable=R0904
         """Datetime helper.
 
         Returns:
-            (datetime): The UTC date and time representing now as at the previous minute boundary.
+            datetime: The UTC date and time representing now as at the previous minute boundary.
         """
         return dt.now(self._tz).replace(second=0, microsecond=0).astimezone(timezone.utc)
 
@@ -1111,7 +1111,7 @@ class SolcastApi: # pylint: disable=R0904
         """Datetime helper.
 
         Returns:
-            (datetime): The UTC date and time representing now including seconds/microseconds.
+            datetime: The UTC date and time representing now including seconds/microseconds.
         """
         return dt.now(self._tz).astimezone(timezone.utc)
 
@@ -1119,7 +1119,7 @@ class SolcastApi: # pylint: disable=R0904
         """Datetime helper.
 
         Returns:
-            (datetime): The UTC date and time representing the start of the current hour.
+            datetime: The UTC date and time representing the start of the current hour.
         """
         return dt.now(self._tz).replace(minute=0, second=0, microsecond=0).astimezone(timezone.utc)
 
@@ -1130,7 +1130,7 @@ class SolcastApi: # pylint: disable=R0904
             futureday (int): A day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
 
         Returns:
-            (dict): Includes the day name, whether there are issues with the data in terms of completeless,
+            dict: Includes the day name, whether there are issues with the data in terms of completeless,
             and detailed half-hourly forecast (and site breakdown if that option is configured), and a
             detailed hourly forecast (and site breakdown if that option is configured).
         """
@@ -1214,7 +1214,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): An optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (int) - A forecast for an hour period as Wh (either used for a sensor or its attributes).
+            int - A forecast for an hour period as Wh (either used for a sensor or its attributes).
         """
         start_utc = self.__get_hour_start_utc() + timedelta(hours=n_hour)
         end_utc = start_utc + timedelta(hours=1)
@@ -1228,7 +1228,7 @@ class SolcastApi: # pylint: disable=R0904
             n_hour (int): An hour into the future, or the current hour (0 = current and 1 = next hour are used).
 
         Returns:
-            (dict): Sensor attributes for an hour period, depending on the configured options.
+            dict: Sensor attributes for an hour period, depending on the configured options.
         """
         res = {}
         if self.options.attr_brk_site:
@@ -1251,7 +1251,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (int) - A forecast for a multiple hour period as Wh (either used for a sensor or its attributes).
+            int - A forecast for a multiple hour period as Wh (either used for a sensor or its attributes).
         """
         start_utc = self.get_now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
@@ -1265,7 +1265,7 @@ class SolcastApi: # pylint: disable=R0904
             n_hours (int): A configured number of hours into the future.
 
         Returns:
-            (dict): Sensor attributes for a multiple hour period, depending on the configured options.
+            dict: Sensor attributes for a multiple hour period, depending on the configured options.
         """
         res = {}
         if self.options.attr_brk_site:
@@ -1288,7 +1288,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (int): A power forecast in N minutes as W (either used for a sensor or its attributes).
+            int: A power forecast in N minutes as W (either used for a sensor or its attributes).
         """
         time_utc = self.get_now_utc() + timedelta(minutes=n_mins)
         return round(1000 * self.__get_forecast_pv_moment(time_utc, site=site, _use_data_field=_use_data_field))
@@ -1300,7 +1300,7 @@ class SolcastApi: # pylint: disable=R0904
             n_mins (int): A number of minutes into the future.
 
         Returns:
-            (dict): Sensor attributes containing a forecast in N minutes, depending on the configured options.
+            dict: Sensor attributes containing a forecast in N minutes, depending on the configured options.
         """
         res = {}
         if self.options.attr_brk_site:
@@ -1323,7 +1323,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (int): An expected peak generation for a given day as Watts.
+            int: An expected peak generation for a given day as Watts.
         """
         _data_field = self._use_data_field if _use_data_field is None else _use_data_field
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
@@ -1338,7 +1338,7 @@ class SolcastApi: # pylint: disable=R0904
             n_day (int): A number representing a day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
 
         Returns:
-            (dict): Sensor attributes of expected peak generation values for a given day, depending on the configured options.
+            dict: Sensor attributes of expected peak generation values for a given day, depending on the configured options.
         """
         res = {}
         if self.options.attr_brk_site:
@@ -1361,7 +1361,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (datetime): The date and time of expected peak generation for a given day.
+            datetime: The date and time of expected peak generation for a given day.
         """
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
@@ -1375,7 +1375,7 @@ class SolcastApi: # pylint: disable=R0904
             n_day (int): A day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
 
         Returns:
-            (dict): Sensor attributes of the date and time of expected peak generation for a given day, depending on the configured options.
+            dict: Sensor attributes of the date and time of expected peak generation for a given day, depending on the configured options.
         """
         res = {}
         if self.options.attr_brk_site:
@@ -1397,7 +1397,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (float): The expected remaining solar generation for the current day as kWh.
+            float: The expected remaining solar generation for the current day as kWh.
         """
         start_utc = self.get_now_utc()
         end_utc = self.get_day_start_utc() + timedelta(days=1)
@@ -1408,7 +1408,7 @@ class SolcastApi: # pylint: disable=R0904
         """Return remaining forecasted production for today for all sites and individual sites.
 
         Returns:
-            (dict): Sensor attributes containing the expected remaining solar generation for the current day, depending on the configured options.
+            dict: Sensor attributes containing the expected remaining solar generation for the current day, depending on the configured options.
         """
         res = {}
         if self.options.attr_brk_site:
@@ -1431,7 +1431,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (float): The forecast total solar generation for a given day as kWh.
+            float: The forecast total solar generation for a given day as kWh.
         """
         start_utc = self.get_day_start_utc() + timedelta(days=n_day)
         end_utc = start_utc + timedelta(days=1)
@@ -1445,7 +1445,7 @@ class SolcastApi: # pylint: disable=R0904
             n_day (int): A day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
 
         Returns:
-            (dict): Sensor attributes containing the forecast total solar generation for a given day, depending on the configured options.
+            dict: Sensor attributes containing the forecast total solar generation for a given day, depending on the configured options.
         """
         res = {}
         if self.options.attr_brk_site:
@@ -1469,7 +1469,7 @@ class SolcastApi: # pylint: disable=R0904
             search_past (bool): Optional flag to indicate that past periods should be searched.
 
         Returns:
-            (tuple(int, int)): List index of start of period, list index of end of period.
+            tuple(int, int): List index of start of period, list index of end of period.
         """
         if end_utc is None:
             end_utc = start_utc + timedelta(seconds=1800)
@@ -1607,7 +1607,7 @@ class SolcastApi: # pylint: disable=R0904
             n_min (int): The minute of the day.
 
         Returns:
-            (float): A splined forecasted remaining value as kWh.
+            float: A splined forecasted remaining value as kWh.
         """
         try:
             return self._forecasts_remaining['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
@@ -1628,7 +1628,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
-            (float): Energy forecast to be remaining for a period as kWh.
+            float: Energy forecast to be remaining for a period as kWh.
         """
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
@@ -1677,7 +1677,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
  
         Returns:
-            (float): Energy forecast total for a period as kWh.
+            float: Energy forecast total for a period as kWh.
        """
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
@@ -1716,7 +1716,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
  
         Returns:
-            (float): Forecast power for a point in time as kW (from splined data).
+            float: Forecast power for a point in time as kW (from splined data).
         """
         try:
             _data_field = self._use_data_field if _use_data_field is None else _use_data_field
@@ -1744,7 +1744,7 @@ class SolcastApi: # pylint: disable=R0904
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
  
         Returns:
-            (float): The maximum forecast power for a period as kW.
+            float: The maximum forecast power for a period as kW.
         """
         try:
             _data = self._data_forecasts if site is None else self._site_data_forecasts[site]
@@ -1780,7 +1780,7 @@ class SolcastApi: # pylint: disable=R0904
         """Get energy data.
  
         Returns:
-            (dict): A Home Assistant energy dashboard compatible data set.
+            dict: A Home Assistant energy dashboard compatible data set.
         """
         try:
             return self._data_energy
@@ -1796,7 +1796,7 @@ class SolcastApi: # pylint: disable=R0904
             do_past (bool): A optional flag to indicate that past actual forecasts should be retrieved.
  
         Returns:
-            (str): An error message, or an empty string for no error.
+            str: An error message, or an empty string for no error.
         """
         try:
             status = ''
@@ -1855,7 +1855,7 @@ class SolcastApi: # pylint: disable=R0904
             do_past (bool): A optional flag to indicate that past actual forecasts should be retrieved.
 
         Returns:
-            (bool): A flag incicating success or failure
+            bool: A flag incicating success or failure
         """
         try:
             lastday = self.get_day_start_utc() + timedelta(days=8)
@@ -1999,7 +1999,7 @@ class SolcastApi: # pylint: disable=R0904
             cachedname (str): "forecasts" or "actuals".
 
         Returns:
-            (dict): Raw forecast data points, or None if unsuccessful.
+            dict: Raw forecast data points, or None if unsuccessful.
         """
         try:
             async with async_timeout.timeout(900):
@@ -2110,7 +2110,7 @@ class SolcastApi: # pylint: disable=R0904
         """Make a Home Assistant energy dashboard compatible dictionary.
 
         Returns:
-            (dict): An energy dashboard compatible data structure.
+            dict: An energy dashboard compatible data structure.
         """
         wh_hours = {}
         try:
@@ -2139,7 +2139,7 @@ class SolcastApi: # pylint: disable=R0904
         """Build data structures needed, adjusting if dampening or setting a hard limit.
 
         Returns:
-            (bool): A flag indicating success or failure.
+            bool: A flag indicating success or failure.
         """
         try:
             today = dt.now(self._tz).date()
@@ -2217,7 +2217,7 @@ class SolcastApi: # pylint: disable=R0904
             _data (list): The data structure to search, either total data or site breakdown data.
 
         Returns:
-            (int): The starting index of the data structure just prior to midnight local time.
+            int: The starting index of the data structure just prior to midnight local time.
         """
         midnight_utc = self.get_day_start_utc()
         for idx in range(len(_data)-1, -1, -1):
