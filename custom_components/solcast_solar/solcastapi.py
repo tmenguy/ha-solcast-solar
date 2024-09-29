@@ -546,8 +546,6 @@ class SolcastApi: # pylint: disable=R0904
                                 async with aiofiles.open(cache_filename) as f:
                                     resp_json = json.loads(await f.read())
                                     status = 200
-                                if not self.previously_loaded:
-                                    _LOGGER.info("Sites loaded for %s", self.__redact_api_key(api_key))
                             else:
                                 _LOGGER.error("Cached Solcast sites are not yet available for %s to cope with API call failure", self.__redact_api_key(api_key))
                                 _LOGGER.error("At least one successful API 'get sites' call is needed, so the integration will not function correctly")
