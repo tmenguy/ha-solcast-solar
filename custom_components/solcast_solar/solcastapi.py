@@ -277,6 +277,26 @@ class SolcastApi: # pylint: disable=R0904
         """
         return self.get_api_used_count() == 0 and self.get_last_updated_datetime() < self.get_day_start_utc() - timedelta(days=1)
 
+    def is_stale_usage_cache(self) -> bool:
+        """Return whether the usage cache was last reset over 24-hours ago (i.e. is stale).
+
+        Returns:
+            (bool): True for stale, False if reset recently.
+        """
+        sp = self.options.api_key.split(",")
+        for spl in sp:
+            api_key = spl.strip()
+            if self._api_used_reset[api_key] < self.__get_real_now_utc() - timedelta(days=1):
+                return True
+        return False
+
+    async def reset_usage_cache(self):
+        """Reset all usage caches"""
+        sp = self.options.api_key.split(",")
+        for spl in sp:
+            api_key = spl.strip()
+            await self.__serialise_usage(api_key, reset=True)
+
     def __redact_api_key(self, api_key) -> str:
         """Obfuscate API key.
 

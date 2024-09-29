@@ -81,6 +81,17 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except:
             _LOGGER.error("Exception in Solcast coordinator setup: %s", traceback.format_exc())
 
+    async def __restart_time_track_midnight_update(self):
+        """Cancel and restart UTC time change tracker"""
+        try:
+            _LOGGER.warning('Restarting midnight UTC timer')
+            try:
+                self.tasks['midnight_update']() # Cancel the tracker
+            except:
+                pass
+            self.tasks['midnight_update'] = async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data,  hour=0, minute=0, second=0)
+        except:
+            _LOGGER.error("Exception in __restart_time_track_midnight_update(): %s", traceback.format_exc())
 
     async def update_integration_listeners(self, *args):
         """Get updated sensor values."""
@@ -181,6 +192,12 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
     async def forecast_update(self, force=False):
         """Get updated forecast data."""
+        _LOGGER.debug('Checking for stale usage cache')
+        if self.solcast.is_stale_usage_cache():
+            _LOGGER.warning('Usage cache reset time is stale, last reset was more than 24-hours ago')
+            await self.solcast.reset_usage_cache()
+            await self.__restart_time_track_midnight_update()
+
         #await self.solcast.sites_weather()
         await self.solcast.get_forecast_update(do_past=False, force=force)
         self._data_updated = True
