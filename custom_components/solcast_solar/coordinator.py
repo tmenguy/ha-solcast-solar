@@ -315,7 +315,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "lastupdated":
                 return self.solcast.get_last_updated_datetime()
             case "hard_limit":
-                return False if self.solcast.hard_limit == 100 else f"{round(self.solcast.hard_limit * 1000)}w"
+                return False if self.solcast.hard_limit == 100 else f"{round(self.solcast.hard_limit, 1)} kW"
             # case "weather_description":
             #     return self.solcast.get_weather_description()
             case _:
