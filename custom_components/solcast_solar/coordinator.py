@@ -87,9 +87,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.warning('Restarting midnight UTC timer')
             try:
                 self.tasks['midnight_update']() # Cancel the tracker
+                _LOGGER.debug('Cancelled coodinator task midnight_update')
             except:
                 pass
             self.tasks['midnight_update'] = async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data,  hour=0, minute=0, second=0)
+            _LOGGER.debug('Started coordinator task midnight_update')
         except:
             _LOGGER.error("Exception in __restart_time_track_midnight_update(): %s", traceback.format_exc())
 
