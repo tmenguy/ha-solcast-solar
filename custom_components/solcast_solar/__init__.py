@@ -528,7 +528,13 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             coordinator.solcast.hard_limit = entry.options.get(HARD_LIMIT, 100000) / 1000
             recalc = True
 
-        _LOGGER.debug('Reload/recalc determination, reload: %s, recalc: %s', reload, recalc)
+        if reload:
+            determination = 'The integration will reload'
+        elif recalc:
+            determination = 'Recalculate forecasts and refresh sensors'
+        else:
+            determination = 'Refresh sensors only'
+        _LOGGER.debug('Options updated, action: %s', determination)
         if not reload:
             coordinator.solcast.set_options(entry.options)
 
