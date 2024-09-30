@@ -149,6 +149,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.options.get(BRK_SITE_DETAILED, False),
     )
     _LOGGER.debug('Auto-update options: %s', {k: v for k, v in entry.options.items() if k.startswith('auto_')})
+    _LOGGER.debug('Estimate to use options: %s', {k: v for k, v in entry.options.items() if k.startswith('key_est')})
     _LOGGER.debug('Attribute options: %s', {k: v for k, v in entry.options.items() if k.startswith('attr_')})
     _LOGGER.debug('Custom sensor options: %s', {k: v for k, v in entry.options.items() if k.startswith('custom')})
     _LOGGER.debug('Hard limit: %s', {k: v for k, v in entry.options.items() if k.startswith('hard_')})
@@ -524,7 +525,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                 await coordinator.solcast.serialise_site_dampening()
             recalc = True
         if hass.data[DOMAIN]['entry_options'].get(HARD_LIMIT) != entry.options.get(HARD_LIMIT):
-            coordinator.solcast.hard_limit = entry.options.get(HARD_LIMIT) / 1000
+            coordinator.solcast.hard_limit = entry.options.get(HARD_LIMIT, 100000) / 1000
             recalc = True
 
         _LOGGER.debug('Reload/recalc determination, reload: %s, recalc: %s', reload, recalc)

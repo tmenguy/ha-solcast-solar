@@ -244,7 +244,7 @@ class SolcastApi: # pylint: disable=R0904
             self.options.auto_24_hour,
             self.damp,
             options[CUSTOM_HOUR_SENSOR],
-            options[KEY_ESTIMATE],
+            options.get(KEY_ESTIMATE, self.options.key_estimate),
             self.options.hard_limit,
             options[BRK_ESTIMATE],
             options[BRK_ESTIMATE10],
