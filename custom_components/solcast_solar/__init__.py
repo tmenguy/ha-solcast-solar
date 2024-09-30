@@ -197,7 +197,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     site_damp = await solcast.site_dampening_data()
     opt = {**entry.options}
-    opt[SITE_DAMP] = site_damp # Internal per-site dampening set flag
+    opt[SITE_DAMP] = site_damp # Internal per-site dampening set flag. A hidden option.
     hass.config_entries.async_update_entry(entry, options=opt)
     hass.data[DOMAIN]['entry_options'] = entry.options
 
@@ -334,14 +334,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                             if solcast.site_damp:
                                 _LOGGER.debug('Clear site dampening')
                                 solcast.site_damp = {}
-                                opt['site_damp'] = False
+                                opt['site_damp'] = False # Clear hidden option.
                                 await solcast.serialise_site_dampening()
                         else:
                             for i in range(0,24):
                                 d.update({f"{i}": float(sp[i])})
                             solcast.site_damp[site] = d
                             await solcast.serialise_site_dampening()
-                            opt['site_damp'] = True
+                            opt['site_damp'] = True # Set hidden option.
 
                         hass.config_entries.async_update_entry(entry, options=opt)
         except intent.IntentHandleError as e:
