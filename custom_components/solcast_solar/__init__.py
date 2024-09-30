@@ -522,6 +522,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             recalc = True
         if hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED]:
             recalc = True
+        coordinator.solcast.estimate_set = {'pv_estimate': entry.options[BRK_ESTIMATE], 'pv_estimate10': entry.options[BRK_ESTIMATE10], 'pv_estimate90': entry.options[BRK_ESTIMATE90]}
+
 
         if reload:
             determination = 'The integration will reload'

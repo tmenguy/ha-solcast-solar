@@ -196,6 +196,7 @@ class SolcastApi: # pylint: disable=R0904
         self.hard_limit = options.hard_limit
         self.custom_hour_sensor = options.custom_hour_sensor
         self.damp = options.dampening
+        self.estimate_set = {'pv_estimate': options.attr_brk_estimate, 'pv_estimate10': options.attr_brk_estimate10, 'pv_estimate90': options.attr_brk_estimate90}
         self.site_damp = {}
         self.sites = []
         self.sites_loaded = False
@@ -220,7 +221,6 @@ class SolcastApi: # pylint: disable=R0904
         self._loaded_data = False
         self._serialize_lock = asyncio.Lock()
         self._use_data_field = f"pv_{options.key_estimate}"
-        self._estimate_set = {'pv_estimate': options.attr_brk_estimate, 'pv_estimate10': options.attr_brk_estimate10, 'pv_estimate90': options.attr_brk_estimate90}
         #self._weather = ""
         self._api_cache_enabled = api_cache_enabled # For offline development.
 
@@ -253,7 +253,7 @@ class SolcastApi: # pylint: disable=R0904
             options[BRK_SITE_DETAILED],
         )
         self._use_data_field = f"pv_{self.options.key_estimate}"
-        self._estimate_set = {
+        self.estimate_set = {
             'pv_estimate': options[BRK_ESTIMATE],
             'pv_estimate10': options[BRK_ESTIMATE10],
             'pv_estimate90': options[BRK_ESTIMATE90],
@@ -1235,10 +1235,10 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 res[site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'])
                 for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-                    if self._estimate_set.get(_data_field):
+                    if self.estimate_set.get(_data_field):
                         res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_n_hour(n_hour, site=site['resource_id'], _use_data_field=_data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-            if self._estimate_set.get(_data_field):
+            if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_forecast_n_hour(n_hour, _use_data_field=_data_field)
         return res
 
@@ -1272,10 +1272,10 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 res[site['resource_id']] = self.get_forecast_custom_hours(n_hours, site=site['resource_id'])
                 for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-                    if self._estimate_set.get(_data_field):
+                    if self.estimate_set.get(_data_field):
                         res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_custom_hours(n_hours, site=site['resource_id'], _use_data_field=_data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-            if self._estimate_set.get(_data_field):
+            if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_forecast_custom_hours(n_hours, _use_data_field=_data_field)
         return res
 
@@ -1307,10 +1307,10 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 res[site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'])
                 for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-                    if self._estimate_set.get(_data_field):
+                    if self.estimate_set.get(_data_field):
                         res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_power_n_mins(n_mins, site=site['resource_id'], _use_data_field=_data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-            if self._estimate_set.get(_data_field):
+            if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, site=None, _use_data_field=_data_field)
         return res
 
@@ -1345,10 +1345,10 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 res[site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'])
                 for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-                    if self._estimate_set.get(_data_field):
+                    if self.estimate_set.get(_data_field):
                         res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-            if self._estimate_set.get(_data_field):
+            if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
@@ -1382,10 +1382,10 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 res[site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'])
                 for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-                    if self._estimate_set.get(_data_field):
+                    if self.estimate_set.get(_data_field):
                         res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_w_time_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-            if self._estimate_set.get(_data_field):
+            if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
@@ -1415,10 +1415,10 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 res[site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'])
                 for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-                    if self._estimate_set.get(_data_field):
+                    if self.estimate_set.get(_data_field):
                         res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_forecast_remaining_today(site=site['resource_id'], _use_data_field=_data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-            if self._estimate_set.get(_data_field):
+            if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_forecast_remaining_today(_use_data_field=_data_field)
         return res
 
@@ -1452,10 +1452,10 @@ class SolcastApi: # pylint: disable=R0904
             for site in self.sites:
                 res[site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'])
                 for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-                    if self._estimate_set.get(_data_field):
+                    if self.estimate_set.get(_data_field):
                         res[_data_field.replace('pv_','')+'-'+site['resource_id']] = self.get_total_kwh_forecast_day(n_day, site=site['resource_id'], _use_data_field=_data_field)
         for _data_field in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
-            if self._estimate_set.get(_data_field):
+            if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
