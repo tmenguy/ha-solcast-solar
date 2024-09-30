@@ -8,8 +8,7 @@
                 "data": {
                     "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
                     "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
-                    "auto_update": "Automatische Aktualisierung (wenn deaktiviert, ist eine Automatisierung erforderlich, um Prognoseaktualisierungen zu erhalten - siehe Integrationsdokumentation)",
-                    "auto_24_hour": "Verteilen Sie die automatischen Prognoseaktualisierungen über 24 Stunden (nicht von Sonnenaufgang bis Sonnenuntergang)."
+                    "auto_update": "Automatische Aktualisierung (wenn keine automatische Aktualisierung erfolgt, ist eine Automatisierung erforderlich – siehe Integrationsdokumentation)"
                 },
                 "description": "Solcast-Kontodaten"
             }
@@ -21,8 +20,7 @@
                 "data": {
                     "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
                     "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
-                    "auto_update": "Automatische Aktualisierung (wenn deaktiviert, muss stattdessen eine Automatisierung verwendet werden)",
-                    "auto_24_hour": "Verteilen Sie die automatischen Prognoseaktualisierungen über 24 Stunden (nicht von Sonnenaufgang bis Sonnenuntergang).",
+                    "auto_update": "Automatische Aktualisierung (wenn keine automatische Aktualisierung vorhanden ist, muss stattdessen eine Automatisierung verwendet werden)",
                     "customhoursensor": "Nächster X-Stunden-Sensor (min=1, max=144)",
                     "hard_limit": "Harter Grenzwert des Wechselrichters in Watt (siehe Integrationsdokumentation)",
                     "attr_brk_estimate10": "Aktivieren Sie die Schätzung von 10 Sensorattributen",
@@ -72,6 +70,22 @@
             "can_reach_server": "Verbindung zum Solcast-Server",
             "used_requests": "Verbrauchte API-Anfragen",
             "rooftop_site_count": "Anzahl der Dachflächen"
+        }
+    },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "Keine automatische Aktualisierung der Prognosen",
+                "1": "Automatische Aktualisierung der Vorhersagen von Sonnenaufgang bis Sonnenuntergang",
+                "2": "Automatische Aktualisierung der Prognosen über 24 Stunden"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Mittlere erwartete Erzeugung (estimate)",
+                "estimate10": "10. Perzentil erwartete Generation (unteres Ende der möglichen Ergebnisse, estimate10)",
+                "estimate90": "Erwartete Generation des 90. Perzentils (oberes Ende der möglichen Ergebnisse, estimate90)"
+            }
         }
     },
     "services": {

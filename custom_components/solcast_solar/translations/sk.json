@@ -8,8 +8,7 @@
                 "data": {
                     "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
                     "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
-                    "auto_update": "Automatická aktualizácia (ak nie je začiarknuté, na získanie aktualizácií prognózy je potrebná automatizácia – pozrite si integračnú dokumentáciu)",
-                    "auto_24_hour": "Rozložiť automatické aktualizácie predpovede na 24 hodín (nie od východu do západu slnka)"
+                    "auto_update": "Automatická aktualizácia (ak nie je automatická aktualizácia, potom je potrebná automatizácia – pozrite si integračnú dokumentáciu)"
                 },
                 "description": "Podrobnosti o účte Solcast"
             }
@@ -21,8 +20,7 @@
                 "data": {
                     "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
                     "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
-                    "auto_update": "Automatická aktualizácia (ak nie je začiarknuté, musíte namiesto toho použiť automatizáciu)",
-                    "auto_24_hour": "Rozložiť automatické aktualizácie predpovede na 24 hodín (nie od východu do západu slnka)",
+                    "auto_update": "Automatická aktualizácia (ak nie je automatická aktualizácia, musíte namiesto nej použiť automatizáciu)",
                     "customhoursensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
                     "hard_limit": "Pevný limit meniča vo wattoch (pozri integračnú dokumentáciu)",
                     "attr_brk_estimate10": "Povoliť odhad 10 atribútov senzora",
@@ -76,6 +74,22 @@
             "can_reach_server": "Solcast server pripojenie",
             "used_requests": "Zostávajúce požiadavky API",
             "rooftop_site_count": "Počet miest na streche"
+        }
+    },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "Žiadna automatická aktualizácia predpovedí",
+                "1": "Automatická aktualizácia predpovedí od východu do západu slnka",
+                "2": "Automatická aktualizácia predpovedí počas 24 hodín"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Stredná očakávaná generácia (estimate)",
+                "estimate10": "10. percentil očakávanej generácie (dolný koniec možných výsledkov, estimate10)",
+                "estimate90": "90. percentil očakávanej generácie (horný koniec možných výsledkov, estimate90)"
+            }
         }
     },
     "services": {

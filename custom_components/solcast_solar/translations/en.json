@@ -8,8 +8,7 @@
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
                     "api_quota": "API limit (optionally comma separate multiple values for each key)",
-                    "auto_update": "Auto-update (if no auto-update then an automation is required - see the integration documentation)",
-                    "auto_24_hour": "Spread forecast auto updates over 24 hours (not from sunrise to sunset)"
+                    "auto_update": "Auto-update (if no auto-update then an automation is required - see the integration documentation)"
                 },
                 "description": "Solcast Account Details"
             }
@@ -22,7 +21,6 @@
                     "api_key": "API key (comma separate multiple values)",
                     "api_quota": "API limit (optionally comma separate multiple values for each key)",
                     "auto_update": "Auto-update (if no auto-update then an automation must be used instead)",
-                    "auto_24_hour": "Spread forecast auto updates over 24 hours (not from sunrise to sunset)",
                     "customhoursensor": "Custom next X hours sensor (min=1, max=144)",
                     "hard_limit": "Inverter hard limit in Watts (see integration documentation)",
                     "key_estimate": "Preferred forecast likelihood to use for sensors",

@@ -8,8 +8,7 @@
                 "data": {
                     "api_key": "Clé API (plusieurs valeurs séparées par des virgules)",
                     "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)",
-                    "auto_update": "Mise à jour automatique (si cette case n'est pas cochée, une automatisation est requise pour obtenir les mises à jour des prévisions - voir la documentation d'intégration)",
-                    "auto_24_hour": "Répartissez les mises à jour automatiques des prévisions sur 24 heures (pas du lever au coucher du soleil)"
+                    "auto_update": "Mise à jour automatique (s'il n'y a pas de mise à jour automatique, une automatisation est requise - voir la documentation d'intégration)"
                 },
                 "description": "Détails du compte Solcast"
             }
@@ -21,8 +20,7 @@
                 "data": {
                     "api_key": "Clé API (plusieurs valeurs séparées par des virgules)",
                     "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)",
-                    "auto_update": "Mise à jour automatique (si décochée, une automatisation doit être utilisée à la place)",
-                    "auto_24_hour": "Répartissez les mises à jour automatiques des prévisions sur 24 heures (pas du lever au coucher du soleil)",
+                    "auto_update": "Mise à jour automatique (s'il n'y a pas de mise à jour automatique, une automatisation doit être utilisée à la place)",
                     "customhoursensor": "Capteur personnalisé des X prochaines heures (min=1, max=144)",
                     "hard_limit": "Limite stricte de l'onduleur en Watts (voir la documentation d'intégration)",
                     "attr_brk_estimate10": "Activer l'estimation de 10 attributs de capteur",
@@ -76,6 +74,22 @@
             "can_reach_server": "Connexion au serveur Solcast",
             "used_requests": "Requêtes API restantes",
             "rooftop_site_count": "Nombre d'emplacements"
+        }
+    },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "Pas de mise à jour automatique des prévisions",
+                "1": "Mise à jour automatique des prévisions du lever au coucher du soleil",
+                "2": "Mise à jour automatique des prévisions sur 24 heures"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Génération médiane attendue (estimate)",
+                "estimate10": "Génération attendue du 10e centile (extrémité inférieure des résultats possibles, estimate10)",
+                "estimate90": "Génération attendue au 90e percentile (extrémité supérieure des résultats possibles, estimate90)"
+            }
         }
     },
     "services": {
