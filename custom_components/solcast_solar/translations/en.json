@@ -30,7 +30,7 @@
                     "attr_brk_site": "Enable site breakdown sensor attributes",
                     "attr_brk_halfhourly": "Enable forecast half-hourly detail attributes",
                     "attr_brk_hourly": "Enable forecast hourly detail attributes",
-                    "attr_brk_detailed": "Enable site breakdown for half-hourly/hourly detail attributes (only functional when site breakdown for sensors is enabled)",
+                    "attr_brk_detailed": "Enable site breakdown for half-hourly/hourly detail attributes",
                     "config_damp": "Modify the hourly dampening factors (after clicking submit)"
                 },
                 "description": "Solcast configuration options"

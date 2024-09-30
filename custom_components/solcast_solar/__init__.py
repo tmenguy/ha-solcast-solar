@@ -500,11 +500,6 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             reload = True
         if hass.data[DOMAIN]['entry_options'][AUTO_UPDATE] != entry.options[AUTO_UPDATE]:
             reload = True
-        if (
-            entry.options[BRK_SITE_DETAILED] and
-            (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
-        ):
-            reload = True
 
         # Config changes, which when changed will cause a forecast recalculation only, without reload.
         # Dampening must be first with the code as-is...
@@ -522,6 +517,10 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             recalc = True
         if hass.data[DOMAIN]['entry_options'].get(HARD_LIMIT) != entry.options.get(HARD_LIMIT):
             coordinator.solcast.hard_limit = entry.options.get(HARD_LIMIT, 100000) / 1000
+            recalc = True
+        if hass.data[DOMAIN]['entry_options'][BRK_SITE] != entry.options[BRK_SITE]:
+            recalc = True
+        if hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED]:
             recalc = True
 
         if reload:
