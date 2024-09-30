@@ -81,9 +81,11 @@
     },
     "selector": {
         "auto_update": {
-            "none": "No automatic update of forecasts",
-            "sunrise_sunset": "Automatic update of forecasts from sunrise to sunset",
-            "all_day": "Automatic update of forecasts over 24 hours"
+            "options": {
+                "none": "No automatic update of forecasts",
+                "sunrise_sunset": "Automatic update of forecasts from sunrise to sunset",
+                "all_day": "Automatic update of forecasts over 24 hours"
+            }
         },
         "key_estimate": {
             "options": {
