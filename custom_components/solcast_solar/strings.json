@@ -8,7 +8,7 @@
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
                     "api_quota": "API limit (optionally comma separate multiple values for each key)",
-                    "auto_update": "Auto-update (if unchecked then an automation is required to get forecast updates - see the integration documentation)",
+                    "auto_update": "Auto-update (if no auto-update then an automation is required - see the integration documentation)",
                     "auto_24_hour": "Spread forecast auto updates over 24 hours (not from sunrise to sunset)"
                 },
                 "description": "Solcast Account Details"
@@ -21,10 +21,11 @@
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
                     "api_quota": "API limit (optionally comma separate multiple values for each key)",
-                    "auto_update": "Auto-update (if unchecked then an automation must be used instead)",
+                    "auto_update": "Auto-update (if no auto-update then an automation must be used instead)",
                     "auto_24_hour": "Spread forecast auto updates over 24 hours (not from sunrise to sunset)",
                     "customhoursensor": "Custom next X hours sensor (min=1, max=144)",
                     "hard_limit": "Inverter hard limit in Watts (see integration documentation)",
+                    "key_estimate": "Preferred forecast likelihood to use for sensors",
                     "attr_brk_estimate10": "Enable estimate 10 sensor attributes",
                     "attr_brk_estimate": "Enable estimate 50 sensor attributes",
                     "attr_brk_estimate90": "Enable estimate 90 sensor attributes",
@@ -76,6 +77,20 @@
             "can_reach_server": "Solcast server connection",
             "used_requests": "API requests remaining",
             "rooftop_site_count": "Rooftop site count"
+        }
+    },
+    "selector": {
+        "auto_update": {
+            "none": "No automatic update of forecasts",
+            "sunrise_sunset": "Automatic update of forecasts from sunrise to sunset",
+            "all_day": "Automatic update of forecasts over 24 hours"
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Median expected generation (estimate)",
+                "estimate10": "10th percentile expected generation (lower end of possible outcomes, estimate10)",
+                "estimate90": "90th percentile expected generation (upper end of possible outcomes, estimate90)"
+            }
         }
     },
     "services": {

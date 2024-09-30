@@ -155,13 +155,16 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     def __auto_update_setup(self, init=False):
         """Daily set up of auto-updates."""
         try:
-            if self.solcast.options.auto_update:
-                if not self.solcast.options.auto_24_hour:
+            match self.solcast.options.auto_update:
+                case 1:
                     self.__get_sun_rise_set()
-                else:
+                    self.__calculate_forecast_updates(init=init)
+                case 2:
                     self._sunrise = self.solcast.get_day_start_utc()
                     self._sunset = self.solcast.get_day_start_utc() + timedelta(hours=24)
-                self.__calculate_forecast_updates(init=init)
+                    self.__calculate_forecast_updates(init=init)
+                case _:
+                    pass
         except:
             _LOGGER.error("Exception in __auto_update_setup(): %s", traceback.format_exc())
 
@@ -182,11 +185,10 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             divisions = int(self.solcast.get_api_limit() / round(len(self.solcast.sites) / len(self.solcast.options.api_key.split(",")), 0))
             interval = int(seconds / divisions)
             self._intervals = [(self._sunrise + timedelta(seconds=interval) * i) for i in range(0,divisions)]
-            #self._intervals = [i.replace(minute=int(i.minute/5)*5, second=0) for i in self._intervals if i > self.solcast.get_now_utc()]
             self._intervals = [i for i in self._intervals if i > self.solcast.get_now_utc()]
             _LOGGER.debug('Auto update: Total seconds %d, divisions: %d updates, interval: %d seconds', seconds, divisions, interval)
             if init:
-                _LOGGER.info('Auto-update will update forecasts %d times %s', divisions, 'over 24 hours' if self.solcast.options.auto_24_hour else 'between sunrise and sunset')
+                _LOGGER.info('Auto-update will update forecasts %d times %s', divisions, 'over 24 hours' if self.solcast.options.auto_update > 1 else 'between sunrise and sunset')
             for i in self._intervals:
                 _LOGGER.debug('Scheduled forecast update at %s', i.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
         except:
@@ -208,7 +210,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
     async def service_event_update(self, *args):
         """Get updated forecast data when requested by a service call."""
-        if self.solcast.options.auto_update:
+        if self.solcast.options.auto_update > 0:
             raise HomeAssistantError("Auto-update is enabled, ignoring service event for forecast update, use Solcast PV Forecast: Force Update instead.")
         else:
             await self.forecast_update()

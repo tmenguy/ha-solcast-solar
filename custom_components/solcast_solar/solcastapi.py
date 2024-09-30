@@ -121,8 +121,8 @@ class ConnectionOptions:
     host: str
     file_path: str
     tz: timezone
-    auto_update: bool
-    auto_24_hour: bool
+    auto_update: int
+    #auto_24_hour: bool
     dampening: dict
     custom_hour_sensor: int
     key_estimate: str
@@ -241,7 +241,7 @@ class SolcastApi: # pylint: disable=R0904
             self.options.file_path,
             self.options.tz,
             self.options.auto_update,
-            self.options.auto_24_hour,
+            #self.options.auto_24_hour,
             self.damp,
             options[CUSTOM_HOUR_SENSOR],
             options.get(KEY_ESTIMATE, self.options.key_estimate),
