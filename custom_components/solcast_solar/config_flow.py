@@ -248,6 +248,10 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
     async def async_step_dampen(self, user_input: dict[str, Any] | None = None) -> FlowResult: #user_input=None):
         """Manage the hourly dampening factors sub-option.
 
+        Note that the config option "site_damp" is not exposed in any way to the user. This is a
+        hidden option in this options flow used to trigger reset of per-site dampening should the
+        overall dampening be set.
+
         Arguments:
             user_input (dict[str, Any] | None): The input provided by the user. Defaults to None.
 
