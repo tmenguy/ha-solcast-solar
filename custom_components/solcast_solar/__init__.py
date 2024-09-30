@@ -524,7 +524,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                 await coordinator.solcast.serialise_site_dampening()
             recalc = True
         if hass.data[DOMAIN]['entry_options'].get(HARD_LIMIT) != entry.options.get(HARD_LIMIT):
-            coordinator.solcast.hard_limit =  entry.options.get(HARD_LIMIT)
+            coordinator.solcast.hard_limit = entry.options.get(HARD_LIMIT) / 1000
             recalc = True
 
         _LOGGER.debug('Reload/recalc determination, reload: %s, recalc: %s', reload, recalc)

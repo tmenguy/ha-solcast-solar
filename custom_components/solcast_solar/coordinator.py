@@ -315,17 +315,15 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "lastupdated":
                 return self.solcast.get_last_updated_datetime()
             case "hard_limit":
-                if self.solcast.hard_limit == 100000:
+                if self.solcast.hard_limit == 100:
                     return False
                 else:
-                    if self.solcast.hard_limit >= 1000000000:
-                        return f"{round(self.solcast.hard_limit/1000000000, 31)} GW"
                     if self.solcast.hard_limit >= 1000000:
-                        return f"{round(self.solcast.hard_limit/1000000, 31)} MW"
-                    elif self.solcast.hard_limit >= 1000:
-                        return f"{round(self.solcast.hard_limit/1000, 3)} kW"
+                        return f"{round(self.solcast.hard_limit/1000000, 1)} GW"
+                    if self.solcast.hard_limit >= 1000:
+                        return f"{round(self.solcast.hard_limit/1000, 1)} MW"
                     else:
-                        return f"{round(self.solcast.hard_limit, 3)} W"
+                        return f"{round(self.solcast.hard_limit, 1)} kW"
             # case "weather_description":
             #     return self.solcast.get_weather_description()
             case _:
