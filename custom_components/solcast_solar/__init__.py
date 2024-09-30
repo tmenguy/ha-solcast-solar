@@ -26,7 +26,6 @@ from homeassistant.util import dt as dt_util # type: ignore
 
 from .const import (
     API_QUOTA,
-    AUTO_24_HOUR,
     AUTO_UPDATE,
     BRK_ESTIMATE,
     BRK_ESTIMATE10,
@@ -135,7 +134,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config.path(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json"),
         tz,
         entry.options.get(AUTO_UPDATE, 0),
-        #entry.options.get(AUTO_24_HOUR, False),
         optdamp,
         entry.options.get(CUSTOM_HOUR_SENSOR, 1),
         entry.options.get(KEY_ESTIMATE, "estimate"),
@@ -502,8 +500,6 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             reload = True
         if hass.data[DOMAIN]['entry_options'][AUTO_UPDATE] != entry.options[AUTO_UPDATE]:
             reload = True
-        #if hass.data[DOMAIN]['entry_options'][AUTO_24_HOUR] != entry.options[AUTO_24_HOUR]:
-        #    reload = True
         if (
             entry.options[BRK_SITE_DETAILED] and
             (hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED])
@@ -709,7 +705,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entry.version < 11:
         new = {**entry.options}
         if new.get(AUTO_UPDATE) is None: new[AUTO_UPDATE] = False
-        if new.get(AUTO_24_HOUR) is None: new[AUTO_24_HOUR] = False
+        if new.get("auto_24_hour") is None: new["auto_24_hour"] = False
         if new.get(HARD_LIMIT) is None: new[HARD_LIMIT] = 100000
         try:
             hass.config_entries.async_update_entry(entry, options=new, version=11)
@@ -726,8 +722,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         new = {**entry.options}
         # Convert from short-lived options schema v11
         new[AUTO_UPDATE] = int(new.get(AUTO_UPDATE, False))
-        if new.get(AUTO_24_HOUR, False): new[AUTO_UPDATE] = 2
-        new.pop(AUTO_24_HOUR, None)
+        if new.get("auto_24_hour", False): new[AUTO_UPDATE] = 2
+        new.pop("auto_24_hour", None)
         try:
             hass.config_entries.async_update_entry(entry, options=new, version=12)
             upgraded()

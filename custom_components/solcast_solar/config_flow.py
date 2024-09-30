@@ -21,7 +21,6 @@ from homeassistant.helpers.selector import ( # type: ignore
 )
 from .const import (
     API_QUOTA,
-    #AUTO_24_HOUR,
     AUTO_UPDATE,
     BRK_ESTIMATE,
     BRK_ESTIMATE10,
@@ -92,7 +91,6 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                     CONF_API_KEY: user_input[CONF_API_KEY],
                     API_QUOTA: user_input[API_QUOTA],
                     AUTO_UPDATE: int(user_input[AUTO_UPDATE]),
-                    #AUTO_24_HOUR: user_input[AUTO_24_HOUR],
                     # Remaining options set to default
                     "damp00": 1.0,
                     "damp01": 1.0,
@@ -145,9 +143,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_API_KEY, default=""): str,
                     vol.Required(API_QUOTA, default="10"): str,
-                    #vol.Optional(AUTO_UPDATE, default=not solcast_json_exists): bool,
-                    #vol.Optional(AUTO_24_HOUR, default=False): bool,
-                    vol.Required(AUTO_UPDATE, default="0"): SelectSelector(
+                    vol.Required(AUTO_UPDATE, default=str(int(not solcast_json_exists))): SelectSelector(
                         SelectSelectorConfig(options=update, mode=SelectSelectorMode.DROPDOWN, translation_key="auto_update")
                     ),
                 }
@@ -181,7 +177,6 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         api_key = self.config_entry.options.get(CONF_API_KEY)
         api_quota = self.config_entry.options[API_QUOTA]
         auto_update = self.config_entry.options[AUTO_UPDATE]
-        #auto_24_hour = self.config_entry.options[AUTO_24_HOUR]
         customhoursensor = self.config_entry.options[CUSTOM_HOUR_SENSOR]
         hard_limit = self.config_entry.options.get(HARD_LIMIT, 100000) # Has a get with default because may not feature in an existing user entry config.
         key_estimate = self.config_entry.options.get(KEY_ESTIMATE, "estimate")
@@ -216,7 +211,6 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 all_config_data[API_QUOTA] = api_quota
 
                 all_config_data[AUTO_UPDATE] = int(user_input[AUTO_UPDATE])
-                #all_config_data[AUTO_24_HOUR] = user_input[AUTO_24_HOUR]
 
                 customhoursensor = user_input[CUSTOM_HOUR_SENSOR]
                 if customhoursensor < 1 or customhoursensor > 144:
@@ -270,8 +264,6 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 {
                     vol.Required(CONF_API_KEY, default=api_key): str,
                     vol.Required(API_QUOTA, default=api_quota): str,
-                    #vol.Optional(AUTO_UPDATE, default=auto_update): bool,
-                    #vol.Optional(AUTO_24_HOUR, default=auto_24_hour): bool,
                     vol.Required(AUTO_UPDATE, default=str(int(auto_update))): SelectSelector(
                         SelectSelectorConfig(options=update, mode=SelectSelectorMode.DROPDOWN, translation_key="auto_update")
                     ),
