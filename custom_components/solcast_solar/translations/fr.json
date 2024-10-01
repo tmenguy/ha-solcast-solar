@@ -23,13 +23,14 @@
                     "auto_update": "Mise à jour automatique (s'il n'y a pas de mise à jour automatique, une automatisation doit être utilisée à la place)",
                     "customhoursensor": "Capteur personnalisé des X prochaines heures (min=1, max=144)",
                     "hard_limit": "Limite stricte de l'onduleur en Watts (voir la documentation d'intégration)",
+                    "key_estimate": "Probabilité de prévision préférée à utiliser pour les capteurs",
                     "attr_brk_estimate10": "Activer l'estimation de 10 attributs de capteur",
                     "attr_brk_estimate": "Activer l'estimation de 50 attributs de capteur",
                     "attr_brk_estimate90": "Activer l'estimation de 90 attributs de capteur",
                     "attr_brk_site": "Activer les attributs du capteur de panne de site",
                     "attr_brk_halfhourly": "Activer les attributs de détail des prévisions demi-horaires",
                     "attr_brk_hourly": "Activer les attributs de détail horaire des prévisions",
-                    "attr_brk_detailed": "Activer la répartition du site pour les attributs de détail demi-horaires/horaires",
+                    "attr_brk_detailed": "Activer la répartition du site pour les attributs de détail demi-horaires/horaires (ceux-ci ne seront pas enregistrés dans les statistiques à long terme de l'enregistreur)",
                     "config_damp": "Modifier les facteurs d'amortissement horaires (après avoir cliqué sur soumettre)"
                 },
                 "description": "Options de configuration Solcast"

@@ -232,7 +232,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 site_breakdown = user_input[BRK_SITE]
                 all_config_data[BRK_SITE] = site_breakdown
                 site_detailed = user_input[BRK_SITE_DETAILED]
-                all_config_data[BRK_SITE_DETAILED] = site_detailed if site_breakdown else False
+                all_config_data[BRK_SITE_DETAILED] = site_detailed
 
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,

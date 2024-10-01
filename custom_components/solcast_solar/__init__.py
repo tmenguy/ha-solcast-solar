@@ -527,7 +527,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         elif recalc:
             determination = 'Recalculate forecasts and refresh sensors'
         else:
-            determination = 'Refresh sensors only' + ' (with spline recalc)' if respline else ''
+            determination = 'Refresh sensors only' + (' (with spline recalc)' if respline else '')
         _LOGGER.debug('Options updated, action: %s', determination)
         if not reload:
             if recalc:

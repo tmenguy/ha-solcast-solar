@@ -23,13 +23,14 @@
                     "auto_update": "Automatická aktualizácia (ak nie je automatická aktualizácia, musíte namiesto nej použiť automatizáciu)",
                     "customhoursensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
                     "hard_limit": "Pevný limit meniča vo wattoch (pozri integračnú dokumentáciu)",
+                    "key_estimate": "Preferovaná pravdepodobnosť použitia pre senzory",
                     "attr_brk_estimate10": "Povoliť odhad 10 atribútov senzora",
                     "attr_brk_estimate": "Povoliť odhad 50 atribútov senzora",
                     "attr_brk_estimate90": "Povoliť odhad 90 atribútov senzora",
                     "attr_brk_site": "Povoliť atribúty senzora rozdelenia stránok",
                     "attr_brk_halfhourly": "Povoliť polhodinové podrobné atribúty prognózy",
                     "attr_brk_hourly": "Povoliť hodinové podrobné atribúty prognózy",
-                    "attr_brk_detailed": "Povoliť rozdelenie stránok pre polhodinové/hodinové atribúty podrobností",
+                    "attr_brk_detailed": "Povoliť rozdelenie stránok pre polhodinové/hodinové atribúty podrobností (tieto sa neuložia do dlhodobých štatistík)",
                     "config_damp": "Upravte hodinové faktory tlmenia (po kliknutí na odoslať)"
                 },
                 "description": "Solcast možnosti konfigurácie"
