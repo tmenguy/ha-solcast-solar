@@ -1582,14 +1582,14 @@ class SolcastApi: # pylint: disable=R0904
         try:
             self.__build_splines(self._forecasts_moment)
         except:
-            _LOGGER.debug('Exception in __spline_moments(): %s', traceback.format_exc())
+            _LOGGER.error('Exception in __spline_moments(): %s', traceback.format_exc())
 
     async def __spline_remaining(self):
         """Build the descending splines."""
         try:
             self.__build_splines(self._forecasts_remaining, reducing=True)
         except:
-            _LOGGER.debug('Exception in __spline_remaining(): %s', traceback.format_exc())
+            _LOGGER.error('Exception in __spline_remaining(): %s', traceback.format_exc())
 
     async def recalculate_splines(self):
         """Recalculate both the moment and remaining splines"""
