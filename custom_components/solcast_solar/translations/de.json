@@ -8,9 +8,9 @@
                 "data": {
                     "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
                     "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
-                    "auto_update": "Automatische Aktualisierung (wenn keine automatische Aktualisierung erfolgt, ist eine Automatisierung erforderlich – siehe Integrationsdokumentation)"
+                    "auto_update": "Automatische Aktualisierung"
                 },
-                "description": "Solcast-Kontodaten"
+                "description": "Solcast-Kontodaten\n\n(Wenn keine automatische Aktualisierung erfolgt, ist eine Automatisierung erforderlich – siehe Integrationsdokumentation)"
             }
         }
     },

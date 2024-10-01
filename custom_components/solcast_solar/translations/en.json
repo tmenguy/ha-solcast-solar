@@ -8,9 +8,9 @@
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
                     "api_quota": "API limit (optionally comma separate multiple values for each key)",
-                    "auto_update": "Auto-update (if no auto-update then an automation is required - see the integration documentation)"
+                    "auto_update": "Auto-update"
                 },
-                "description": "Solcast Account Details"
+                "description": "Solcast Account Details\n\n(If not using auto-update then an automation is required - see the integration documentation)"
             }
         }
     },
