@@ -520,7 +520,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                 recalc = True
             # Attribute changes, which will need a recalulation of splines
             if not recalc:
-                respline = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE)
+                respline = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE) or changed(KEY_ESTIMATE)
 
         if reload:
             determination = 'The integration will reload'
