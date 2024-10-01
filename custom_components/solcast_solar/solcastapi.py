@@ -43,6 +43,7 @@ from .const import (
     DATE_FORMAT,
     DATE_FORMAT_UTC,
     FORECAST_DEBUG_LOGGING,
+    HARD_LIMIT,
     KEY_ESTIMATE,
     SENSOR_DEBUG_LOGGING,
     SPLINE_DEBUG_LOGGING,
@@ -195,7 +196,7 @@ class SolcastApi: # pylint: disable=R0904
         self.options = options
         self.hard_limit = options.hard_limit
         self.custom_hour_sensor = options.custom_hour_sensor
-        self.damp = options.dampening
+        self.damp = options.dampening # Re-set on recalc in __init__
         self.estimate_set = {'pv_estimate': options.attr_brk_estimate, 'pv_estimate10': options.attr_brk_estimate10, 'pv_estimate90': options.attr_brk_estimate90}
         self.site_damp = {}
         self.sites = []
@@ -226,7 +227,7 @@ class SolcastApi: # pylint: disable=R0904
 
         _LOGGER.debug("Configuration directory is %s", self._config_dir)
 
-    def set_options(self, options: dict):
+    async def set_options(self, options: dict, respline: bool):
         """Set the class option variables (used by __init__ to avoid an integration reload).
 
         Args:
@@ -252,12 +253,15 @@ class SolcastApi: # pylint: disable=R0904
             options[BRK_HOURLY],
             options[BRK_SITE_DETAILED],
         )
+        self.hard_limit = options.get(HARD_LIMIT, 100000) / 1000
         self._use_data_field = f"pv_{self.options.key_estimate}"
         self.estimate_set = {
             'pv_estimate': options[BRK_ESTIMATE],
             'pv_estimate10': options[BRK_ESTIMATE10],
             'pv_estimate90': options[BRK_ESTIMATE90],
         }
+        if respline:
+            await self.recalculate_splines()
 
     def get_data(self) -> dict[str, Any]:
         """Return the data dictionary.
@@ -1555,7 +1559,13 @@ class SolcastApi: # pylint: disable=R0904
             variant (list): The variant variable to populate, _forecasts_moment or _forecasts_reducing.
             reducing (bool): A flag to indicate whether the spline is momentary power, or reducing energy, default momentary.
         """
-        df = ['pv_estimate'] + (['pv_estimate10'] if self.options.attr_brk_estimate10 else []) + (['pv_estimate90'] if self.options.attr_brk_estimate90 else [])
+        df = [self._use_data_field]
+        if self._use_data_field != self.options.attr_brk_estimate:
+            df.append('pv_estimate')
+        if self._use_data_field != self.options.attr_brk_estimate10:
+            df.append('pv_estimate10')
+        if self._use_data_field != self.options.attr_brk_estimate90:
+            df.append('pv_estimate90')
         xx = list(range(0, 1800*len(self._spline_period), 300))
 
         variant['all'] = {}
@@ -1592,11 +1602,7 @@ class SolcastApi: # pylint: disable=R0904
 
         n_min (int): Minute of the day.
         """
-        try:
-            return self._forecasts_moment['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
-        except Exception as e:
-            _LOGGER.debug('Exception in __get_moment(): %s', e)
-            return 0
+        return self._forecasts_moment['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
 
     def __get_remaining(self, site, _data_field, n_min) -> float:
         """Get a remaining value at a given five-minute point from a reducing spline.
@@ -1609,11 +1615,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             float: A splined forecasted remaining value as kWh.
         """
-        try:
-            return self._forecasts_remaining['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
-        except Exception as e:
-            _LOGGER.debug('Exception in __get_remaining(): %s', e)
-            return 0
+        return self._forecasts_remaining['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
 
     def __get_forecast_pv_remaining(self, start_utc, end_utc=None, site=None, _use_data_field=None) -> float:
         """Return estimate remaining for a period.
@@ -1665,7 +1667,8 @@ class SolcastApi: # pylint: disable=R0904
         except Exception as e:
             _LOGGER.error("Exception in __get_forecast_pv_remaining(): %s", e)
             _LOGGER.error(traceback.format_exc())
-            return 0
+            raise
+            #return 0
 
     def __get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None) -> float:
         """Return energy total for a period.
@@ -1732,7 +1735,8 @@ class SolcastApi: # pylint: disable=R0904
         except Exception as e:
             _LOGGER.error("Exception in __get_forecast_pv_moment(): %s", e)
             _LOGGER.error(traceback.format_exc())
-            return 0
+            raise
+            #return 0
 
     def __get_max_forecast_pv_estimate(self, start_utc, end_utc, site=None, _use_data_field=None) -> float:
         """Return forecast maximum for a period.

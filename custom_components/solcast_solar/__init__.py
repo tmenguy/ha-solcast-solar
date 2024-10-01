@@ -492,51 +492,48 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
     try:
         reload = False
         recalc = False
+        respline = False
+
+        def changed(config):
+            return hass.data[DOMAIN]['entry_options'].get(config) != entry.options.get(config)
 
         # Config changes, which when changed will cause a reload.
-        if hass.data[DOMAIN]['entry_options'].get(CONF_API_KEY) != entry.options.get(CONF_API_KEY):
-            reload = True
-        if hass.data[DOMAIN]['entry_options'][API_QUOTA] != entry.options[API_QUOTA]:
-            reload = True
-        if hass.data[DOMAIN]['entry_options'][AUTO_UPDATE] != entry.options[AUTO_UPDATE]:
-            reload = True
+        reload = changed(CONF_API_KEY) or changed(API_QUOTA) or changed(AUTO_UPDATE)
 
         # Config changes, which when changed will cause a forecast recalculation only, without reload.
-        # Dampening must be first with the code as-is...
-        d = {}
-        for i in range(0,24):
-            d.update({f"{i}": entry.options[f"damp{i:02}"]})
-            if hass.data[DOMAIN]['entry_options'][f"damp{i:02}"] != entry.options[f"damp{i:02}"]:
-                recalc = True
-        if recalc:
-            coordinator.solcast.damp = d
-        if hass.data[DOMAIN]['entry_options'][SITE_DAMP] != entry.options[SITE_DAMP]:
-            if not entry.options[SITE_DAMP]:
-                coordinator.solcast.site_damp = {}
-                await coordinator.solcast.serialise_site_dampening()
-            recalc = True
-        if hass.data[DOMAIN]['entry_options'].get(HARD_LIMIT) != entry.options.get(HARD_LIMIT):
-            coordinator.solcast.hard_limit = entry.options.get(HARD_LIMIT, 100000) / 1000
-            recalc = True
-        if hass.data[DOMAIN]['entry_options'][BRK_SITE] != entry.options[BRK_SITE]:
-            recalc = True
-        if hass.data[DOMAIN]['entry_options'][BRK_SITE_DETAILED] != entry.options[BRK_SITE_DETAILED]:
-            recalc = True
-        coordinator.solcast.estimate_set = {'pv_estimate': entry.options[BRK_ESTIMATE], 'pv_estimate10': entry.options[BRK_ESTIMATE10], 'pv_estimate90': entry.options[BRK_ESTIMATE90]}
+        # Dampening must be the first check with the code as-is...
+        if not reload:
+            d = {}
+            for i in range(0,24):
+                d.update({f"{i}": entry.options[f"damp{i:02}"]})
+                if changed(f"damp{i:02}"):
+                    recalc = True
+            if recalc:
+                coordinator.solcast.damp = d
 
+            if changed(SITE_DAMP):
+                if not entry.options[SITE_DAMP]:
+                    coordinator.solcast.site_damp = {}
+                    await coordinator.solcast.serialise_site_dampening()
+                recalc = True
+            if changed(HARD_LIMIT):
+                recalc = True
+            # Attribute changes, which will need a recalulation of splines
+            if not recalc:
+                respline = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE)
 
         if reload:
             determination = 'The integration will reload'
         elif recalc:
             determination = 'Recalculate forecasts and refresh sensors'
         else:
-            determination = 'Refresh sensors only'
+            determination = 'Refresh sensors only' + ' (with spline recalc)' if respline else ''
         _LOGGER.debug('Options updated, action: %s', determination)
         if not reload:
-            coordinator.solcast.set_options(entry.options)
-
             if recalc:
                 await coordinator.solcast.build_forecast_data()
+
+            await coordinator.solcast.set_options(entry.options, respline)
             coordinator.set_data_updated(True)
             await coordinator.update_integration_listeners()
             coordinator.set_data_updated(False)

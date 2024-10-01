@@ -227,9 +227,10 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 all_config_data[BRK_ESTIMATE] = user_input[BRK_ESTIMATE]
                 all_config_data[BRK_ESTIMATE10] = user_input[BRK_ESTIMATE10]
                 all_config_data[BRK_ESTIMATE90] = user_input[BRK_ESTIMATE90]
-                all_config_data[BRK_SITE] = user_input[BRK_SITE]
                 all_config_data[BRK_HALFHOURLY] = user_input[BRK_HALFHOURLY]
                 all_config_data[BRK_HOURLY] = user_input[BRK_HOURLY]
+                site_breakdown = user_input[BRK_SITE]
+                all_config_data[BRK_SITE] = site_breakdown
                 site_detailed = user_input[BRK_SITE_DETAILED]
                 all_config_data[BRK_SITE_DETAILED] = site_detailed if site_breakdown else False
 

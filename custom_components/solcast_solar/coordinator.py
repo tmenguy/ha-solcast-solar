@@ -142,6 +142,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Resets tracked API usage at midnight UTC."""
         try:
             await self.solcast.reset_api_usage()
+            self._data_updated = True
+            await self.update_integration_listeners()
+            self._data_updated = False
         except:
             _LOGGER.error("Exception in __update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
 
