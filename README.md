@@ -132,7 +132,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
  [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png)
 
 1. Enter your `Solcast API Key`, `API limit`, desired auto-update settings and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_NB: this goes against Solcast T&C's by having more than one account_). If the API limit is the same for multiple accounts then enter a single value, or both values separated by a comma.
-1. If auto-update was not selected then create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
+1. If an auto-update option was not chosen then create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
 1. Set up HA Energy Dashboard settings.
 1. To change other configuration options after installation, select the integration in `Devices & services` then `CONFIGURE`.
 
@@ -148,7 +148,7 @@ Make sure you use your `API Key` and not your rooftop id created in Solcast. You
 > Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
 
 ### Auto-update of forecasts
-Using auto-update will schedule forecast updates that get automatically spread across hours when the sun is up. It calculates the number of daily updates that will occur according to the number of Solcast sites and the API limit that is configured.
+Using auto-update will schedule forecast updates that get automatically spread across hours when the sun is up, or alternatively over a 24-hour period. It calculates the number of daily updates that will occur according to the number of Solcast sites and the API limit that is configured.
 
 Should it be desired to fetch an update ouside of these hours, then the API limit in the integration configuration may be reduced, and an automation may then be set up to call the service `solcast_solar.force_update_forecasts` at the desired time of day. (Note that calling the service `solcast_solar.update_forecasts` will be refused if auto-update is enabled, so use force update instead.)
 
@@ -161,7 +161,7 @@ If auto-update is not enabled then create a new automation (or automations) and 
 
 To make the most of the available API calls per day, you can have the automation call the API using an interval calculated by the number of daytime hours divided by the number of total API calls a day you can make.
 
-This automation bases execution times on sunrise and sunset, which differ around the globe, so inherently spreads the load on Solcast. It also incorporates a randomised time offset. This will hopefully avoid the likelihood that the Solcast servers get inundated by multiple callers at the same time.
+This automation bases execution times on sunrise and sunset, which differ around the globe, so inherently spreads the load on Solcast. It is very similar to the behaviour of auto-update from sunrise to sunset, with the difference being that it also incorporates a randomised time offset, which will hopefully further avoid the likelihood that the Solcast servers get inundated by multiple callers at the same time.
 
 ```yaml
 alias: Solcast update
