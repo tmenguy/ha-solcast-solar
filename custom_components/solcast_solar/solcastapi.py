@@ -227,7 +227,7 @@ class SolcastApi: # pylint: disable=R0904
 
         _LOGGER.debug("Configuration directory is %s", self._config_dir)
 
-    async def set_options(self, options: dict, respline: bool):
+    async def set_options(self, options: dict):
         """Set the class option variables (used by __init__ to avoid an integration reload).
 
         Args:
@@ -235,12 +235,14 @@ class SolcastApi: # pylint: disable=R0904
         """
         self.damp = {str(i): options[f"damp{i:02}"] for i in range(0,24)}
         self.options = ConnectionOptions(
+            # All these options require a reload, and can not be dynamically set, hence retrieval from self.options...
             self.options.api_key,
             self.options.api_quota,
             self.options.host,
             self.options.file_path,
             self.options.tz,
             self.options.auto_update,
+            # Options that can be dynamically set...
             self.damp,
             options[CUSTOM_HOUR_SENSOR],
             options.get(KEY_ESTIMATE, self.options.key_estimate),
@@ -260,8 +262,6 @@ class SolcastApi: # pylint: disable=R0904
             'pv_estimate10': options[BRK_ESTIMATE10],
             'pv_estimate90': options[BRK_ESTIMATE90],
         }
-        if respline:
-            await self.recalculate_splines()
 
     def get_data(self) -> dict[str, Any]:
         """Return the data dictionary.

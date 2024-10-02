@@ -530,9 +530,11 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             determination = 'Refresh sensors only' + (' (with spline recalc)' if respline else '')
         _LOGGER.debug('Options updated, action: %s', determination)
         if not reload:
-            await coordinator.solcast.set_options(entry.options, respline)
+            await coordinator.solcast.set_options(entry.options)
             if recalc:
                 await coordinator.solcast.build_forecast_data()
+            elif respline:
+                await coordinator.solcast.recalculate_splines()
             coordinator.set_data_updated(True)
             await coordinator.update_integration_listeners()
             coordinator.set_data_updated(False)
