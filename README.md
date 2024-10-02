@@ -30,7 +30,7 @@ See [detailed](#hacs-recommended) instructions below.  Now that HACS 2.0 has bee
 >
 > Uninstalling the Oziee version then installing this one, or simply downloading this one over that one will preserve the history and configuration.
 >
-> If you **uninstalled** the Oziee version, and then installed this version, then you will likely need to re-select to use Solcast Solar as the source of Forecast Production for your Energy Dashboard.
+> If you **uninstalled** the Oziee version, and then installed this version, then you will likely need to re-select to use Solcast Solar as the source of forecast production for your Energy dashboard.
 
 
 Version Change Notes: See [below](#changes).
@@ -56,19 +56,19 @@ Sign up for an API key (https://solcast.com/).
 
 Configure your rooftop sites correctly at `solcast.com`.
 
-Copy the API Key for use with this integration (See [Configuration](#Configuration) below).
+Copy the API key for use with this integration (See [Configuration](#Configuration) below).
 
 ## Installation
 
 ### HACS *(recommended)*
 
-As a Custom Repository using HACS. More info about HACS can be found [here](https://hacs.xyz/).  If you haven't installed HACS yet, go do it first!
+Install as a Custom Repository using HACS. More info about HACS can be found [here](https://hacs.xyz/).  If you haven't installed HACS yet, go do it first!
 
-The easiest way to install the integration is to click the button below (you will be prompted for your home assistant URL if you've never used this type of button before) to open this page in your Home Assistant HACS page.
+The easiest way to install the integration is to click the button below (you will be prompted for your Home Assistant URL if you've never used this type of button before) to open this page in your Home Assistant HACS page.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=BJReplay&repository=ha-solcast-solar&category=integration)
 
-You'll be prompted to confirm you want to open the repository inside HACS inside your home assistant:
+You'll be prompted to confirm you want to open the repository inside HACS inside Home Assistant:
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/OpenPageinyourHomeAssistant.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/OpenPageinyourHomeAssistant.png)
 
@@ -76,7 +76,7 @@ You'll see this page, with a `↓ Download` button near the bottom right - click
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Download.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Download.png)
 
-You'll be prompted to download the Solcast PV Solar component - click on `Download`:
+You'll be prompted to download the Solcast PV Forecast component - click on `Download`:
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolcastPVSolar.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolcastPVSolar.png)
 
@@ -92,7 +92,7 @@ Click on settings, and you should see a Repair notification for `Restart require
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SuccessIssueRepaired.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SuccessIssueRepaired.png)
 
-If you don't see this (you might be running an older version of Home Assistant), navigate to System, Settings, click on the Power Icon, and Restart Home Assistant.  You need to restart Home Assistant before you can then install the custom component that you've just downloaded.
+If you don't see this (you might be running an older version of Home Assistant), navigate to `System`, `Settings`, click on the power Icon, and `Restart Home Assistant`.  You need to restart Home Assistant before you can then install the custom component that you've just downloaded.
 
 Once you've restarted, follow along at [Configuration](#configuration) to continue setting up the Solcast PV Forecast integration component.
 
@@ -101,8 +101,8 @@ Once you've restarted, follow along at [Configuration](#configuration) to contin
 More info [here](https://hacs.xyz/docs/faq/custom_repositories/)
 
 1. (If using it, remove oziee/ha-solcast-solar in HACS)
-1. Add custom repository (three verical dots menu, top right) ```https://github.com/BJReplay/ha-solcast-solar``` as an ```integration```
-1. Search for 'Solcast' in HACS, open it and click the ```Download``` button
+1. Add custom repository (three verical dots menu, top right) `https://github.com/BJReplay/ha-solcast-solar` as an ```integration```
+1. Search for 'Solcast' in HACS, open it and click the `Download` button
 1. See [Configuration](#configuration) below
 
 If previously using Oziee's ha-solcast-solar then all history and config should remain.
@@ -111,11 +111,11 @@ If previously using Oziee's ha-solcast-solar then all history and config should 
 
 You probably **do not** want to do this! Use the HACS method above unless you know what you are doing and have a good reason as to why you are installing manually.
 
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find ```configuration.yaml```)
-1. If you do not have a ```custom_components``` directory there, you need to create it
-1. In the ```custom_components``` directory create a new folder called ```solcast_solar```
-1. Download _all_ the files from the ```custom_components/solcast_solar/``` directory in this repository
-1. Place the files you downloaded in the new directory you created
+1. Using the tool of choice open the folder (directory) for your HA configuration (where you find `configuration.yaml`)
+1. If you do not have a `custom_components` folder there, you need to create it
+1. In the `custom_components` folder create a new folder called `solcast_solar`
+1. Download _all_ the files from the `custom_components/solcast_solar/` folder in this repository
+1. Place the files you downloaded in the new folder you created
 1. *Restart HA to load the new integration*
 1. See [Configuration](#configuration) below
 
@@ -131,9 +131,9 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
  
  [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png)
 
-1. Enter your `Solcast API Key`, `API limit`, desired auto-update settings and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_NB: this goes against Solcast T&C's by having more than one account_). If the API limit is the same for multiple accounts then enter a single value, or both values separated by a comma.
+1. Enter your `Solcast API Key`, `API limit`, desired auto-update choice and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter both account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_Note: this goes against Solcast T&C's by having more than one account_). If the API limit is the same for multiple accounts then enter a single value for that, or both values separated by a comma.
 1. If an auto-update option was not chosen then create your own automation to call the service `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
-1. Set up HA Energy Dashboard settings.
+1. Set up the Home Assistant Energy dashboard settings.
 1. To change other configuration options after installation, select the integration in `Devices & services` then `CONFIGURE`.
 
 Make sure you use your `API Key` and not your rooftop id created in Solcast. You can find your API key here [api key](https://toolkit.solcast.com.au/account).
@@ -143,12 +143,12 @@ Make sure you use your `API Key` and not your rooftop id created in Solcast. You
 > [!IMPORTANT]
 > After the integration is started, review the Home Assistant log.
 > 
-> Should an error that gathering rooftop sites data has failed occur then this is almost certainly not an integration issue, rather a Solcast API issue. The integration will repeatedly restart in this situation until the sites data can be loaded, as until configured sites data is acquired the integration cannot function.
+> Should an error that gathering rooftop sites data has failed occur then this is almost certainly not an integration issue, rather an issue reaching the Solcast API on the Internet. The integration will repeatedly restart in this situation until the sites data can be loaded, as until configured sites data is acquired the integration cannot function.
 >
 > Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
 
 ### Auto-update of forecasts
-Using auto-update will schedule forecast updates that get automatically spread across hours when the sun is up, or alternatively over a 24-hour period. It calculates the number of daily updates that will occur according to the number of Solcast sites and the API limit that is configured.
+Using auto-update will get forecast updates that are automatically spread across hours when the sun is up, or alternatively over a 24-hour period. It calculates the number of daily updates that will occur according to the number of Solcast sites and the API limit that is configured.
 
 Should it be desired to fetch an update ouside of these hours, then the API limit in the integration configuration may be reduced, and an automation may then be set up to call the service `solcast_solar.force_update_forecasts` at the desired time of day. (Note that calling the service `solcast_solar.update_forecasts` will be refused if auto-update is enabled, so use force update instead.)
 
@@ -274,16 +274,16 @@ DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] HTTP session sta
 
 ### Set up HA energy dashboard settings
 
-Go to the `HA>Settings>Dashboards>Energy`
+Go to `Settings`, `Dashboards`, `Energy`
 
-Click the 'edit the Solar Production' item you have previously created in the Energy dashboard. 
+Edit the `Solar Panels` `Solar production` item you have previously created (or will create now). Do not add a separate `Solar production` item, or things will just get weird.
 
 > [!IMPORTANT]  
-> If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor setup.
+> If you do not have a solar generation sensor in your system then this integration will not work in the Energy dashboard. The graph, and adding the forecast integration rely on there being a generation sensor set up.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolarPanels.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolarPanels.png)
 
-Click the Forecast option button and select the Solcast Solar option. Click SAVE. HA will do all the rest for you.
+Select `Forecast Production` and select the `Solcast Solar` option. Click `SAVE`, and Home Assistant will do the rest for you.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolcastSolar.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SolcastSolar.png)
 
@@ -293,13 +293,13 @@ Click the Forecast option button and select the Solcast Solar option. Click SAVE
 
 ### Dampening configuration
 
-It is possible to configure hourly dampening values to account for shading. This may be configured by automation or the integration configuration for total dampening. Per-site dampening is possible using service calls only.
+It is possible to configure hourly dampening values to account for shading. This may be configured by automation or the integration configuration for total dampening. Per-site dampening is possible by using service calls (but not in the itegration `CONFIGURE` dialogue).
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/reconfig.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/reconfig.png)
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/damp.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/damp.png)
 
-Here you can change the dampening factor value for any hour. Values from 0.0 - 1.0 are valid. Setting 0.95 will dampen each Solcast forecast data value by 5%. This is reflected in the sensor values and attributes and also in the Home Assistant Energy dashboard.
+You can change the dampening factor value for any hour. Values from 0.0 - 1.0 are valid. Setting 0.95 will dampen each Solcast forecast data value by 5%. This is reflected in the sensor values and attributes and also in the Home Assistant Energy dashboard.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/dampopt.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/dampopt.png)
 
@@ -332,9 +332,9 @@ If per-site dampening is configured for a single site in a multi-site set up the
 
 There are quite a few sensor attributes that can be used as a data source for template sensors, charts, etc., including a per-site breakdown, estimate 10/50/90 values, and per-hour and half hour detailed breakdown for each forecast day.
 
-Many users will not use these attributes, so to cut the clutter (especially in the UI) and also long-term statistics (LTS) generation all of these can be individually disabled.
+Many users will not use these attributes, so to cut the clutter (especially in the UI) and also long-term statistics (LTS) generation all of these can be disabled if they are not needed.
 
-By default, all of them are enabled, with the exception of per-site detailedForecast and detailedHourly. (All hourly and half-hourly detail attributes will be excluded from being sent to the recorder (the LTS), as these attributes are very large, would result in excessive database growth, and are of little use when considered long-term.)
+By default, all of them are enabled, with the exception of per-site detailedForecast and detailedHourly. (All hourly and half-hourly detail attributes are excluded from being sent to the recorder (the LTS), as these attributes are very large, would result in excessive database growth, and are of little use when considered long-term.)
 
 > [!NOTE]
 >
