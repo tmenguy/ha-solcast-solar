@@ -64,6 +64,10 @@
                 },
                 "description": "Ändern Sie den stündlichen Dämpfungsfaktor"
             }
+        },
+        "error": {
+            "unknown": "Unbekannter Fehler",
+            "incorrect_options_action": "Falsche Aktion ausgewählt"
         }
     },
     "system_health": {
@@ -155,6 +159,7 @@
             "forecast_this_hour": {"name": "Prognose aktuelle Stunde"},
             "get_remaining_today": {"name": "Prognose verbleibende Leistung heute"},
             "forecast_next_hour": {"name": "Prognose nächste Stunde"},
+            "forecast_custom_hours": {"name": "Prognostizieren Sie die nächsten X Stunden"},
             "total_kwh_forecast_tomorrow": {"name": "Prognose morgen"},
             "peak_w_tomorrow": {"name": "Prognose Spitzenleistung morgen"},
             "peak_w_time_tomorrow": {"name": "Zeitpunkt Spitzenleistung morgen"},
@@ -166,7 +171,12 @@
             "total_kwh_forecast_d5": {"name": "Prognose Tag 5"},
             "total_kwh_forecast_d6": {"name": "Prognose Tag 6"},
             "total_kwh_forecast_d7": {"name": "Prognose Tag 7"},
-            "power_now": {"name": "Aktuelle Leistung"}
+            "power_now": {"name": "Aktuelle Leistung"},
+            "weather_description": {"name": "Wetter"},
+            "hard_limit": {"name": "Fester Grenzwert eingestellt"}
+        },
+        "select": {
+            "estimate_mode" : {"name": "Verwenden Sie das Prognosefeld"}
         }
     }
 }

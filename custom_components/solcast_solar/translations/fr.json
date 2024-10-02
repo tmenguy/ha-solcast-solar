@@ -122,15 +122,15 @@
         },
         "set_dampening": {
             "name": "Définir le coefficient des prévisions",
-            "description": "Définissez le facteur horaire d’amortissement des prévisions.",
+            "description": "Définissez le facteur horaire d'amortissement des prévisions.",
             "fields": {
                 "damp_factor": {
-                    "name": "Chaîne de coefficient d’amortissement",
-                    "description": "Chaîne de valeurs horaires du facteur d’amortissement séparées par des virgules."
+                    "name": "Chaîne de coefficient d'amortissement",
+                    "description": "Chaîne de valeurs horaires du facteur d'amortissement séparées par des virgules."
                 },
                 "site": {
                     "name": "Identifiant du site",
-                    "description": "ID de site facultatif pour décomposer l’amortissement. (Remarque : l'omission du site supprimera tous les amortissements de sites individuels.)"
+                    "description": "ID de site facultatif pour décomposer l'amortissement. (Remarque : l'omission du site supprimera tous les amortissements de sites individuels.)"
                 }
             }
         },
@@ -159,6 +159,7 @@
             "forecast_this_hour": {"name": "Prévisions heure actuel"},
             "get_remaining_today": {"name": "Prévisions de production  restantes aujourd'hui"},
             "forecast_next_hour": {"name": "Prévisions pour la prochaine heure"},
+            "forecast_custom_hours": {"name": "Prévisions pour les X prochaines heures"},
             "total_kwh_forecast_tomorrow": {"name": "Prévisions pour demain"},
             "peak_w_tomorrow": {"name": "Prévisions du pic pour demain"},
             "peak_w_time_tomorrow": {"name": "Heure du pic demain"},
@@ -170,7 +171,12 @@
             "total_kwh_forecast_d5": {"name": "Prévision jour 5"},
             "total_kwh_forecast_d6": {"name": "Prévision jour 6"},
             "total_kwh_forecast_d7": {"name": "Prévision jour 7"},
-            "power_now": {"name": "Puissance maintenant"}
+            "power_now": {"name": "Puissance maintenant"},
+            "weather_description": {"name": "Météo"},
+            "hard_limit": {"name": "Ensemble de limites strictes"}
+        },
+        "select": {
+            "estimate_mode" : {"name": "Utiliser le champ de prévision"}
         }
     }
 }

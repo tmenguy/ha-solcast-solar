@@ -159,6 +159,7 @@
             "forecast_this_hour": {"name": "اس گھنٹے کی پیشن گوئی"},
             "get_remaining_today": {"name": "آج باقی رہنے والی پیشن گوئی"},
             "forecast_next_hour": {"name": "اگلے گھنٹے کی پیشن گوئی"},
+            "forecast_custom_hours": {"name": "اگلے X گھنٹے کی پیشن گوئی"},
             "total_kwh_forecast_tomorrow": {"name": "کل کی پیشن گوئی"},
             "peak_w_tomorrow": {"name": "کل عروج کی پیشن گوئی"},
             "peak_w_time_tomorrow": {"name": "کل عروج کا وقت"},
@@ -170,7 +171,12 @@
             "total_kwh_forecast_d5": {"name": "دن 5 کی پیشن گوئی"},
             "total_kwh_forecast_d6": {"name": "دن 6 کی پیشن گوئی"},
             "total_kwh_forecast_d7": {"name": "دن 7 کی پیشن گوئی"},
-            "power_now": {"name": "ابھی پاور"}
+            "power_now": {"name": "ابھی پاور"},
+            "weather_description": {"name": "موسم"},
+            "hard_limit": {"name": "سخت حد مقرر"}
+        },
+        "select": {
+            "estimate_mode" : {"name": "پیشن گوئی کا میدان استعمال کریں۔"}
         }
     }
 }

@@ -132,22 +132,22 @@
                     "name": "ID lokality",
                     "description": "Voliteľný identifikátor lokality na nastavenie rozdelenia. (Poznámka: Vynechaním lokality sa vymažú všetky tlmenia jednotlivých lokalít.)"
                 }
-            },
-            "set_hard_limit": {
-                "name": "Nastavte pevný limit predpovede meniča",
-                "description": "Zabráňte tomu, aby boli predpovedané hodnoty vyššie, ako dokáže menič produkovať.",
-                "fields": {
-                    "hard_limit": {
-                        "name": "Limitná hodnota vo wattoch",
-                        "description": "Nastavte maximálnu hodnotu vo wattoch, ktorú môže menič produkovať."
-                    }
+            }
+        },
+        "set_hard_limit": {
+            "name": "Nastavte pevný limit predpovede meniča",
+            "description": "Zabráňte tomu, aby boli predpovedané hodnoty vyššie, ako dokáže menič produkovať.",
+            "fields": {
+                "hard_limit": {
+                    "name": "Limitná hodnota vo wattoch",
+                    "description": "Nastavte maximálnu hodnotu vo wattoch, ktorú môže menič produkovať."
                 }
-            },
-            "remove_hard_limit": {
-                "name": "Odstráňte pevný limit predpovede meniča",
-                "description": "Odstráňte nastavený limit."
             }
-            }
+        },
+        "remove_hard_limit": {
+            "name": "Odstráňte pevný limit predpovede meniča",
+            "description": "Odstráňte nastavený limit."
+        }
     },
     "entity": {
         "sensor": {
@@ -159,18 +159,21 @@
             "forecast_this_hour": {"name": "Predpoveď túto hodinu"},
             "get_remaining_today": {"name": "Predpoveď zostávajúca dnes"},
             "forecast_next_hour": {"name": "Predpoveď ďalšie hodina"},
+            "forecast_custom_hours": {"name": "Predpoveď najbližších X hodín"},
             "total_kwh_forecast_tomorrow": {"name": "Prepoveď zajtra"},
             "peak_w_tomorrow": {"name": "Predpoveď špička zajtra"},
             "peak_w_time_tomorrow": {"name": "Čas špičky zajtra"},
             "api_counter": {"name": "Použité API"},
-            "api_limit": {"name": "API Limit"},
-            "lastupdated": {"name": "API Last Polled"},
+            "api_limit": {"name": "Limit API"},
+            "lastupdated": {"name": "API naposledy dotazované"},
             "total_kwh_forecast_d3": {"name": "Predpoveď deň 3"},
             "total_kwh_forecast_d4": {"name": "Prepoveď deň 4"},
             "total_kwh_forecast_d5": {"name": "Predpoveď deň 5"},
             "total_kwh_forecast_d6": {"name": "Predpoveď deň 6"},
             "total_kwh_forecast_d7": {"name": "Predpoveď deň 7"},
-            "power_now": {"name": "Výkon teraz"}
+            "power_now": {"name": "Výkon teraz"},
+            "weather_description": {"name": "Počasie"},
+            "hard_limit": {"name": "Tvrdý limit nastavený"}
         },
         "select": {
             "estimate_mode" : {"name": "Použiť pole predpovede"}
