@@ -244,7 +244,7 @@ class SolcastApi: # pylint: disable=R0904
             self.damp,
             options[CUSTOM_HOUR_SENSOR],
             options.get(KEY_ESTIMATE, self.options.key_estimate),
-            self.options.hard_limit,
+            options.get(HARD_LIMIT, 100000) / 1000,
             options[BRK_ESTIMATE],
             options[BRK_ESTIMATE10],
             options[BRK_ESTIMATE90],
@@ -253,7 +253,7 @@ class SolcastApi: # pylint: disable=R0904
             options[BRK_HOURLY],
             options[BRK_SITE_DETAILED],
         )
-        self.hard_limit = options.get(HARD_LIMIT, 100000) / 1000
+        self.hard_limit = self.options.hard_limit
         self._use_data_field = f"pv_{self.options.key_estimate}"
         self.estimate_set = {
             'pv_estimate': options[BRK_ESTIMATE],
