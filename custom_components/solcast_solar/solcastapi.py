@@ -897,44 +897,6 @@ class SolcastApi: # pylint: disable=R0904
                         if json_version == JSON_VERSION:
                             self._data = json_data
                             self._loaded_data = True
-
-                            # Check for any new API keys so no sites data yet for those.
-                            ks = {}
-                            try:
-                                cache_sites = list(json_data['siteinfo'].keys())
-                                for d in self.sites:
-                                    if d['resource_id'] not in cache_sites:
-                                        ks[d['resource_id']] = d['apikey']
-                            except Exception  as e:
-                                raise f"Exception while adding new sites: {e}"
-
-                            if len(ks.keys()) > 0:
-                                # Some site data does not exist yet so get it.
-                                _LOGGER.info("New site(s) have been added, so getting forecast data for them")
-                                for site, api_key in ks.items():
-                                    await self.__http_data_call(site=site, api_key=api_key, do_past=True)
-                                await self.__serialize_data()
-
-                            # Check for sites that need to be removed.
-                            l = []
-                            try:
-                                configured_sites = [s['resource_id'] for s in self.sites]
-                                for s in cache_sites:
-                                    if s not in configured_sites:
-                                        _LOGGER.warning("Site resource id %s is no longer configured, removing saved data from cached file", s)
-                                        l.append(s)
-                            except Exception  as e:
-                                raise f"Exception while removing stale sites: {e}"
-
-                            for ll in l:
-                                del json_data['siteinfo'][ll]
-                            if len(l) > 0:
-                                await self.__serialize_data()
-
-                            # Create an up to date forecast.
-                            await self.build_forecast_data()
-                            if not self.previously_loaded:
-                                _LOGGER.info("Data loaded")
                         else:
                             _LOGGER.warning('solcast.json version is not latest (%d vs. %d), upgrading', json_version, JSON_VERSION)
                             # Future: If the file structure changes then upgrade it
@@ -947,6 +909,44 @@ class SolcastApi: # pylint: disable=R0904
                             #    json_data['version'] = 5
                             #    json_version = 5
                             #    self.__serialize_data()
+
+                    # Check for any new API keys so no sites data yet for those.
+                    ks = {}
+                    try:
+                        cache_sites = list(json_data['siteinfo'].keys())
+                        for d in self.sites:
+                            if d['resource_id'] not in cache_sites:
+                                ks[d['resource_id']] = d['apikey']
+                    except Exception  as e:
+                        raise f"Exception while adding new sites: {e}"
+
+                    if len(ks.keys()) > 0:
+                        # Some site data does not exist yet so get it.
+                        _LOGGER.info("New site(s) have been added, so getting forecast data for them")
+                        for site, api_key in ks.items():
+                            await self.__http_data_call(site=site, api_key=api_key, do_past=True)
+                        await self.__serialize_data()
+
+                    # Check for sites that need to be removed.
+                    l = []
+                    try:
+                        configured_sites = [s['resource_id'] for s in self.sites]
+                        for s in cache_sites:
+                            if s not in configured_sites:
+                                _LOGGER.warning("Site resource id %s is no longer configured, removing saved data from cached file", s)
+                                l.append(s)
+                    except Exception  as e:
+                        raise f"Exception while removing stale sites: {e}"
+
+                    for ll in l:
+                        del json_data['siteinfo'][ll]
+                    if len(l) > 0:
+                        await self.__serialize_data()
+
+                    # Create an up to date forecast.
+                    await self.build_forecast_data()
+                    if not self.previously_loaded:
+                        _LOGGER.info("Data loaded")
 
                 if not self._loaded_data:
                     # No file to load.
