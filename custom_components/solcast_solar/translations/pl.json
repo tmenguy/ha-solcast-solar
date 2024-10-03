@@ -7,9 +7,10 @@
             "user": {
                 "data": {
                     "api_key": "Klucz API (wielokrotne wartości oddzielane przecinkiem)",
-                    "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)"
+                    "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
+                    "auto_update": "Automatyczna aktualizacja"
                 },
-                "description": "Dane konta Solcast"
+                "description": "Dane konta Solcast\n\n(Jeśli nie ma automatycznej aktualizacji, wymagana jest automatyzacja - zobacz dokumentację integracji)"
             }
         }
     },
@@ -19,13 +20,17 @@
                 "data": {
                     "api_key": "Klucz API (wielokrotne wartości oddzielane przecinkiem)",
                     "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
+                    "auto_update": "Automatyczna aktualizacja (jeśli nie ma automatycznej aktualizacji, zamiast tego należy zastosować automatyzację)",
                     "customhoursensor": "Niestandardowy czujnik następnej godziny X (min.=1, maks.=144)",
+                    "hard_limit": "Twardy limit falownika w watach (patrz dokumentacja integracji)",
+                    "key_estimate": "Preferowane prawdopodobieństwo zastosowania prognozy w przypadku czujników",
                     "attr_brk_estimate10": "Włącz oszacowanie 10 atrybutów czujnika",
                     "attr_brk_estimate": "Włącz oszacowanie 50 atrybutów czujnika",
                     "attr_brk_estimate90": "Włącz oszacowanie 90 atrybutów czujnika",
                     "attr_brk_site": "Włącz atrybuty czujnika podziału witryny",
                     "attr_brk_halfhourly": "Włącz atrybuty szczegółów prognozy półgodzinnej",
                     "attr_brk_hourly": "Włącz atrybuty szczegółów prognozy godzinowej",
+                    "attr_brk_detailed": "Włącz podział lokalizacji dla atrybutów szczegółów półgodzinnych/godzinnych (nie będą one zapisywane w długoterminowych statystykach rejestratora)",
                     "config_damp": "Zmodyfikuj godzinowe współczynniki tłumienia (po kliknięciu przycisku Prześlij)"
                 },
                 "description": "Opcje konfiguracji Solcast"
@@ -72,10 +77,30 @@
             "rooftop_site_count": "Liczba połaci"
         }
     },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "Brak automatycznej aktualizacji prognoz",
+                "1": "Automatyczna aktualizacja prognoz od wschodu do zachodu słońca",
+                "2": "Automatyczna aktualizacja prognoz w ciągu 24 godzin"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Mediana oczekiwanej generacji (estimate)",
+                "estimate10": "10. percentyl oczekiwanej generacji (dolny koniec możliwych wyników, estimate10)",
+                "estimate90": "90. percentyl oczekiwanej generacji (górny koniec możliwych wyników, estimate90)"
+            }
+        }
+    },
     "services": {
         "update_forecasts": {
             "name": "Aktualizuj",
             "description": "Pobierz najnowsze dane prognoz Solcast."
+        },
+        "force_update_forecasts": {
+            "name": "Wymuś aktualizuj",
+            "description": "Force pobiera najnowsze dane prognoz Solcast."
         },
         "clear_all_solcast_data": {
             "name": "Wyczyść wszystkie zapisane dane Solcast",
@@ -102,6 +127,10 @@
                 "damp_factor": {
                     "name": "Ciąg tłumienia",
                     "description": "Ciąg wartości współczynnika tłumienia godzinowego, oddzielany przecinkiem."
+                },
+                "site": {
+                    "name": "Identyfikator witryny",
+                    "description": "Opcjonalny identyfikator miejsca w celu rozbicia tłumienia. (Uwaga: pominięcie miejsca spowoduje usunięcie wszystkich zawilgoceń poszczególnych miejsc.)"
                 }
             }
         },

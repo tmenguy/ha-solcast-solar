@@ -7,9 +7,10 @@
             "user": {
                 "data": {
                     "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
-                    "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)"
+                    "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
+                    "auto_update": "Automatická aktualizácia"
                 },
-                "description": "Podrobnosti o účte Solcast"
+                "description": "Podrobnosti o účte Solcast\n\n(Ak nie je automatická aktualizácia, potom je potrebná automatizácia – pozrite si integračnú dokumentáciu)"
             }
         }
     },
@@ -19,13 +20,17 @@
                 "data": {
                     "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
                     "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
+                    "auto_update": "Automatická aktualizácia (ak nie je automatická aktualizácia, musíte namiesto nej použiť automatizáciu)",
                     "customhoursensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
+                    "hard_limit": "Pevný limit meniča vo wattoch (pozri integračnú dokumentáciu)",
+                    "key_estimate": "Preferovaná pravdepodobnosť použitia pre senzory",
                     "attr_brk_estimate10": "Povoliť odhad 10 atribútov senzora",
                     "attr_brk_estimate": "Povoliť odhad 50 atribútov senzora",
                     "attr_brk_estimate90": "Povoliť odhad 90 atribútov senzora",
                     "attr_brk_site": "Povoliť atribúty senzora rozdelenia stránok",
                     "attr_brk_halfhourly": "Povoliť polhodinové podrobné atribúty prognózy",
                     "attr_brk_hourly": "Povoliť hodinové podrobné atribúty prognózy",
+                    "attr_brk_detailed": "Povoliť rozdelenie stránok pre polhodinové/hodinové atribúty podrobností (tieto sa neuložia do dlhodobých štatistík)",
                     "config_damp": "Upravte hodinové faktory tlmenia (po kliknutí na odoslať)"
                 },
                 "description": "Solcast možnosti konfigurácie"
@@ -72,15 +77,35 @@
             "rooftop_site_count": "Počet miest na streche"
         }
     },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "Žiadna automatická aktualizácia predpovedí",
+                "1": "Automatická aktualizácia predpovedí od východu do západu slnka",
+                "2": "Automatická aktualizácia predpovedí počas 24 hodín"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Stredná očakávaná generácia (estimate)",
+                "estimate10": "10. percentil očakávanej generácie (dolný koniec možných výsledkov, estimate10)",
+                "estimate90": "90. percentil očakávanej generácie (horný koniec možných výsledkov, estimate90)"
+            }
+        }
+    },
     "services": {
         "update_forecasts": {
             "name": "Aktualizácia",
             "description": "Načítava najnovšie predpovede zo Solcastu."
-            },
+        },
+        "force_update_forecasts": {
+            "name": "Vynútiť Aktualizácia",
+            "description": "Force načítava najnovšie predpovede zo Solcastu."
+        },
         "clear_all_solcast_data": {
             "name": "Vymažte všetky uložené údaje Solcast",
             "description": "Odstráni súbor solcast.json a odstráni všetky aktuálne údaje lokality solcast."
-            },
+        },
         "query_forecast_data": {
             "name": "Dopytujte údaje predpovede",
             "description": "Vráti množinu údajov alebo hodnotu pre daný dotaz.",
@@ -102,8 +127,26 @@
                 "damp_factor": {
                     "name": "Tlmiaci reťazec",
                     "description": "Reťazec hodnôt hodinového faktora tlmenia oddelený čiarkou."
+                },
+                "site": {
+                    "name": "ID lokality",
+                    "description": "Voliteľný identifikátor lokality na nastavenie rozdelenia. (Poznámka: Vynechaním lokality sa vymažú všetky tlmenia jednotlivých lokalít.)"
                 }
             }
+        },
+        "set_hard_limit": {
+            "name": "Nastavte pevný limit predpovede meniča",
+            "description": "Zabráňte tomu, aby boli predpovedané hodnoty vyššie, ako dokáže menič produkovať.",
+            "fields": {
+                "hard_limit": {
+                    "name": "Limitná hodnota vo wattoch",
+                    "description": "Nastavte maximálnu hodnotu vo wattoch, ktorú môže menič produkovať."
+                }
+            }
+        },
+        "remove_hard_limit": {
+            "name": "Odstráňte pevný limit predpovede meniča",
+            "description": "Odstráňte nastavený limit."
         }
     },
     "entity": {
@@ -116,18 +159,21 @@
             "forecast_this_hour": {"name": "Predpoveď túto hodinu"},
             "get_remaining_today": {"name": "Predpoveď zostávajúca dnes"},
             "forecast_next_hour": {"name": "Predpoveď ďalšie hodina"},
+            "forecast_custom_hours": {"name": "Predpoveď najbližších X hodín"},
             "total_kwh_forecast_tomorrow": {"name": "Prepoveď zajtra"},
             "peak_w_tomorrow": {"name": "Predpoveď špička zajtra"},
             "peak_w_time_tomorrow": {"name": "Čas špičky zajtra"},
             "api_counter": {"name": "Použité API"},
-            "api_limit": {"name": "API Limit"},
-            "lastupdated": {"name": "API Last Polled"},
+            "api_limit": {"name": "Limit API"},
+            "lastupdated": {"name": "API naposledy dotazované"},
             "total_kwh_forecast_d3": {"name": "Predpoveď deň 3"},
             "total_kwh_forecast_d4": {"name": "Prepoveď deň 4"},
             "total_kwh_forecast_d5": {"name": "Predpoveď deň 5"},
             "total_kwh_forecast_d6": {"name": "Predpoveď deň 6"},
             "total_kwh_forecast_d7": {"name": "Predpoveď deň 7"},
-            "power_now": {"name": "Výkon teraz"}
+            "power_now": {"name": "Výkon teraz"},
+            "weather_description": {"name": "Počasie"},
+            "hard_limit": {"name": "Tvrdý limit nastavený"}
         },
         "select": {
             "estimate_mode" : {"name": "Použiť pole predpovede"}

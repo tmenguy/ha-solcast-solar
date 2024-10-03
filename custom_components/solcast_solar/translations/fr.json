@@ -7,9 +7,10 @@
             "user": {
                 "data": {
                     "api_key": "Clé API (plusieurs valeurs séparées par des virgules)",
-                    "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)"
+                    "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)",
+                    "auto_update": "Mise à jour automatique"
                 },
-                "description": "Détails du compte Solcast"
+                "description": "Solcast Account Details\n\n(S'il n'y a pas de mise à jour automatique, une automatisation est requise - voir la documentation d'intégration)"
             }
         }
     },
@@ -19,13 +20,17 @@
                 "data": {
                     "api_key": "Clé API (plusieurs valeurs séparées par des virgules)",
                     "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)",
+                    "auto_update": "Mise à jour automatique (s'il n'y a pas de mise à jour automatique, une automatisation doit être utilisée à la place)",
                     "customhoursensor": "Capteur personnalisé des X prochaines heures (min=1, max=144)",
+                    "hard_limit": "Limite stricte de l'onduleur en Watts (voir la documentation d'intégration)",
+                    "key_estimate": "Probabilité de prévision préférée à utiliser pour les capteurs",
                     "attr_brk_estimate10": "Activer l'estimation de 10 attributs de capteur",
                     "attr_brk_estimate": "Activer l'estimation de 50 attributs de capteur",
                     "attr_brk_estimate90": "Activer l'estimation de 90 attributs de capteur",
                     "attr_brk_site": "Activer les attributs du capteur de panne de site",
                     "attr_brk_halfhourly": "Activer les attributs de détail des prévisions demi-horaires",
                     "attr_brk_hourly": "Activer les attributs de détail horaire des prévisions",
+                    "attr_brk_detailed": "Activer la répartition du site pour les attributs de détail demi-horaires/horaires (ceux-ci ne seront pas enregistrés dans les statistiques à long terme de l'enregistreur)",
                     "config_damp": "Modifier les facteurs d'amortissement horaires (après avoir cliqué sur soumettre)"
                 },
                 "description": "Options de configuration Solcast"
@@ -72,10 +77,30 @@
             "rooftop_site_count": "Nombre d'emplacements"
         }
     },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "Pas de mise à jour automatique des prévisions",
+                "1": "Mise à jour automatique des prévisions du lever au coucher du soleil",
+                "2": "Mise à jour automatique des prévisions sur 24 heures"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Génération médiane attendue (estimate)",
+                "estimate10": "Génération attendue du 10e centile (extrémité inférieure des résultats possibles, estimate10)",
+                "estimate90": "Génération attendue au 90e percentile (extrémité supérieure des résultats possibles, estimate90)"
+            }
+        }
+    },
     "services": {
         "update_forecasts": {
             "name": "Mise à jour",
             "description": "Récupère les dernières données de prévisions de Solcast."
+        },
+        "force_update_forecasts": {
+            "name": "Forcer la mise à jour",
+            "description": "Force récupère les dernières données de prévisions de Solcast."
         },
         "clear_all_solcast_data": {
             "name": "Effacer toutes les données Solcast enregistrées",
@@ -97,13 +122,31 @@
         },
         "set_dampening": {
             "name": "Définir le coefficient des prévisions",
-            "description": "Définissez le facteur horaire d’amortissement des prévisions.",
+            "description": "Définissez le facteur horaire d'amortissement des prévisions.",
             "fields": {
                 "damp_factor": {
-                    "name": "Chaîne de coefficient d’amortissement",
-                    "description": "Chaîne de valeurs horaires du facteur d’amortissement séparées par des virgules."
+                    "name": "Chaîne de coefficient d'amortissement",
+                    "description": "Chaîne de valeurs horaires du facteur d'amortissement séparées par des virgules."
+                },
+                "site": {
+                    "name": "Identifiant du site",
+                    "description": "ID de site facultatif pour décomposer l'amortissement. (Remarque : l'omission du site supprimera tous les amortissements de sites individuels.)"
                 }
             }
+        },
+        "set_hard_limit": {
+            "name": "Définir la limite stricte de prévision de l'onduleur",
+            "description": "Évitez que les valeurs prévues soient supérieures à ce que l'onduleur peut produire.",
+            "fields": {
+                "hard_limit": {
+                    "name": "Valeur limite en Watts",
+                    "description": "Définissez la valeur maximale en watts que l'onduleur peut produire."
+                }
+            }
+        },
+        "remove_hard_limit": {
+            "name": "Supprimer la limite stricte de prévision de l'onduleur",
+            "description": "Supprimer la limite définie."
         }
     },
     "entity": {
@@ -116,6 +159,7 @@
             "forecast_this_hour": {"name": "Prévisions heure actuel"},
             "get_remaining_today": {"name": "Prévisions de production  restantes aujourd'hui"},
             "forecast_next_hour": {"name": "Prévisions pour la prochaine heure"},
+            "forecast_custom_hours": {"name": "Prévisions pour les X prochaines heures"},
             "total_kwh_forecast_tomorrow": {"name": "Prévisions pour demain"},
             "peak_w_tomorrow": {"name": "Prévisions du pic pour demain"},
             "peak_w_time_tomorrow": {"name": "Heure du pic demain"},
@@ -127,7 +171,12 @@
             "total_kwh_forecast_d5": {"name": "Prévision jour 5"},
             "total_kwh_forecast_d6": {"name": "Prévision jour 6"},
             "total_kwh_forecast_d7": {"name": "Prévision jour 7"},
-            "power_now": {"name": "Puissance maintenant"}
+            "power_now": {"name": "Puissance maintenant"},
+            "weather_description": {"name": "Météo"},
+            "hard_limit": {"name": "Ensemble de limites strictes"}
+        },
+        "select": {
+            "estimate_mode" : {"name": "Utiliser le champ de prévision"}
         }
     }
 }

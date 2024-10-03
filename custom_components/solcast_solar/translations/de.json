@@ -7,9 +7,10 @@
             "user": {
                 "data": {
                     "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
-                    "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)"
+                    "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
+                    "auto_update": "Automatische Aktualisierung"
                 },
-                "description": "Solcast-Kontodaten"
+                "description": "Solcast-Kontodaten\n\n(Wenn keine automatische Aktualisierung erfolgt, ist eine Automatisierung erforderlich – siehe Integrationsdokumentation)"
             }
         }
     },
@@ -19,13 +20,17 @@
                 "data": {
                     "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
                     "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
+                    "auto_update": "Automatische Aktualisierung (wenn keine automatische Aktualisierung vorhanden ist, muss stattdessen eine Automatisierung verwendet werden)",
                     "customhoursensor": "Nächster X-Stunden-Sensor (min=1, max=144)",
+                    "hard_limit": "Harter Grenzwert des Wechselrichters in Watt (siehe Integrationsdokumentation)",
+                    "key_estimate": "Bevorzugte Prognosewahrscheinlichkeit für Sensoren",
                     "attr_brk_estimate10": "Aktivieren Sie die Schätzung von 10 Sensorattributen",
                     "attr_brk_estimate": "Aktivieren Sie die Schätzung von 50 Sensorattributen",
                     "attr_brk_estimate90": "Aktivieren Sie die Schätzung von 90 Sensorattributen",
                     "attr_brk_site": "Aktivieren Sie die Attribute des Site-Aufschlüsselungssensors",
                     "attr_brk_halfhourly": "Aktivieren Sie prognostizierte halbstündliche Detailattribute",
                     "attr_brk_hourly": "Aktivieren Sie prognostizierte stündliche Detailattribute",
+                    "attr_brk_detailed": "Standortaufschlüsselung für halbstündliche/stündliche Detailattribute aktivieren (Diese werden nicht in der Langzeitstatistik des Rekorders gespeichert)",
                     "config_damp": "Ändern Sie die stündlichen Dämpfungsfaktoren (nachdem Sie auf „Senden“ geklickt haben)"
                 },
                 "description": "Dein Solcast-API-Kontoschlüssel"
@@ -59,6 +64,10 @@
                 },
                 "description": "Ändern Sie den stündlichen Dämpfungsfaktor"
             }
+        },
+        "error": {
+            "unknown": "Unbekannter Fehler",
+            "incorrect_options_action": "Falsche Aktion ausgewählt"
         }
     },
     "system_health": {
@@ -68,10 +77,30 @@
             "rooftop_site_count": "Anzahl der Dachflächen"
         }
     },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "Keine automatische Aktualisierung der Prognosen",
+                "1": "Automatische Aktualisierung der Vorhersagen von Sonnenaufgang bis Sonnenuntergang",
+                "2": "Automatische Aktualisierung der Prognosen über 24 Stunden"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Mittlere erwartete Erzeugung (estimate)",
+                "estimate10": "10. Perzentil erwartete Generation (unteres Ende der möglichen Ergebnisse, estimate10)",
+                "estimate90": "Erwartete Generation des 90. Perzentils (oberes Ende der möglichen Ergebnisse, estimate90)"
+            }
+        }
+    },
     "services": {
         "update_forecasts": {
             "name": "Aktualisieren",
-            "description": "Lade die neusten Prognosedaten von Solcast herunter."
+            "description": "Ruft die neuesten Prognosedaten von Solcast ab."
+        },
+        "force_update_forecasts": {
+            "name": "Aktualisierung erzwingen",
+            "description": "Force ruft die neuesten Prognosedaten von Solcast ab."
         },
         "clear_all_solcast_data": {
             "name": "Solcast-Daten zurücksetzen",
@@ -90,6 +119,34 @@
                     "description": "Endzeitpunkt der Prognosedaten."
                 }
             }
+        },
+        "set_dampening": {
+            "name": "Setzen Sie dämpfende Prognosen",
+            "description": "Stellen Sie den prognostizierten Dämpfungsfaktor pro Stunde ein.",
+            "fields": {
+                "damp_factor": {
+                    "name": "Dämpfungssaite",
+                    "description": "Zeichenfolge mit stündlichen Dämpfungsfaktorwerten, durch Kommas getrennt."
+                },
+                "site": {
+                    "name": "Site-ID",
+                    "description": "Optionale Standort-ID zur Aufschlüsselung der Dämpfung. (Hinweis: Wenn Sie „Site“ weglassen, werden alle einzelnen Site-Dämpfungen gelöscht.)"
+                }
+            }
+        },
+        "set_hard_limit": {
+            "name": "Legen Sie den harten Grenzwert für die Wechselrichterprognose fest",
+            "description": "Vermeiden Sie, dass die prognostizierten Werte höher sind, als der Wechselrichter erzeugen kann.",
+            "fields": {
+                "hard_limit": {
+                    "name": "Grenzwert in Watt",
+                    "description": "Stellen Sie den maximalen Wert in Watt ein, den der Wechselrichter erzeugen kann."
+                }
+            }
+        },
+        "remove_hard_limit": {
+            "name": "Entfernen Sie die harte Grenze der Wechselrichterprognose",
+            "description": "Eingestelltes Limit entfernen."
         }
     },
     "entity": {
@@ -102,6 +159,7 @@
             "forecast_this_hour": {"name": "Prognose aktuelle Stunde"},
             "get_remaining_today": {"name": "Prognose verbleibende Leistung heute"},
             "forecast_next_hour": {"name": "Prognose nächste Stunde"},
+            "forecast_custom_hours": {"name": "Prognostizieren Sie die nächsten X Stunden"},
             "total_kwh_forecast_tomorrow": {"name": "Prognose morgen"},
             "peak_w_tomorrow": {"name": "Prognose Spitzenleistung morgen"},
             "peak_w_time_tomorrow": {"name": "Zeitpunkt Spitzenleistung morgen"},
@@ -113,7 +171,12 @@
             "total_kwh_forecast_d5": {"name": "Prognose Tag 5"},
             "total_kwh_forecast_d6": {"name": "Prognose Tag 6"},
             "total_kwh_forecast_d7": {"name": "Prognose Tag 7"},
-            "power_now": {"name": "Aktuelle Leistung"}
+            "power_now": {"name": "Aktuelle Leistung"},
+            "weather_description": {"name": "Wetter"},
+            "hard_limit": {"name": "Fester Grenzwert eingestellt"}
+        },
+        "select": {
+            "estimate_mode" : {"name": "Verwenden Sie das Prognosefeld"}
         }
     }
 }

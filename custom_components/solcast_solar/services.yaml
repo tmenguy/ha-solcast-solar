@@ -1,7 +1,11 @@
 # Describes the format for available services for the Solcast integration
 update_forecasts:
   name: Update
-  description: Fetches the forecasts from Solcast.
+  description: Fetches the forecasts from Solcast
+
+force_update_forecasts:
+  name: Force Update
+  description: Force fetches the forecasts from Solcast
 
 clear_all_solcast_data:
   name: Clear saved Solcast site data
@@ -24,6 +28,8 @@ set_dampening:
   name: Set forecasts dampening
   description: Set the hourly forecast dampening factor
   fields:
+    site:
+      example: "1234-5678-9012-3456"
     damp_factor:
       example: "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1"
 

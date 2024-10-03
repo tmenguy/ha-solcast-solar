@@ -7,9 +7,10 @@
             "user": {
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
-                    "api_quota": "API limit (optionally comma separate multiple values for each key)"
+                    "api_quota": "API limit (optionally comma separate multiple values for each key)",
+                    "auto_update": "Auto-update"
                 },
-                "description": "Solcast Account Details"
+                "description": "Solcast Account Details\n\n(If not using auto-update then an automation is required - see the integration documentation)"
             }
         }
     },
@@ -19,13 +20,17 @@
                 "data": {
                     "api_key": "API key (comma separate multiple values)",
                     "api_quota": "API limit (optionally comma separate multiple values for each key)",
-                    "customhoursensor": "Custom Next X Hour Sensor (min=1, max=144)",
+                    "auto_update": "Auto-update (if no auto-update then an automation must be used instead)",
+                    "customhoursensor": "Custom next X hours sensor (min=1, max=144)",
+                    "hard_limit": "Inverter hard limit in Watts (see integration documentation)",
+                    "key_estimate": "Preferred forecast likelihood to use for sensors",
                     "attr_brk_estimate10": "Enable estimate 10 sensor attributes",
                     "attr_brk_estimate": "Enable estimate 50 sensor attributes",
                     "attr_brk_estimate90": "Enable estimate 90 sensor attributes",
                     "attr_brk_site": "Enable site breakdown sensor attributes",
                     "attr_brk_halfhourly": "Enable forecast half-hourly detail attributes",
                     "attr_brk_hourly": "Enable forecast hourly detail attributes",
+                    "attr_brk_detailed": "Enable site breakdown for half-hourly/hourly detail attributes (these will not be saved to recorder long-term statistics)",
                     "config_damp": "Modify the hourly dampening factors (after clicking submit)"
                 },
                 "description": "Solcast configuration options"
@@ -72,15 +77,35 @@
             "rooftop_site_count": "Rooftop site count"
         }
     },
+    "selector": {
+        "auto_update": {
+            "options": {
+                "0": "No automatic update of forecasts",
+                "1": "Automatic update of forecasts from sunrise to sunset",
+                "2": "Automatic update of forecasts over 24 hours"
+            }
+        },
+        "key_estimate": {
+            "options": {
+                "estimate": "Median expected generation (estimate)",
+                "estimate10": "10th percentile expected generation (lower end of possible outcomes, estimate10)",
+                "estimate90": "90th percentile expected generation (upper end of possible outcomes, estimate90)"
+            }
+        }
+    },
     "services": {
         "update_forecasts": {
             "name": "Update",
             "description": "Fetches the latest forecasts data from Solcast."
-            },
+        },
+        "force_update_forecasts": {
+            "name": "Force Update",
+            "description": "Force fetches the latest forecasts data from Solcast."
+        },
         "clear_all_solcast_data": {
             "name": "Clear all saved Solcast data",
             "description": "Deletes the solcast.json file to remove all current solcast site data."
-            },
+        },
         "query_forecast_data": {
             "name": "Query forecast data",
             "description": "Return a data set for a given query.",
@@ -102,6 +127,10 @@
                 "damp_factor": {
                     "name": "Dampening string",
                     "description": "String of hourly dampening factor values comma seperated."
+                },
+                "site": {
+                    "name": "Site ID",
+                    "description": "Optional site ID to break down dampening. (Note: Omitting site will clear all individual site dampening.)"
                 }
             }
         },
