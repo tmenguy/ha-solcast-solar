@@ -150,6 +150,9 @@ Make sure you use your `API Key` and not your rooftop id created in Solcast. You
 ### Auto-update of forecasts
 Using auto-update will get forecast updates that are automatically spread across hours when the sun is up, or alternatively over a 24-hour period. It calculates the number of daily updates that will occur according to the number of Solcast sites and the API limit that is configured.
 
+#### Only available in v4.1.8 pre-release 
+Note that auto-update of forecasts is only available in v4.1.8 or later releases which is currently **only available in pre-release**. 
+
 Should it be desired to fetch an update ouside of these hours, then the API limit in the integration configuration may be reduced, and an automation may then be set up to call the service `solcast_solar.force_update_forecasts` at the desired time of day. (Note that calling the service `solcast_solar.update_forecasts` will be refused if auto-update is enabled, so use force update instead.)
 
 For example, to update just after midnight, as well as take advantage of auto-update, create the desired automation to force update, then reduce the API limit configured in the automation accordingly. (For this exmple, if the API key has ten total calls allowed per day and two rooftop sites, reduce the API limit to eight because two updates will be used when the automation runs.)
