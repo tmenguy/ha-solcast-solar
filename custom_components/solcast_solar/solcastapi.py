@@ -23,7 +23,7 @@ from pathlib import Path
 from os.path import exists as file_exists
 from os.path import dirname
 from typing import Optional, Any, Dict, Tuple, cast
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 import async_timeout # type: ignore
 import aiofiles # type: ignore
@@ -48,7 +48,7 @@ from .const import (
     DATE_FORMAT_UTC,
     DOMAIN,
     FORECAST_DEBUG_LOGGING,
-    HARD_LIMIT,
+    HARD_LIMIT_API,
     KEY_ESTIMATE,
     SENSOR_DEBUG_LOGGING,
     SITE_DAMP,
@@ -77,6 +77,25 @@ class DateTimeEncoder(json.JSONEncoder):
             return o.isoformat()
         else:
             return None
+
+class DateKeyEncoder(json.JSONEncoder):
+    """Helper to convert datetime dict keys and values to ISO format."""
+    def _preprocess_date(self, o):
+        if isinstance(o, dt):
+            return str(o)
+        elif isinstance(o, dict):
+            return {self._preprocess_date(k): self._preprocess_date(v) for k,v in o.items()}
+        elif isinstance(o, list):
+            return [self._preprocess_date(i) for i in o]
+        return o
+
+    def default(self, o):
+        if isinstance(o, dt):
+            return str(o)
+        return super().default(o)
+
+    def iterencode(self, o, _one_shot=False):
+        return super().iterencode(self._preprocess_date(o))
 
 class NoIndentEncoder(json.JSONEncoder):
     """Helper to output semi-indented json."""
@@ -153,7 +172,7 @@ class ConnectionOptions:
     dampening: dict
     custom_hour_sensor: int
     key_estimate: str
-    hard_limit: int
+    hard_limit: str
     attr_brk_estimate: bool
     attr_brk_estimate10: bool
     attr_brk_estimate90: bool
@@ -283,7 +302,7 @@ class SolcastApi: # pylint: disable=R0904
             self.damp,
             options[CUSTOM_HOUR_SENSOR],
             options.get(KEY_ESTIMATE, self.options.key_estimate),
-            options.get(HARD_LIMIT, 100000) / 1000,
+            options.get(HARD_LIMIT_API, '100.0'),
             options[BRK_ESTIMATE],
             options[BRK_ESTIMATE10],
             options[BRK_ESTIMATE90],
@@ -515,9 +534,9 @@ class SolcastApi: # pylint: disable=R0904
                                     resp_json = json.loads(await f.read())
                                     status = 200
                                     for i in resp_json['sites']:
-                                        if i.get('api_key') is None:
-                                            continue
-                                        if i.get('api_key') not in sp:
+                                        if i.get('api_key') is None: # If the API key is not in the site then assume the key has not changed
+                                            i['api_key'] = api_key
+                                        if i['api_key'] not in sp:
                                             status = 429
                                             _LOGGER.debug("API key has changed so sites cache is invalid, not loading cached data")
                                             break
@@ -562,7 +581,6 @@ class SolcastApi: # pylint: disable=R0904
                                 i['apikey'] = api_key
                                 i.pop('longitude', None)
                                 i.pop('latitude', None)
-                                i['api_key'] = None
                             self.sites = self.sites + d['sites']
                             self.sites_loaded = True
                             self._api_used_reset[api_key] = None
@@ -2461,8 +2479,34 @@ class SolcastApi: # pylint: disable=R0904
 
         return wh_hours
 
+    def __site_api_key(self, site: str):
+        for s in self.sites:
+            if s['resource_id'] == site:
+                return s['api_key']
+        return None
+
+    def hard_limit_set(self):
+        """Returns True if a hard limit is set"""
+        limit_set = False
+        hard_limit = self.hard_limit.split(',')
+        multi_key = len(hard_limit) > 1
+        for h in hard_limit:
+            if h != '100.0':
+                limit_set = True
+        return limit_set, multi_key
+
+    def __hard_limit_for_key(self, api_key):
+        hard_limit = self.hard_limit.split(',')
+        if len(hard_limit) == 1:
+            return float(hard_limit[0])
+        i = 0
+        for key in self.options.api_key.split(','):
+            if key == api_key:
+                return float(hard_limit[i])
+            i += 1
+
     async def build_forecast_data(self) -> bool:
-        """Build data structures needed, adjusting if dampening or setting a hard limit.
+        """Build data structures needed, adjusting if setting a hard limit.
 
         Returns:
             bool: A flag indicating success or failure.
@@ -2478,8 +2522,61 @@ class SolcastApi: # pylint: disable=R0904
             forecasts = {}
             forecasts_undampened = {}
 
-            def build_data(data: list, commencing: dt, forecasts: dict, site_data_forecasts: list, update_tally: bool=False):
+            async def build_data(data: list, commencing: dt, forecasts: dict, site_data_forecasts: list, update_tally: bool=False):
+                """
+                Build per-site hard limit.
+                The API key hard limit for each site is calculated as proportion of the site contribution for the account.  
+                """
+                sites_hard_limit = defaultdict(dict)
+
+                hard_limit_set, multi_key = self.hard_limit_set()
+                if hard_limit_set:
+                    # Separate hard limit values for each key
+                    api_key_sites = defaultdict(dict)
+                    for s in self.sites:
+                        api_key_sites[s['api_key'] if multi_key else 'all'][s['resource_id']] = {
+                            'earliest_period': data['siteinfo'][s['resource_id']]['forecasts'][0]['period_start'],
+                            'last_period': data['siteinfo'][s['resource_id']]['forecasts'][-1]['period_start']
+                        }
+                    _LOGGER.debug('Hard limit for individual API keys: %s', multi_key)
+                    for api_key, sites in api_key_sites.items():
+                        hard_limit = self.__hard_limit_for_key(api_key)
+                        _LOGGER.debug("Hard limit for API key %s: %s", self.__redact_api_key(api_key) if multi_key else 'all', hard_limit)
+                        siteinfo = {site: {forecast['period_start']: forecast for forecast in data['siteinfo'][site]['forecasts']} for site in sites}
+                        earliest = dt.now(self._tz)
+                        latest = None
+                        for site, limits in sites.items():
+                            if limits['earliest_period'] < earliest:
+                                earliest = limits['earliest_period']
+                            latest = limits['last_period']
+                        _LOGGER.debug("Earliest period: %s, latest period: %s", dt.strftime(earliest, DATE_FORMAT_UTC), dt.strftime(latest, DATE_FORMAT_UTC))
+                        periods = [earliest + timedelta(minutes=30 * x) for x in range(int((latest - earliest).total_seconds() / 1800))]
+                        for pv_estimate in ['pv_estimate', 'pv_estimate10', 'pv_estimate90']:
+                            sites_hard_limit[api_key][pv_estimate] = {}
+                        for period in periods:
+                            for pv_estimate in ['pv_estimate', 'pv_estimate10', 'pv_estimate90']:
+                                estimate = {site: siteinfo[site].get(period, {}).get(pv_estimate) for site in sites}
+                                total_estimate = sum(estimate[site] for site in sites if estimate[site] is not None)
+                                if estimate is not None and total_estimate is not None:
+                                    if total_estimate == 0:
+                                        continue
+                                    sites_hard_limit[api_key][pv_estimate][period] = {site: estimate[site] / total_estimate * hard_limit for site in sites if estimate[site] is not None}
+
+                    ##### FOR DEBUG #####
+                    async with self._serialise_lock:
+                        async with aiofiles.open('/config/test.json', 'w') as f:
+                            await f.write(json.dumps(dict(sites_hard_limit), indent=2, ensure_ascii=False, cls=DateKeyEncoder))
+
+                else:
+                    for api_key in self.options.api_key.split(','):
+                        for pv_estimate in ['pv_estimate', 'pv_estimate10', 'pv_estimate90']:
+                            sites_hard_limit[api_key][pv_estimate] = {}
+
+                """
+                Build per-site and total forecasts with proportionate hard limit applied.
+                """
                 for site, siteinfo in data['siteinfo'].items():
+                    api_key = self.__site_api_key(site) if multi_key else 'all'
                     if update_tally:
                         tally = 0
                     site_forecasts = {}
@@ -2493,38 +2590,37 @@ class SolcastApi: # pylint: disable=R0904
                             # Record the individual site forecast.
                             site_forecasts[z] = {
                                 "period_start": z,
-                                "pv_estimate": min(forecast["pv_estimate"], self.hard_limit),
-                                "pv_estimate10": min(forecast["pv_estimate10"], self.hard_limit),
-                                "pv_estimate90": min(forecast["pv_estimate90"], self.hard_limit),
+                                "pv_estimate": round(min(forecast["pv_estimate"], sites_hard_limit[api_key]["pv_estimate"].get(z, {}).get(site, 100)), 4),
+                                "pv_estimate10": round(min(forecast["pv_estimate10"], sites_hard_limit[api_key]["pv_estimate10"].get(z, {}).get(site, 100)), 4),
+                                "pv_estimate90": round(min(forecast["pv_estimate90"], sites_hard_limit[api_key]["pv_estimate90"].get(z, {}).get(site, 100)), 4),
                             }
 
                             if update_tally and zz.date() == today:
-                                tally += min(forecast[self._use_data_field] * 0.5, self.hard_limit)
+                                tally += min(forecast[self._use_data_field], sites_hard_limit[api_key][self._use_data_field].get(z, {}).get(site, 100)) * 0.5
 
                             # Add the forecast for this site to the total.
                             extant = forecasts.get(z)
                             if extant:
-                                extant["pv_estimate"] = min(round(extant["pv_estimate"] + site_forecasts[z]["pv_estimate"], 4), self.hard_limit)
-                                extant["pv_estimate10"] = min(round(extant["pv_estimate10"] + site_forecasts[z]["pv_estimate10"], 4), self.hard_limit)
-                                extant["pv_estimate90"] = min(round(extant["pv_estimate90"] + site_forecasts[z]["pv_estimate90"], 4), self.hard_limit)
+                                extant["pv_estimate"] = round(extant["pv_estimate"] + site_forecasts[z]["pv_estimate"], 4)
+                                extant["pv_estimate10"] = round(extant["pv_estimate10"] + site_forecasts[z]["pv_estimate10"], 4)
+                                extant["pv_estimate90"] = round(extant["pv_estimate90"] + site_forecasts[z]["pv_estimate90"], 4)
                             else:
                                 forecasts[z] = {
                                     "period_start": z,
-                                    "pv_estimate": min(site_forecasts[z]["pv_estimate"], self.hard_limit),
-                                    "pv_estimate10": min(site_forecasts[z]["pv_estimate10"], self.hard_limit),
-                                    "pv_estimate90": min(site_forecasts[z]["pv_estimate90"], self.hard_limit),
+                                    "pv_estimate": site_forecasts[z]["pv_estimate"],
+                                    "pv_estimate10": site_forecasts[z]["pv_estimate10"],
+                                    "pv_estimate90": site_forecasts[z]["pv_estimate90"],
                                 }
-
                     site_data_forecasts[site] = sorted(site_forecasts.values(), key=itemgetter("period_start"))
                     if update_tally:
                         siteinfo['tally'] = round(tally, 4)
                         self._tally[site] = siteinfo['tally']
 
-            build_data(self._data, commencing, forecasts, self._site_data_forecasts, update_tally=True)
+            await build_data(self._data, commencing, forecasts, self._site_data_forecasts, update_tally=True)
             self._data_forecasts = sorted(forecasts.values(), key=itemgetter("period_start"))
             self._data_energy = {"wh_hours": self.__make_energy_dict()}
 
-            build_data(self._data_undampened, commencing_undampened, forecasts_undampened, self._site_data_forecasts_undampened)
+            await build_data(self._data_undampened, commencing_undampened, forecasts_undampened, self._site_data_forecasts_undampened)
             self._data_forecasts_undampened = sorted(forecasts_undampened.values(), key=itemgetter("period_start"))
 
             await self.__check_data_records()
@@ -2536,7 +2632,6 @@ class SolcastApi: # pylint: disable=R0904
         except:
             _LOGGER.error("Exception in get_forecast_update(): %s", traceback.format_exc())
             return False
-
 
     def __calc_forecast_start_index(self, _data) -> int:
         """Get the start of forecasts as-at just before midnight.

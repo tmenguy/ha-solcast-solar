@@ -38,6 +38,7 @@ from .const import (
     CUSTOM_HOUR_SENSOR,
     DOMAIN,
     HARD_LIMIT,
+    HARD_LIMIT_API,
     INIT_MSG,
     KEY_ESTIMATE,
     SERVICE_CLEAR_DATA,
@@ -76,7 +77,7 @@ SERVICE_DAMP_GET_SCHEMA: Final = vol.All(
 )
 SERVICE_HARD_LIMIT_SCHEMA: Final = vol.All(
     {
-        vol.Required(HARD_LIMIT): cv.Number,
+        vol.Required(HARD_LIMIT): cv.string,
     }
 )
 SERVICE_QUERY_SCHEMA: Final = vol.All(
@@ -147,7 +148,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         optdamp,
         entry.options.get(CUSTOM_HOUR_SENSOR, 1),
         entry.options.get(KEY_ESTIMATE, "estimate"),
-        entry.options.get(HARD_LIMIT,100000) / 1000,
+        entry.options.get(HARD_LIMIT_API,'100.0'),
         entry.options.get(BRK_ESTIMATE, True),
         entry.options.get(BRK_ESTIMATE10, True),
         entry.options.get(BRK_ESTIMATE90, True),
@@ -223,8 +224,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("UTC times are converted to %s", hass.config.time_zone)
 
     if not solcast.previously_loaded:
-        if options.hard_limit < 100:
-            _LOGGER.info("Inverter hard limit value has been set. If the forecasts and graphs are not as you expect, remove this setting")
+        if solcast.hard_limit_set():
+            _LOGGER.info("Inverter hard limit value is set to limit maximum forecast values")
 
     hass.data[DOMAIN]['has_loaded'] = True
 
@@ -396,18 +397,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             _LOGGER.info("Service call: %s", SERVICE_SET_HARD_LIMIT)
 
-            hl = call.data.get(HARD_LIMIT, 100000)
+            hl = call.data.get(HARD_LIMIT, '100.0')
 
 
             if hl is None:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="hard_empty")
             else:
-                val = int(hl)
-                if val < 0:  # If not a positive int print message and ask for input again.
-                    raise ServiceValidationError(translation_domain=DOMAIN, translation_key="hard_not_positive_number")
+                to_set = []
+                for h in hl.split(','):
+                    h = h.strip()
+                    if not h.replace('.','',1).isdigit():
+                        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="hard_not_positive_number")
+                    val = float(h)
+                    if val < 0:  # If not a positive int print message and ask for input again.
+                        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="hard_not_positive_number")
+                    to_set.append(f"{val:.1f}")
 
                 opt = {**entry.options}
-                opt[HARD_LIMIT] = val
+                opt[HARD_LIMIT_API] = ','.join(to_set)
                 hass.config_entries.async_update_entry(entry, options=opt)
 
         except ValueError as e:
@@ -428,7 +435,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.info("Service call: %s", SERVICE_REMOVE_HARD_LIMIT)
 
             opt = {**entry.options}
-            opt[HARD_LIMIT] = 100000
+            opt[HARD_LIMIT_API] = '100.0'
             hass.config_entries.async_update_entry(entry, options=opt)
 
         except intent.IntentHandleError as e:
@@ -549,7 +556,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         # Config changes, which when changed will cause a reload.
         if changed(CONF_API_KEY):
             hass.data[DOMAIN]['old_api_key'] = hass.data[DOMAIN]['entry_options'].get(CONF_API_KEY)
-        reload = changed(CONF_API_KEY) or changed(API_QUOTA) or changed(AUTO_UPDATE)
+        reload = changed(CONF_API_KEY) or changed(API_QUOTA) or changed(AUTO_UPDATE) or changed(HARD_LIMIT_API)
 
         # Config changes, which when changed will cause a forecast recalculation only, without reload.
         # Dampening must be the first check with the code as-is...
@@ -562,8 +569,6 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             if recalc:
                 coordinator.solcast.damp = d
 
-            if changed(HARD_LIMIT):
-                recalc = True
             # Attribute changes, which will need a recalulation of splines
             if not recalc:
                 respline = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE) or changed(KEY_ESTIMATE)
@@ -788,6 +793,23 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 12
+                hass.config_entries.async_update_entry(entry, options=new)
+                upgraded()
+            else:
+                raise
+
+    if entry.version < 14:
+        new = {**entry.options}
+        if new.get(HARD_LIMIT_API) is None:
+            hard_limit = new.get(HARD_LIMIT,100000) / 1000
+            new[HARD_LIMIT_API] = f"{hard_limit:.1f}"
+            new.pop(HARD_LIMIT)
+        try:
+            hass.config_entries.async_update_entry(entry, options=new, version=14)
+            upgraded()
+        except Exception as e:
+            if "unexpected keyword argument 'version'" in e:
+                entry.version = 14
                 hass.config_entries.async_update_entry(entry, options=new)
                 upgraded()
             else:
