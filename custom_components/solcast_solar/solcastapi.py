@@ -962,7 +962,7 @@ class SolcastApi: # pylint: disable=R0904
             site (str): An optional site.
 
         Returns:
-            (list): The service call response for the presently set dampening factors.
+            (list): The action response for the presently set dampening factors.
         """
         try:
             if self.entry_options.get(SITE_DAMP):
@@ -1184,7 +1184,7 @@ class SolcastApi: # pylint: disable=R0904
         return status
 
     async def delete_solcast_file(self, *args): # pylint: disable=W0613
-        """Service event to delete the solcast.json file.
+        """Action to delete the solcast.json file.
 
         Note: This will immediately trigger a forecast get with history, so this should
         really be called an integration reset.
@@ -1192,7 +1192,7 @@ class SolcastApi: # pylint: disable=R0904
         Arguments:
             args (tuple): Not used.
         """
-        _LOGGER.debug("Service event to delete old solcast.json file")
+        _LOGGER.debug("Action to delete old solcast.json file")
         try:
             if file_exists(self._filename_undampened):
                 os.remove(self._filename_undampened)
@@ -1206,10 +1206,10 @@ class SolcastApi: # pylint: disable=R0904
             await self.get_sites_and_usage()
             await self.load_saved_data()
         except Exception:
-            _LOGGER.error("Service event to delete old solcast.json file failed")
+            _LOGGER.error("Action to delete old solcast.json file failed")
 
     async def get_forecast_list(self, *args) -> Optional[Tuple[Dict[Any], ...]]:
-        """Service event to get forecasts.
+        """Action to get forecasts.
 
         Arguments:
             args (tuple): [0] (dt) = from timestamp, [1] (dt) = to timestamp, [2] = site, [3] (bool) = dampened or undampened.
@@ -1235,7 +1235,7 @@ class SolcastApi: # pylint: disable=R0904
             return tuple( {**d, "period_start": d["period_start"].astimezone(self._tz)} for d in h )
 
         except Exception:
-            _LOGGER.error("Service event to get list of forecasts failed")
+            _LOGGER.error("Action to get list of forecasts failed")
             return None
 
     def get_api_used_count(self) -> int:
