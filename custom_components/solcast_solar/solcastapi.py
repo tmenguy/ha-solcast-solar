@@ -2686,6 +2686,6 @@ class SolcastApi: # pylint: disable=R0904
                     if intervals == 48:
                         _LOGGER.debug("Forecast data for %s contains all 48 intervals", day.strftime('%Y-%m-%d'))
                     else:
-                        _LOGGER.debug("Forecast data for %s contains only %d of 48 intervals and may produce inaccurate forecast data", day.strftime('%Y-%m-%d'), intervals)
+                        _LOGGER.debug("Forecast data for %s contains %d of 48 intervals and may produce inaccurate forecast data", day.strftime('%Y-%m-%d'), intervals)
         except Exception as e:
             _LOGGER.error("Exception in __check_data_records(): %s: %s", e, traceback.format_exc())
