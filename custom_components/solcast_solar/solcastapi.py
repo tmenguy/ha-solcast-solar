@@ -253,6 +253,8 @@ class SolcastApi: # pylint: disable=R0904
         self.sites_loaded = False
         self.tasks = {}
 
+        file_name, extension = os.path.splitext(options.file_path)
+
         self._aiohttp_session = aiohttp_session
         self._api_cache_enabled = api_cache_enabled # For offline development.
         self._api_limit = {}
@@ -264,7 +266,6 @@ class SolcastApi: # pylint: disable=R0904
         self._data_forecasts_undampened = []
         self._data_undampened = copy.deepcopy(self._data)
         self._filename = options.file_path
-        file_name, extension = os.path.splitext(options.file_path)
         self._filename_undampened = f"{file_name}-undampened{extension}"
         self._forecasts_moment = {}
         self._forecasts_remaining = {}
@@ -273,6 +274,8 @@ class SolcastApi: # pylint: disable=R0904
         self._loaded_data = False
         self._site_data_forecasts = {}
         self._site_data_forecasts_undampened = {}
+        self._sites_hard_limit = defaultdict(dict)
+        self._sites_hard_limit_undampened = defaultdict(dict)
         self._spline_period = list(range(0, 90000, 1800))
         self._serialise_lock = asyncio.Lock()
         self._tally = {}
@@ -1441,7 +1444,7 @@ class SolcastApi: # pylint: disable=R0904
 
         Arguments:
             n_hour (int): An hour into the future, or the current hour (0 = current and 1 = next hour are used).
-            site (str): An optional Solcast site ID, used to build site breakdown attributes (used).
+            site (str): An optional Solcast site ID, used to build site breakdown attributes.
             _used_data_field (str): An optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
@@ -1550,7 +1553,7 @@ class SolcastApi: # pylint: disable=R0904
 
         Arguments:
             n_day (int): A number representing a day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
-            site (str): An optional Solcast site ID, used to build site breakdown attributes (used).
+            site (str): An optional Solcast site ID, used to build site breakdown attributes.
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
@@ -1588,7 +1591,7 @@ class SolcastApi: # pylint: disable=R0904
 
         Arguments:
             n_day (int): A number representing a day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
-            site (str): An optional Solcast site ID, used to build site breakdown attributes (used).
+            site (str): An optional Solcast site ID, used to build site breakdown attributes.
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
@@ -1624,7 +1627,7 @@ class SolcastApi: # pylint: disable=R0904
         """Return remaining forecasted production for today.
 
         Arguments:
-            site (str): An optional Solcast site ID, used to build site breakdown attributes (used).
+            site (str): An optional Solcast site ID, used to build site breakdown attributes.
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
@@ -1658,7 +1661,7 @@ class SolcastApi: # pylint: disable=R0904
 
         Arguments:
             n_day (int): A day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
-            site (str): An optional Solcast site ID, used to build site breakdown attributes (used).
+            site (str): An optional Solcast site ID, used to build site breakdown attributes.
             _used_data_field (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
         Returns:
@@ -2512,8 +2515,6 @@ class SolcastApi: # pylint: disable=R0904
             bool: A flag indicating success or failure.
         """
         try:
-            st_time = time.time()
-
             today = dt.now(self._tz).date()
             commencing = dt.now(self._tz).date() - timedelta(days=730)
             commencing_undampened = dt.now(self._tz).date() - timedelta(days=14)
@@ -2522,23 +2523,22 @@ class SolcastApi: # pylint: disable=R0904
             forecasts = {}
             forecasts_undampened = {}
 
-            async def build_data(data: list, commencing: dt, forecasts: dict, site_data_forecasts: list, update_tally: bool=False):
+            async def build_data(data: list, commencing: dt, forecasts: dict, site_data_forecasts: list, sites_hard_limit: defaultdict, update_tally: bool=False):
                 """
                 Build per-site hard limit.
                 The API key hard limit for each site is calculated as proportion of the site contribution for the account.  
                 """
-                sites_hard_limit = defaultdict(dict)
-
+                st_time = time.time()
                 hard_limit_set, multi_key = self.hard_limit_set()
                 if hard_limit_set:
-                    # Separate hard limit values for each key
                     api_key_sites = defaultdict(dict)
                     for s in self.sites:
                         api_key_sites[s['api_key'] if multi_key else 'all'][s['resource_id']] = {
                             'earliest_period': data['siteinfo'][s['resource_id']]['forecasts'][0]['period_start'],
                             'last_period': data['siteinfo'][s['resource_id']]['forecasts'][-1]['period_start']
                         }
-                    _LOGGER.debug('Hard limit for individual API keys: %s', multi_key)
+                    if update_tally:
+                        _LOGGER.debug('Hard limit for individual API keys: %s', multi_key)
                     for api_key, sites in api_key_sites.items():
                         hard_limit = self.__hard_limit_for_key(api_key)
                         _LOGGER.debug("Hard limit for API key %s: %s", self.__redact_api_key(api_key) if multi_key else 'all', hard_limit)
@@ -2546,10 +2546,18 @@ class SolcastApi: # pylint: disable=R0904
                         earliest = dt.now(self._tz)
                         latest = None
                         for site, limits in sites.items():
-                            if limits['earliest_period'] < earliest:
-                                earliest = limits['earliest_period']
+                            if len(sites_hard_limit[api_key]) == 0:
+                                _LOGGER.debug('Build hard limit period values from scratch for %s', 'dampened' if update_tally else 'un-dampened')
+                                if limits['earliest_period'] < earliest:
+                                    earliest = limits['earliest_period']
+                            else:
+                                earliest = self.get_day_start_utc() # Past hard limits done, so re-calculate from today onwards
                             latest = limits['last_period']
-                        _LOGGER.debug("Earliest period: %s, latest period: %s", dt.strftime(earliest, DATE_FORMAT_UTC), dt.strftime(latest, DATE_FORMAT_UTC))
+                        _LOGGER.debug(
+                            "Earliest period: %s, latest period: %s",
+                            dt.strftime(earliest.astimezone(self._tz), DATE_FORMAT),
+                            dt.strftime(latest.astimezone(self._tz), DATE_FORMAT)
+                        )
                         periods = [earliest + timedelta(minutes=30 * x) for x in range(int((latest - earliest).total_seconds() / 1800))]
                         for pv_estimate in ['pv_estimate', 'pv_estimate10', 'pv_estimate90']:
                             sites_hard_limit[api_key][pv_estimate] = {}
@@ -2561,6 +2569,7 @@ class SolcastApi: # pylint: disable=R0904
                                     if total_estimate == 0:
                                         continue
                                     sites_hard_limit[api_key][pv_estimate][period] = {site: estimate[site] / total_estimate * hard_limit for site in sites if estimate[site] is not None}
+                    _LOGGER.debug("Build hard limit processing took %.3f seconds for %s", round(time.time() - st_time, 4), 'dampened' if update_tally else 'un-dampened')
 
                     ##### FOR DEBUG #####
                     async with self._serialise_lock:
@@ -2575,6 +2584,7 @@ class SolcastApi: # pylint: disable=R0904
                 """
                 Build per-site and total forecasts with proportionate hard limit applied.
                 """
+                st_time = time.time()
                 for site, siteinfo in data['siteinfo'].items():
                     api_key = self.__site_api_key(site) if multi_key else 'all'
                     if update_tally:
@@ -2615,18 +2625,18 @@ class SolcastApi: # pylint: disable=R0904
                     if update_tally:
                         siteinfo['tally'] = round(tally, 4)
                         self._tally[site] = siteinfo['tally']
+                _LOGGER.debug("Build per-site and total processing took %.3f seconds for %s", round(time.time() - st_time, 4), 'dampened' if update_tally else 'un-dampened')
 
-            await build_data(self._data, commencing, forecasts, self._site_data_forecasts, update_tally=True)
+            await build_data(self._data, commencing, forecasts, self._site_data_forecasts, self._sites_hard_limit, update_tally=True)
             self._data_forecasts = sorted(forecasts.values(), key=itemgetter("period_start"))
             self._data_energy = {"wh_hours": self.__make_energy_dict()}
 
-            await build_data(self._data_undampened, commencing_undampened, forecasts_undampened, self._site_data_forecasts_undampened)
+            await build_data(self._data_undampened, commencing_undampened, forecasts_undampened, self._site_data_forecasts_undampened, self._sites_hard_limit_undampened)
             self._data_forecasts_undampened = sorted(forecasts_undampened.values(), key=itemgetter("period_start"))
 
             await self.__check_data_records()
             await self.recalculate_splines()
 
-            _LOGGER.debug("Build forecast processing took %.3f seconds", round(time.time() - st_time, 4))
             return True
 
         except:
