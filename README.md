@@ -449,7 +449,7 @@ Consider a scenario where you have a single 6kW string inverter, and attached ar
 
 The hard limit may be set as an "overall" value (applying to all sites in all Solcast accounts configured), or it may be set by Solcast account with a separate hard limit value for each Solcast API key. (In the latter case, comma-separate the desired hard limit values.)
 
-The hard limit may be set in the integration configuration, or set via a service call in `Developer Tools`.
+The hard limit may be set in the integration configuration, or set via manually invoking the action in `Developer Tools`.
 
 ## Key Solcast concepts
 
