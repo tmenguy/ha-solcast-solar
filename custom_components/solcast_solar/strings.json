@@ -73,9 +73,7 @@
     },
     "system_health": {
         "info": {
-            "can_reach_server": "Solcast server connection",
-            "used_requests": "API requests remaining",
-            "rooftop_site_count": "Rooftop site count"
+            "can_reach_server": "Solcast server connection"
         }
     },
     "selector": {

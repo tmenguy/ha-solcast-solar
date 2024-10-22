@@ -73,9 +73,7 @@
     },
     "system_health": {
         "info": {
-            "can_reach_server": "Connexion au serveur Solcast",
-            "used_requests": "Requêtes API restantes",
-            "rooftop_site_count": "Nombre d'emplacements"
+            "can_reach_server": "Connexion au serveur Solcast"
         }
     },
     "selector": {

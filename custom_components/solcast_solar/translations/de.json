@@ -74,9 +74,7 @@
     },
     "system_health": {
         "info": {
-            "can_reach_server": "Verbindung zum Solcast-Server",
-            "used_requests": "Verbrauchte API-Anfragen",
-            "rooftop_site_count": "Anzahl der Dachflächen"
+            "can_reach_server": "Verbindung zum Solcast-Server"
         }
     },
     "selector": {

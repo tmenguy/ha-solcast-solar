@@ -74,9 +74,7 @@
     },
     "system_health": {
         "info": {
-            "can_reach_server": "Solcast server pripojenie",
-            "used_requests": "Zostávajúce požiadavky API",
-            "rooftop_site_count": "Počet miest na streche"
+            "can_reach_server": "Solcast server pripojenie"
         }
     },
     "selector": {

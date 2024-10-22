@@ -74,9 +74,7 @@
     },
     "system_health": {
         "info": {
-            "can_reach_server": "Połączenie z serwerem Solcast",
-            "used_requests": "Wykorzystane żądania API",
-            "rooftop_site_count": "Liczba połaci"
+            "can_reach_server": "Połączenie z serwerem Solcast"
         }
     },
     "selector": {

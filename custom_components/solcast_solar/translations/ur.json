@@ -74,9 +74,7 @@
     },
     "system_health": {
         "info": {
-            "can_reach_server": "سولکاسٹ سرور کنکشن",
-            "used_requests": "API کی درخواستیں باقی ہیں۔",
-            "rooftop_site_count": "چھت والی سائٹ کی گنتی"
+            "can_reach_server": "سولکاسٹ سرور کنکشن"
         }
     },
     "selector": {
