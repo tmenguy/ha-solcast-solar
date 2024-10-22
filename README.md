@@ -696,14 +696,14 @@ series:
 
 * None
 
+## Changes
+
 v4.2.5
 * Add multi-API key hard limit by @autoSteve
 * Proportionally limit site breakdowns by @autoSteve
 * Calculate daily site tally correctly based on hard limit by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.4...v4.2.5
-
-## Changes
 
 v4.2.1
 * Fix an issue that causes changing Solcast accounts to fail by @autoSteve
