@@ -1440,6 +1440,64 @@ class SolcastApi: # pylint: disable=R0904
                     res[f"detailedHourly-{site['resource_id']}"] = hourlytups[site['resource_id']]
         return res
 
+
+    ##### For debug
+    def get_accounts_total_day(self, api_key, futureday):
+        """Debug account total attribute"""
+        res = self.get_forecast_day(futureday)
+        try:
+            res.pop('detailedForecast')
+        except:
+            pass
+        try:
+            res.pop('detailedHourly')
+        except:
+            pass
+        pop_sites = [site['resource_id'] for site in self.sites if site['api_key'] != api_key]
+        sum_sites = [site['resource_id'] for site in self.sites if site['api_key'] == api_key]
+        for site in pop_sites:
+            try:
+                res.pop('detailedForecast-'+site)
+            except:
+                pass
+            try:
+                res.pop('detailedHourly-'+site)
+            except:
+                pass
+        res['detailedForecast'] = None
+        res['detailedHourly'] = None
+        try:
+            for site in sum_sites:
+                _LOGGER.debug(site)
+                if res.get('detailedForecast-'+site) is not None:
+                    if res['detailedForecast'] is None:
+                        res['detailedForecast'] = res['detailedForecast-'+site]
+                    else:
+                        i = 0
+                        for f in res['detailedForecast']:
+                            f['pv_estimate'] += res['detailedForecast-'+site][i]['pv_estimate']
+                            f['pv_estimate10'] += res['detailedForecast-'+site][i]['pv_estimate10']
+                            f['pv_estimate90'] += res['detailedForecast-'+site][i]['pv_estimate90']
+                            i += 1
+                    res.pop('detailedForecast-'+site)
+                if res.get('detailedHourly-'+site) is not None:
+                    if res['detailedHourly'] is None:
+                        res['detailedHourly'] = res['detailedHourly-'+site]
+                    else:
+                        i = 0
+                        for f in res['detailedHourly']:
+                            f['pv_estimate'] += res['detailedHourly-'+site][i]['pv_estimate']
+                            f['pv_estimate10'] += res['detailedHourly-'+site][i]['pv_estimate10']
+                            f['pv_estimate90'] += res['detailedHourly-'+site][i]['pv_estimate90']
+                            i += 1
+                    res.pop('detailedHourly-'+site)
+        except:
+            _LOGGER.debug(traceback.format_exc())
+        return res
+
+
+
+
     def get_forecast_n_hour(self, n_hour, site=None, _use_data_field=None) -> int:
         """Return forecast for the Nth hour.
 
@@ -1693,6 +1751,24 @@ class SolcastApi: # pylint: disable=R0904
             if self.estimate_set.get(_data_field):
                 res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, site=None, _use_data_field=_data_field)
         return res
+
+
+    ##### For debug
+    def get_account_total_kwh_forecast_day(self, api_key, n_day) -> Dict[str, Any]:
+        """Return forecast production total for N days ahead for an account.
+
+        Arguments:
+            n_day (int): A day (0 = today, 1 = tomorrow, etc., with a maxiumum of day 7).
+
+        Returns:
+            float: The forecast total solar generation for a given day as kWh.
+        """
+        res = 0
+        for site in [site['resource_id'] for site in self.sites if site['api_key'] == api_key]:
+            res += self.get_total_kwh_forecast_day(n_day, site=site)
+        return res
+
+
 
     def __get_forecast_list_slice(self, _data, start_utc, end_utc=None, search_past=False) -> tuple[int, int]:
         """Return forecast data list slice start and end indexes for interval.
@@ -2572,15 +2648,19 @@ class SolcastApi: # pylint: disable=R0904
                                     sites_hard_limit[api_key][pv_estimate][period] = {site: estimate[site] / total_estimate * hard_limit for site in sites if estimate[site] is not None}
                     _LOGGER.debug("Build hard limit processing took %.3f seconds for %s", round(time.time() - st_time, 4), 'dampened' if update_tally else 'un-dampened')
 
-                    ##### FOR DEBUG #####
+                    ##### For debug
                     async with self._serialise_lock:
                         async with aiofiles.open('/config/test.json', 'w') as f:
                             await f.write(json.dumps(dict(sites_hard_limit), indent=2, ensure_ascii=False, cls=DateKeyEncoder))
 
                 else:
-                    for api_key in self.options.api_key.split(','):
+                    if multi_key:
+                        for api_key in self.options.api_key.split(','):
+                            for pv_estimate in ['pv_estimate', 'pv_estimate10', 'pv_estimate90']:
+                                sites_hard_limit[api_key][pv_estimate] = {}
+                    else:
                         for pv_estimate in ['pv_estimate', 'pv_estimate10', 'pv_estimate90']:
-                            sites_hard_limit[api_key][pv_estimate] = {}
+                            sites_hard_limit['all'][pv_estimate] = {}
 
                 """
                 Build per-site and total forecasts with proportionate hard limit applied.

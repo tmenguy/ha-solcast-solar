@@ -191,7 +191,10 @@
             "power_now": {"name": "Power Now"},
             "weather_description": {"name": "Weather"},
             "hard_limit": {"name": "Hard Limit Set"},
-            "hard_limit_api": {"name": "Hard Limit Set {api_key}"}
+            "hard_limit_api": {"name": "Hard Limit Set {api_key}"},
+
+
+            "api_key_total": {"name": "API Key Total {api_key}"}
         },
         "select": {
             "estimate_mode" : {"name": "Use Forecast Field"}

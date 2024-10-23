@@ -17,7 +17,6 @@ from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.event import async_track_utc_time_change # type: ignore
 from homeassistant.exceptions import ServiceValidationError # type: ignore
 from homeassistant.helpers.sun import get_astral_event_next # type: ignore
-from homeassistant.const import CONF_API_KEY # type: ignore
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator # type: ignore
 
@@ -384,6 +383,12 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                             return False
                         else:
                             return unit_adjusted(hard_limit)
+
+                    ##### For debug
+                    if key == "api_key_total_" + api_key[-6:]:
+                        return self.solcast.get_account_total_kwh_forecast_day(api_key, 0)
+
+
                     i += 1
                 return None
 
@@ -441,6 +446,14 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "get_remaining_today":
                 return self.solcast.get_forecasts_remaining_today()
             case _:
+                ##### For debug
+                api_keys = self.solcast.options.api_key
+                for api_key in api_keys.split(','):
+                    if key == "api_key_total_" + api_key[-6:]:
+                        _LOGGER.debug("Returning %s", key)
+                        return self.solcast.get_accounts_total_day(api_key, 0)
+
+
                 return None
 
     def get_site_sensor_value(self, roof_id, key) -> (float | None):

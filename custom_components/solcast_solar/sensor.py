@@ -267,8 +267,9 @@ def get_sensor_update_policy(key: str) -> SensorUpdatePolicy:
             "get_remaining_today" |
             "power_now" |
             "power_now_30m" |
-            "power_now_1hr"
-            ):
+            "power_now_1hr" |
+            "api_counter"
+        ):
             return SensorUpdatePolicy.EVERY_TIME_INTERVAL
         case _:
             return SensorUpdatePolicy.DEFAULT
@@ -293,6 +294,24 @@ async def async_setup_entry(
         sen = SolcastSensor(coordinator, SENSORS[sensor_types], entry)
         entities.append(sen)
 
+        def add_api_breakdown(api_key):
+            ##### For debug
+            k = SensorEntityDescription(
+                key="api_key_total_" + api_key[-6:],
+                device_class=SensorDeviceClass.ENERGY,
+                native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+                translation_key="api_key_total",
+                translation_placeholders={
+                    'api_key': '*'*6 + api_key[-6:],
+                },
+                icon="mdi:solar-power",
+                suggested_display_precision=2,
+                state_class=SensorStateClass.TOTAL,
+            )
+            _LOGGER.debug('Adding sensor: %s', k)
+            sen = SolcastSensor(coordinator, k, entry)
+            return sen
+
     api_keys = coordinator.solcast.options.api_key.split(',')
     hard_limits = coordinator.solcast.options.hard_limit.split(',')
     if len(hard_limits) == 1:
@@ -305,6 +324,12 @@ async def async_setup_entry(
         )
         sen = SolcastSensor(coordinator, k, entry)
         entities.append(sen)
+
+
+        ##### For debug
+        entities.append(add_api_breakdown(api_keys[0]))
+
+
     else:
         for api_key in api_keys:
             k = SensorEntityDescription(
@@ -313,12 +338,20 @@ async def async_setup_entry(
                 translation_placeholders={
                     'api_key': '*'*6 + api_key[-6:],
                 },
-                name="Hard Limit Set",
+                #name="Hard Limit Set",
                 icon="mdi:speedometer",
                 entity_category=EntityCategory.DIAGNOSTIC,
             )
             sen = SolcastSensor(coordinator, k, entry)
             entities.append(sen)
+
+
+            ##### For debug
+            entities.append(add_api_breakdown(api_key))
+
+
+            entities.append(sen)
+
 
     for site in coordinator.get_solcast_sites():
         k = RooftopSensorEntityDescription(
@@ -402,13 +435,22 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
             if (
                 self.entity_id.startswith('sensor.solcast_pv_forecast_forecast_today') or
                 self.entity_id.startswith('sensor.solcast_pv_forecast_forecast_tomorrow') or
-                self.entity_id.startswith('sensor.solcast_pv_forecast_forecast_day')
+                self.entity_id.startswith('sensor.solcast_pv_forecast_forecast_day') or
+
+                ##### For debug
+                self.entity_id.startswith('sensor.solcast_pv_forecast_api_key_total')
+
             ):
                 exclude = ['detailedForecast', 'detailedHourly']
                 if self._coordinator.solcast.options.attr_brk_site_detailed:
                     for s in self._coordinator.solcast.sites:
                         exclude.append('detailedForecast-' + s['resource_id'])
                         exclude.append('detailedHourly-' + s['resource_id'])
+
+                    ##### For debug
+                    for api_key in self._coordinator.solcast.options.api_key.split(','):
+                        exclude.append('sensor.solcast_pv_forecast_api_key_total_'+api_key[-6:])
+
                 self._state_info["unrecorded_attributes"] = self._state_info["unrecorded_attributes"] | frozenset(exclude)
         except Exception as e:
             _LOGGER.error("Exception setting excluded attributes: %s", e)
