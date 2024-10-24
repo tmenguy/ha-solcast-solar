@@ -2180,7 +2180,7 @@ class SolcastApi: # pylint: disable=R0904
     async def reapply_forward_dampening(self):
         """Re-apply dampening to forward forecasts."""
         if not self.__valid_granular_dampening():
-            _LOGGER.warning("Invalid dampening configuration, so no re-appying dampening to future forecasts")
+            _LOGGER.warning("Invalid dampening configuration, so not re-appying dampening to future forecasts")
             return
         _LOGGER.debug("Re-applying future dampening")
         for site in self.sites:
