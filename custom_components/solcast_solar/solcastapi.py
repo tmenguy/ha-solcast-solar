@@ -2177,6 +2177,50 @@ class SolcastApi: # pylint: disable=R0904
         else:
             return self.damp.get(f"{z.hour}", 1.0)
 
+    async def reapply_forward_dampening(self):
+        """Re-apply dampening to forward forecasts."""
+        if not self.__valid_granular_dampening():
+            _LOGGER.warning("Invalid dampening configuration, so no re-appying dampening to future forecasts")
+            return
+        _LOGGER.debug("Re-applying future dampening")
+        for site in self.sites:
+            site = site['resource_id']
+
+            # Load the forecast history.
+            try:
+                forecasts_undampened_future = [
+                    forecast for forecast in self._data_undampened['siteinfo'][site]['forecasts'] if forecast['period_start'] >= dt.now(timezone.utc)
+                ]
+            except:
+                forecasts_undampened_future = {}
+            if forecasts_undampened_future == {}:
+                return
+            try:
+                forecasts = {forecast["period_start"]: forecast for forecast in self._data['siteinfo'][site]['forecasts']}
+            except:
+                forecasts = {}
+            if forecasts == {}:
+                return
+
+            # Apply dampening to the new data
+            for forecast in sorted(forecasts_undampened_future, key=itemgetter("period_start")):
+                period_start = forecast["period_start"]
+                pv = round(forecast["pv_estimate"], 4)
+                pv10 = round(forecast["pv_estimate10"], 4)
+                pv90 = round(forecast["pv_estimate90"], 4)
+
+                # Retrieve the dampening factor for the period, and dampen the estimates.
+                dampening_factor = self.__get_dampening_factor(site, period_start.astimezone(self._tz), True)
+                pv_dampened = round(pv * dampening_factor, 4)
+                pv10_dampened = round(pv10 * dampening_factor, 4)
+                pv90_dampened = round(pv90 * dampening_factor, 4)
+
+                # Add or update the new entries.
+                self.__forecast_entry_update(forecasts, period_start, pv_dampened, pv10_dampened, pv90_dampened)
+
+            forecasts = sorted(list(forecasts.values()), key=itemgetter("period_start"))
+            self._data['siteinfo'].update({site:{'forecasts': copy.deepcopy(forecasts)}})
+
     async def __http_data_call(self, site=None, api_key=None, do_past=False, force=False) -> bool:
         """Request forecast data via the Solcast API.
 

@@ -365,7 +365,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await solcast.refresh_granular_dampening_data() # Ensure latest file content gets updated
                 solcast.granular_dampening[site] = [float(sp[i]) for i in range(0,len(sp))]
                 await solcast.serialise_granular_dampening()
+                old_damp = opt.get(SITE_DAMP, False)
                 opt[SITE_DAMP] = True # Set "hidden" option.
+                if opt[SITE_DAMP] == old_damp:
+                    await solcast.reapply_forward_dampening()
+                    await coordinator.solcast.build_forecast_data()
+                    coordinator.set_data_updated(True)
+                    await coordinator.update_integration_listeners()
+                    coordinator.set_data_updated(False)
 
             hass.config_entries.async_update_entry(entry, options=opt)
         except intent.IntentHandleError as e:
@@ -569,11 +576,13 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         # Config changes, which when changed will cause a forecast recalculation only, without reload.
         # Dampening must be the first check with the code as-is...
         if not reload:
+            damp_changed = False
             d = {}
             for i in range(0,24):
                 d.update({f"{i}": entry.options[f"damp{i:02}"]})
                 if changed(f"damp{i:02}"):
                     recalc = True
+                    damp_changed = True
             if recalc:
                 coordinator.solcast.damp = d
 
@@ -582,6 +591,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                 respline = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE) or changed(KEY_ESTIMATE)
 
             if changed(SITE_DAMP):
+                damp_changed = True
                 if not entry.options[SITE_DAMP]:
                     if coordinator.solcast.allow_granular_dampening_reset():
                         coordinator.solcast.granular_dampening = {}
@@ -589,6 +599,9 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                         _LOGGER.debug("Granular dampening file reset")
                     else:
                         _LOGGER.debug("Granular dampening file not reset")
+            if damp_changed:
+                recalc = True
+                await coordinator.solcast.reapply_forward_dampening()
 
         if reload:
             determination = 'The integration will reload'
