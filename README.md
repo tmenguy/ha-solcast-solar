@@ -702,6 +702,7 @@ v4.2.5
 * Proportionally limit site breakdowns by @autoSteve
 * Calculate daily site tally correctly based on hard limit by @autoSteve
 * Immediate application of dampening to future forecasts by @autoSteve
+* Fix system health output exception by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.4...v4.2.5
 
