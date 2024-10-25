@@ -220,7 +220,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(status)
 
     coordinator = SolcastUpdateCoordinator(hass, solcast, version)
-    await coordinator.setup()
+    if not await coordinator.setup():
+        raise ConfigEntryNotReady('Internal error: Coordinator setup failed')
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 

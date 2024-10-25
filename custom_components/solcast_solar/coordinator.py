@@ -69,7 +69,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """
         return self.solcast.get_data()
 
-    async def setup(self):
+    async def setup(self) -> bool:
         """Set up time change tracking."""
         self._last_day = dt.now(self.solcast.options.tz).day
         try:
@@ -81,8 +81,10 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self.tasks['midnight_update'] = async_track_utc_time_change(self._hass, self.__update_utcmidnight_usage_sensor_data,  hour=0, minute=0, second=0)
             for timer, _ in self.tasks.items():
                 _LOGGER.debug("Started task %s", timer)
+            return True
         except:
             _LOGGER.error("Exception in setup: %s", traceback.format_exc())
+            return False
 
     async def update_integration_listeners(self, *args):
         """Get updated sensor values."""
@@ -238,7 +240,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
         if len(self._intervals) > 0:
             next_update = self._intervals[0].astimezone(self.solcast.options.tz)
-            next_update = next_update.strftime(DATE_FORMAT) if next_update.date() == dt.now().date() else next_update.strftime(TIME_FORMAT)
+            next_update = next_update.strftime(TIME_FORMAT) if next_update.date() == dt.now().date() else next_update.strftime(DATE_FORMAT)
         else:
             next_update = None
 
