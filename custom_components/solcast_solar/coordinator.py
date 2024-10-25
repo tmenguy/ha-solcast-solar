@@ -221,7 +221,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self._intervals = intervals_today + intervals_tomorrow
 
             if len(intervals_today) > 0:
-                _LOGGER.info("Auto update: Forecast update%s for today at %s", 's' if len(intervals_today) > 1 else '', ', '.join(format_intervals(self._intervals)))
+                _LOGGER.info("Auto update: Forecast update%s for today at %s", 's' if len(intervals_today) > 1 else '', ', '.join(format_intervals(intervals_today)))
             if len(intervals_today) < divisions: # Only log tomorrow if part-way though today, or today has no more updates
                 _LOGGER.info("Auto update: Forecast update%s for tomorrow at %s", 's' if len(intervals_tomorrow) > 1 else '', ', '.join(format_intervals(intervals_tomorrow)))
         except:
