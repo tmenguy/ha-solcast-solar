@@ -185,9 +185,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except loader.IntegrationNotFound:
         pass
 
+    raw_version = version.replace('v','')
     solcast.headers = {
         'Accept': 'application/json',
-        'User-Agent': 'ha-solcast-solar-integration/'+version.replace('v','')[:version.rfind('.')]
+        'User-Agent': 'ha-solcast-solar-integration/'+raw_version[:raw_version.rfind('.')]
     }
     _LOGGER.debug("Session headers: %s", solcast.headers)
 
