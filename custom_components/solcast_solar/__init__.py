@@ -230,7 +230,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("UTC times are converted to %s", hass.config.time_zone)
 
     if not solcast.previously_loaded:
-        if solcast.hard_limit_set():
+        hard_limit_set, _ = solcast.hard_limit_set()
+        if hard_limit_set:
             _LOGGER.info("Inverter hard limit value is set to limit maximum forecast values")
 
     hass.data[DOMAIN]['has_loaded'] = True
@@ -250,7 +251,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         Arguments:
             call (ServiceCall): Not used.
         """
-        _LOGGER.info("Action: %s", SERVICE_UPDATE)
+        _LOGGER.info("Action: Fetching forecast")
         await coordinator.service_event_update()
 
     async def action_call_force_update_forecast(call: ServiceCall):
@@ -259,7 +260,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         Arguments:
             call (ServiceCall): Not used.
         """
-        _LOGGER.info("Action: %s", SERVICE_FORCE_UPDATE)
+        _LOGGER.info("Forced update: Fetching forecast")
         await coordinator.service_event_force_update()
 
     async def action_call_clear_solcast_data(call: ServiceCall):
@@ -268,7 +269,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         Arguments:
             call (ServiceCall): Not used.
         """
-        _LOGGER.info("Action: %s", SERVICE_CLEAR_DATA)
+        _LOGGER.info("Action: Clearing history and fetching past actuals and forecast")
         await coordinator.service_event_delete_old_solcast_json_file()
 
     async def action_call_get_solcast_data(call: ServiceCall) -> (Dict[str, Any] | None):
@@ -284,7 +285,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             Dict[str, Any] | None: The Solcast data from start to end date/times.
         """
         try:
-            _LOGGER.info("Action: %s", SERVICE_QUERY_FORECAST_DATA)
+            _LOGGER.info("Action: Query forecast data")
 
             start = call.data.get(EVENT_START_DATETIME, dt_util.now())
             end = call.data.get(EVENT_END_DATETIME, dt_util.now())
@@ -311,7 +312,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ServiceValidationError: Notify Home Assistant that an error has occurred, with translation.
         """
         try:
-            _LOGGER.info("Action: %s", SERVICE_SET_DAMPENING)
+            _LOGGER.info("Action: Set dampening")
 
             factors = call.data.get(DAMP_FACTOR, None)
             site = call.data.get(SITE, None) # Optional site.
@@ -385,7 +386,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             call (ServiceCall): The data to act on: an optional site.
         """
         try:
-            _LOGGER.info("Action: %s", SERVICE_GET_DAMPENING)
+            _LOGGER.info("Action: Get dampening")
 
             site = call.data.get(SITE, None) # Optional site.
             d = await solcast.get_dampening(site)
@@ -408,7 +409,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ServiceValidationError: Notify Home Assistant that an error has occurred, with translation.
         """
         try:
-            _LOGGER.info("Action: %s", SERVICE_SET_HARD_LIMIT)
+            _LOGGER.info("Action: Set hard limit")
 
             hl = call.data.get(HARD_LIMIT, '100.0')
 
@@ -445,7 +446,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             HomeAssistantError: Notify Home Assistant that an error has occurred.
         """
         try:
-            _LOGGER.info("Action: %s", SERVICE_REMOVE_HARD_LIMIT)
+            _LOGGER.info("Action: Remove hard limit")
 
             opt = {**entry.options}
             opt[HARD_LIMIT_API] = '100.0'

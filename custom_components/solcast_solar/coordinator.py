@@ -24,6 +24,7 @@ from .const import (
     DATE_FORMAT,
     DOMAIN,
     SENSOR_DEBUG_LOGGING,
+    TIME_FORMAT,
 )
 
 from .solcastapi import SolcastApi
@@ -130,12 +131,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                         try:
                             await asyncio.sleep(update_in)
                             # Proceed with forecast update if not cancelled
+                            _LOGGER.info("Auto update: Fetching forecast")
                             self._intervals = self._intervals[1:]
                             await self.__forecast_update()
-                            if len(self._intervals) > 0:
-                                _LOGGER.debug("Next forecast update scheduled for %s", self._intervals[0].astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
                         except asyncio.CancelledError:
-                            _LOGGER.debug("Cancelled next scheduled update")
+                            _LOGGER.info("Auto update: Cancelled next scheduled update")
                         finally:
                             if self.tasks.get('pending_update') is not None:
                                 self.tasks.pop('pending_update')
@@ -208,22 +208,22 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 intervals = [(sunrise + timedelta(seconds=interval) * i) for i in range(0, divisions)]
                 intervals = [i for i in intervals if i > self.solcast.get_now_utc()]
                 if log:
-                    _LOGGER.debug("Auto update: Total seconds %d, divisions: %d updates, interval: %d seconds", seconds, divisions, interval)
+                    _LOGGER.debug("Auto update total seconds: %d, divisions: %d, interval: %d seconds", seconds, divisions, interval)
                     if init:
-                        _LOGGER.debug("Auto-update will update forecasts %d times %s", divisions, "over 24 hours" if self.solcast.options.auto_update > 1 else "between sunrise and sunset")
+                        _LOGGER.debug("Auto update will update forecasts %d times %s", divisions, "over 24 hours" if self.solcast.options.auto_update > 1 else "between sunrise and sunset")
                 return intervals
 
-            self._intervals = get_intervals(self._sunrise, self._sunset)
-
             def format_intervals(intervals):
-                return [i.astimezone(self.solcast.options.tz).strftime('%H:%M') if len(intervals) > 5 else i.astimezone(self.solcast.options.tz).strftime('%H:%M:%S') for i in intervals]
+                return [i.astimezone(self.solcast.options.tz).strftime('%H:%M') if len(intervals) > 10 else i.astimezone(self.solcast.options.tz).strftime('%H:%M:%S') for i in intervals]
 
-            intervals_today = format_intervals(self._intervals)
+            intervals_today = get_intervals(self._sunrise, self._sunset)
+            intervals_tomorrow = get_intervals(self._sunrise_tomorrow, self._sunset_tomorrow, log=False)
+            self._intervals = intervals_today + intervals_tomorrow
+
             if len(intervals_today) > 0:
-                _LOGGER.info("Auto-scheduled forecast update for today at %s", ', '.join(intervals_today))
+                _LOGGER.info("Auto update: Forecast update%s for today at %s", 's' if len(intervals_today) > 1 else '', ', '.join(format_intervals(self._intervals)))
             if len(intervals_today) < divisions: # Only log tomorrow if part-way though today, or today has no more updates
-                intervals_tomorrow = format_intervals(get_intervals(self._sunrise_tomorrow, self._sunset_tomorrow, log=False))
-                _LOGGER.info("Auto-scheduled forecast update for tomorrow at %s", ', '.join(intervals_tomorrow))
+                _LOGGER.info("Auto update: Forecast update%s for tomorrow at %s", 's' if len(intervals_tomorrow) > 1 else '', ', '.join(format_intervals(intervals_tomorrow)))
         except:
             _LOGGER.error("Exception in __calculate_forecast_updates(): %s", traceback.format_exc())
 
@@ -236,8 +236,14 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             await self.solcast.reset_usage_cache()
             await self.__restart_time_track_midnight_update()
 
+        if len(self._intervals) > 0:
+            next_update = self._intervals[0].astimezone(self.solcast.options.tz)
+            next_update = next_update.strftime(DATE_FORMAT) if next_update.date() == dt.now().date() else next_update.strftime(TIME_FORMAT)
+        else:
+            next_update = None
+
         #await self.solcast.get_weather()
-        await self.solcast.get_forecast_update(do_past=False, force=force)
+        await self.solcast.get_forecast_update(do_past=False, force=force, next_update=next_update)
         self._data_updated = True
         await self.update_integration_listeners()
         self._data_updated = False

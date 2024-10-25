@@ -1927,12 +1927,13 @@ class SolcastApi: # pylint: disable=R0904
                     st_i, end_i, round(res,4)
                 )
             else:
-                _LOGGER.error(
-                    "No forecast data available for %s()%s%s: %s to %s",
-                    currentFuncName(1), '' if site is None else ' '+site, '' if _data_field is None else ' '+_data_field,
-                    start_utc.strftime(DATE_FORMAT_UTC),
-                    end_utc.strftime(DATE_FORMAT_UTC)
-                )
+                pass
+                #_LOGGER.error(
+                #    "No forecast data available for %s()%s%s: %s to %s",
+                #    currentFuncName(1), '' if site is None else ' '+site, '' if _data_field is None else ' '+_data_field,
+                #    start_utc.strftime(DATE_FORMAT_UTC),
+                #    end_utc.strftime(DATE_FORMAT_UTC)
+                #)
             return res
         except Exception as e:
             _LOGGER.error("Exception in __get_forecast_pv_estimates(): %s: %s", e, traceback.format_exc())
@@ -2018,7 +2019,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.error("Exception in get_energy_data(): %s: %s", e, traceback.format_exc())
             return None
 
-    async def get_forecast_update(self, do_past=False, force=False) -> str:
+    async def get_forecast_update(self, do_past=False, force=False, next_update=None) -> str:
         """Request forecast data for all sites.
 
         Arguments:
@@ -2034,6 +2035,10 @@ class SolcastApi: # pylint: disable=R0904
                 _LOGGER.warning(status)
                 return status
 
+            if next_update is not None:
+                next_update = f", next update at {next_update}"
+            else:
+                next_update = ''
             await self.refresh_granular_dampening_data()
 
             failure = False
@@ -2047,16 +2052,16 @@ class SolcastApi: # pylint: disable=R0904
                     if len(self.sites) > 1:
                         if sites_attempted < len(self.sites):
                             _LOGGER.warning(
-                                "Forecast update for site %s failed so not getting remaining sites%s", site['resource_id'],
-                                " - API use count may be odd" if len(self.sites) > 2 and not force else ""
+                                "Forecast update for site %s failed so not getting remaining sites%s%s", site['resource_id'],
+                                " - API use count may be odd" if len(self.sites) > 2 and not force else "", next_update
                             )
                         else:
                             _LOGGER.warning(
-                                "Forecast update for the last site queued failed (%s)%s", site['resource_id'],
-                                " - API use count may be odd" if not force else ""
+                                "Forecast update for the last site queued failed (%s)%s%s", site['resource_id'],
+                                " - API use count may be odd" if not force else "", next_update
                             )
                     else:
-                        _LOGGER.warning("Forecast update for site %s failed", site['resource_id'])
+                        _LOGGER.warning("Forecast update failed%s", next_update)
                     status = 'At least one site forecast get failed'
                     break
 
@@ -2073,15 +2078,15 @@ class SolcastApi: # pylint: disable=R0904
                 s_status = await self.__serialise_data(self._data, self._filename)
                 await self.__serialise_data(self._data_undampened, self._filename_undampened)
                 if b_status and s_status:
-                    _LOGGER.info("Forecast update completed successfully")
+                    _LOGGER.info("Forecast update completed successfully%s", next_update)
             else:
                 if sites_attempted > 0:
-                    _LOGGER.error("At least one site forecast failed to fetch, so forecast has not been built")
+                    _LOGGER.error("At least one site forecast failed to fetch, so forecast has not been built%s", next_update)
                 else:
                     _LOGGER.error("Internal error, there is no sites data so forecast has not been built")
                 status = 'At least one site forecast get failed'
         except Exception as e:
-            status = f"Exception in get_forecast_update(): {e} - Forecast has not been built"
+            status = f"Exception in get_forecast_update(): {e} - Forecast has not been built{next_update}"
             _LOGGER.error(status)
             _LOGGER.error(traceback.format_exc())
         return status
