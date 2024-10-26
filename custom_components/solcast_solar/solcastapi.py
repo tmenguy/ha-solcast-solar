@@ -24,6 +24,7 @@ from os.path import exists as file_exists
 from os.path import dirname
 from typing import Optional, Any, Dict, Tuple, cast
 from collections import OrderedDict, defaultdict
+from enum import Enum
 
 import async_timeout # type: ignore
 import aiofiles # type: ignore
@@ -130,6 +131,12 @@ class JSONDecoder(json.JSONDecoder):
             else:
                 ret[key] = value
         return ret
+
+class DaylightTransition(Enum):
+    """Sensor update policy"""
+    NO = 0
+    TO_DAYLIGHT = 1
+    TO_STANDARD = 2
 
 # HTTP status code translation.
 # A 418 error is included here for fun. This introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
@@ -337,7 +344,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             bool: True for stale, False if updated recently.
         """
-        return self.get_last_updated_datetime() < self.get_day_start_utc() - timedelta(days=1)
+        return self.get_last_updated_datetime() < self.get_day_start_utc(future=-1)
 
     def is_stale_usage_cache(self) -> bool:
         """Return whether the usage cache was last reset over 24-hours ago (i.e. is stale).
@@ -1319,13 +1326,17 @@ class SolcastApi: # pylint: disable=R0904
             if ret[key] is None: ret.pop(key, None)
         return ret
 
-    def get_day_start_utc(self) -> dt:
+    def get_day_start_utc(self, future:int=0) -> dt:
         """Datetime helper.
 
         Returns:
             datetime: The UTC date and time representing midnight local time.
+
+        Arguments:
+            future(int): An optional number of days into the future
         """
-        return dt.now(self._tz).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        for_when = (dt.now(self._tz) + timedelta(days=future)).astimezone(self._tz)
+        return for_when.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
 
     def __get_utc_previous_midnight(self) -> dt:
         """Datetime helper.
@@ -1359,7 +1370,7 @@ class SolcastApi: # pylint: disable=R0904
         """
         return dt.now(self._tz).replace(minute=0, second=0, microsecond=0).astimezone(timezone.utc)
 
-    def get_forecast_day(self, futureday) -> Dict[str, Any]:
+    def get_forecast_day(self, futureday: int) -> Dict[str, Any]:
         """Return forecast data for the Nth day ahead.
 
         Arguments:
@@ -1391,7 +1402,7 @@ class SolcastApi: # pylint: disable=R0904
             return ht
 
         start_utc = self.get_day_start_utc() + timedelta(days=futureday)
-        end_utc = start_utc + timedelta(days=1)
+        end_utc = self.get_day_start_utc(future=1)
         st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
         h = self._data_forecasts[st_i:end_i]
         if self.options.attr_brk_halfhourly:
@@ -1456,7 +1467,7 @@ class SolcastApi: # pylint: disable=R0904
         res = round(500 * self.__get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field))
         return res
 
-    def get_forecasts_n_hour(self, n_hour) -> Dict[str, Any]:
+    def get_forecasts_n_hour(self, n_hour: int) -> Dict[str, Any]:
         """Return forecast for the Nth hour for all sites and individual sites.
 
         Arguments:
@@ -1477,7 +1488,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_forecast_n_hour(n_hour, _use_data_field=_data_field)
         return res
 
-    def get_forecast_custom_hours(self, n_hours, site=None, _use_data_field=None) -> int:
+    def get_forecast_custom_hours(self, n_hours:int, site:str=None, _use_data_field:str=None) -> int:
         """Return forecast for the next N hours.
 
         Arguments:
@@ -1561,8 +1572,8 @@ class SolcastApi: # pylint: disable=R0904
             int: An expected peak generation for a given day as Watts.
         """
         _data_field = self._use_data_field if _use_data_field is None else _use_data_field
-        start_utc = self.get_day_start_utc() + timedelta(days=n_day)
-        end_utc = start_utc + timedelta(days=1)
+        start_utc = self.get_day_start_utc(future=n_day)
+        end_utc = self.get_day_start_utc(future=n_day+1)
         res = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, _use_data_field=_data_field)
         return 0 if res is None else round(1000 * res[_data_field])
 
@@ -1598,8 +1609,8 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             datetime: The date and time of expected peak generation for a given day.
         """
-        start_utc = self.get_day_start_utc() + timedelta(days=n_day)
-        end_utc = start_utc + timedelta(days=1)
+        start_utc = self.get_day_start_utc(future=n_day)
+        end_utc = self.get_day_start_utc(future=n_day+1)
         res = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, _use_data_field=_use_data_field)
         return res if res is None else res["period_start"]
 
@@ -1635,7 +1646,7 @@ class SolcastApi: # pylint: disable=R0904
             float: The expected remaining solar generation for the current day as kWh.
         """
         start_utc = self.get_now_utc()
-        end_utc = self.get_day_start_utc() + timedelta(days=1)
+        end_utc = self.get_day_start_utc(future=1)
         res = round(self.__get_forecast_pv_remaining(start_utc, end_utc=end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
@@ -1668,8 +1679,8 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             float: The forecast total solar generation for a given day as kWh.
         """
-        start_utc = self.get_day_start_utc() + timedelta(days=n_day)
-        end_utc = start_utc + timedelta(days=1)
+        start_utc = self.get_day_start_utc(future=n_day)
+        end_utc = self.get_day_start_utc(future=n_day+1)
         res = round(0.5 * self.__get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
@@ -2096,7 +2107,7 @@ class SolcastApi: # pylint: disable=R0904
         apply_dampening = []
         try:
             forecasts = {}
-            pastdays = self.get_day_start_utc() - timedelta(days=14)
+            pastdays = self.get_day_start_utc(future=-14)
             for s in self.sites:
                 site = s['resource_id']
                 if not self._data_undampened['siteinfo'].get(site) or len(self._data_undampened['siteinfo'][site].get('forecasts', [])) == 0:
@@ -2133,9 +2144,8 @@ class SolcastApi: # pylint: disable=R0904
                     _LOGGER.info("Dampening forecasts for today onwards for site %s", site)
                 else:
                     continue
-                day_start = self.get_day_start_utc()
                 for interval, forecast in forecasts[site].items():
-                    if interval >= day_start:
+                    if interval >= self.get_day_start_utc():
                         # Apply dampening to the existing data (today onwards only).
                         period_start = forecast["period_start"]
                         dampening_factor = self.__get_dampening_factor(site, period_start.astimezone(self._tz), valid_granular_dampening)
@@ -2238,7 +2248,7 @@ class SolcastApi: # pylint: disable=R0904
             bool: A flag indicating success or failure
         """
         try:
-            lastday = self.get_day_start_utc() + timedelta(days=8)
+            lastday = self.get_day_start_utc(future=8)
             numhours = math.ceil((lastday - self.get_now_utc()).total_seconds() / 3600)
             _LOGGER.debug("Polling API for site %s lastday %s numhours %d", site, lastday.strftime('%Y-%m-%d'), numhours)
 
@@ -2351,12 +2361,12 @@ class SolcastApi: # pylint: disable=R0904
                 self.__forecast_entry_update(forecasts_undampened, period_start, pv, pv10, pv90)
 
             # Forecasts contains up to 730 days of period history data for each site. Convert dictionary to list, retain the past two years, sort by period start.
-            pastdays = self.get_day_start_utc() - timedelta(days=730)
+            pastdays = self.get_day_start_utc(future=-730)
             forecasts = sorted(list(filter(lambda forecast: forecast["period_start"] >= pastdays, forecasts.values())), key=itemgetter("period_start"))
             self._data['siteinfo'].update({site:{'forecasts': copy.deepcopy(forecasts)}})
 
             # Undampened forecasts contains up to 14 days of period history data for each site.
-            pastdays = self.get_day_start_utc() - timedelta(days=14)
+            pastdays = self.get_day_start_utc(future=-14)
             forecasts_undampened = sorted(list(filter(lambda forecast: forecast["period_start"] >= pastdays, forecasts_undampened.values())), key=itemgetter("period_start"))
             self._data_undampened['siteinfo'].update({site:{'forecasts': copy.deepcopy(forecasts_undampened)}})
 
@@ -2715,35 +2725,73 @@ class SolcastApi: # pylint: disable=R0904
     async def __check_data_records(self):
         """Log whether all records are present for each day."""
         try:
+            contiguous = 0
             contiguous_start_date = None
             contiguous_end_date = None
-            all_records = True
+            all_records_good = True
             interval_assessment = {}
 
-            for future in range(0, 8):
-                start_utc = self.get_day_start_utc() + timedelta(days=future)
-                end_utc = start_utc + timedelta(days=1)
-                st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
-                intervals = end_i - st_i
+            def is_dst(_datetime: dt):
+                return _datetime.astimezone(self._tz).dst() == timedelta(hours=1) if dt is not None else None
 
-                interval_date = dt.now(self._tz).date() + timedelta(days=future)
-                if future == 0 and intervals == 48:
-                    contiguous_start_date = interval_date
-                if intervals == 48:
-                    if all_records:
-                        contiguous_end_date = interval_date
+            for future_day in range(0, 8):
+                start_utc = self.get_day_start_utc(future=future_day)
+                end_utc = self.get_day_start_utc(future=future_day+1)
+                st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
+
+                dst_change = DaylightTransition.NO
+                for interval in range(st_i, end_i):
+                    if interval == st_i:
+                        _is_dst = is_dst(self._data_forecasts[interval]['period_start'])
                     else:
-                        interval_assessment[interval_date] = 48
-                else:
-                    all_records = False
-                    interval_assessment[interval_date] = intervals
-            if contiguous_start_date and contiguous_end_date:
-                _LOGGER.debug("Forecast data from %s to %s contains all 48 intervals", contiguous_start_date.strftime('%Y-%m-%d'), contiguous_end_date.strftime('%Y-%m-%d'))
-            if len(interval_assessment.keys()) > 0:
-                for day, intervals in OrderedDict(sorted(interval_assessment.items(), key=lambda k:k[0])).items():
-                    if intervals == 48:
-                        _LOGGER.debug("Forecast data for %s contains all 48 intervals", day.strftime('%Y-%m-%d'))
-                    else:
-                        _LOGGER.debug("Forecast data for %s contains %d of 48 intervals and may produce inaccurate forecast data", day.strftime('%Y-%m-%d'), intervals)
+                        i = is_dst(self._data_forecasts[interval]['period_start'])
+                        if i is not None and i != _is_dst:
+                            if _is_dst:
+                                dst_change = DaylightTransition.TO_STANDARD
+                            else:
+                                dst_change = DaylightTransition.TO_DAYLIGHT
+                intervals = end_i - st_i
+                forecasts_date = dt.now(self._tz).date() + timedelta(days=future_day)
+
+                def set_assessment(is_correct: bool):
+                    nonlocal interval_assessment, forecasts_date, intervals, contiguous, all_records_good, contiguous_end_date
+                    interval_assessment[forecasts_date] = {'intervals': intervals, 'correct': is_correct} # pylint: disable=W0640
+                    if is_correct:
+                        if all_records_good:
+                            contiguous += 1
+                            contiguous_end_date = forecasts_date # pylint: disable=W0640
+                        else:
+                            all_records_good = False
+
+                match intervals:
+                    case 48:
+                        set_assessment(True)
+                    case 46:
+                        if dst_change == DaylightTransition.TO_DAYLIGHT:
+                            set_assessment(True)
+                        else:
+                            set_assessment(False)
+                    case 50:
+                        if dst_change == DaylightTransition.TO_STANDARD:
+                            set_assessment(True)
+                        else:
+                            set_assessment(False)
+                    case _:
+                        set_assessment(False)
+                if future_day == 0 and interval_assessment[forecasts_date]['correct']:
+                    contiguous_start_date = forecasts_date
+            if contiguous > 1:
+                _LOGGER.debug("Forecast data from %s to %s contains all intervals", contiguous_start_date.strftime('%Y-%m-%d'), contiguous_end_date.strftime('%Y-%m-%d'))
+            else:
+                contiguous_end_date = None
+            if contiguous < 8:
+                for day, assessment in OrderedDict(sorted(interval_assessment.items(), key=lambda k:k[0])).items():
+                    if contiguous_end_date is not None and day <= contiguous_end_date:
+                        continue
+                    match assessment['correct']:
+                        case True:
+                            _LOGGER.debug("Forecast data for %s contains all intervals", day.strftime('%Y-%m-%d'))
+                        case False:
+                            _LOGGER.debug("Forecast data for %s contains %d of 48 intervals and may produce inaccurate forecast data", day.strftime('%Y-%m-%d'), intervals)
         except Exception as e:
             _LOGGER.error("Exception in __check_data_records(): %s: %s", e, traceback.format_exc())
