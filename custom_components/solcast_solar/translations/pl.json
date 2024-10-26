@@ -31,8 +31,8 @@
                     "attr_brk_halfhourly": "Włącz atrybuty szczegółów prognozy półgodzinnej",
                     "attr_brk_hourly": "Włącz atrybuty szczegółów prognozy godzinowej",
                     "attr_brk_detailed": "Włącz podział witryny dla atrybutów szczegółów półgodzinnych/godzinnych (nie zostaną one zapisane w atrybutach stanu bazy danych)",
-                    "config_damp": "Zmodyfikuj godzinowe współczynniki tłumienia (po kliknięciu przycisku Prześlij)",
-                    "site_damp": "Ustawiono tłumienie ziarniste: Wyczyść, aby powrócić do ogólnego tłumienia godzinowego"
+                    "config_damp": "Zmodyfikuj godzinowe współczynniki tłumienia (po kliknięciu przycisku „ZATWIERDŹ”)",
+                    "site_damp": "Ustawiono tłumienie szczegółowe: Wyczyść, aby powrócić do ogólnego tłumienia godzinowego"
 
                 },
                 "description": "Opcje konfiguracji Solcast"
@@ -82,7 +82,7 @@
             "options": {
                 "0": "Brak automatycznej aktualizacji prognoz",
                 "1": "Automatyczna aktualizacja prognoz od wschodu do zachodu słońca",
-                "2": "Automatyczna aktualizacja prognoz w ciągu 24 godzin"
+                "2": "Automatyczna aktualizacja prognoz przez 24 godziny"
             }
         },
         "key_estimate": {
@@ -134,7 +134,7 @@
             "fields": {
                 "site": {
                     "name": "Identyfikator witryny",
-                    "description": "Opcjonalne miejsce do tłumienia. (Uwaga: nie będzie działać, jeśli nie jest włączone tłumienie ziarniste.)"
+                    "description": "Opcjonalne miejsce do tłumienia. (Uwaga: nie będzie działać, jeśli nie jest włączone tłumienie szczegółowe.)"
                 }
             }
         },
@@ -212,7 +212,7 @@
             "message": "Tłumienie witryny nie jest ustawione dla {site}, „all” jest jedynym dostępnym parametrem witryny dla zgłoszenia serwisowego."
         },
         "damp_no_factors": {
-            "message": "Żadnych współczynników tłumienia. Musi to być lista liczb oddzielonych przecinkami z zakresu od 0,0 do 1,0."
+            "message": "Brakuje współczynników tłumienia. Musi to być lista liczb oddzielonych przecinkami z zakresu od 0,0 do 1,0."
         },
         "damp_count_not_correct": {
             "message": "Między 0,0 a 1,0 nie ma 24 ani 48 liczb oddzielonych przecinkami."
