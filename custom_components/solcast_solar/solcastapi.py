@@ -1401,8 +1401,8 @@ class SolcastApi: # pylint: disable=R0904
                         _LOGGER.error("Exception in get_forecast_day(): %s: %s", e, traceback.format_exc())
             return ht
 
-        start_utc = self.get_day_start_utc() + timedelta(days=futureday)
-        end_utc = self.get_day_start_utc(future=1)
+        start_utc = self.get_day_start_utc(future=futureday)
+        end_utc = self.get_day_start_utc(future=futureday+1)
         st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
         h = self._data_forecasts[st_i:end_i]
         if self.options.attr_brk_halfhourly:
@@ -2792,6 +2792,6 @@ class SolcastApi: # pylint: disable=R0904
                         case True:
                             _LOGGER.debug("Forecast data for %s contains all intervals", day.strftime('%Y-%m-%d'))
                         case False:
-                            _LOGGER.debug("Forecast data for %s contains %d of 48 intervals and may produce inaccurate forecast data", day.strftime('%Y-%m-%d'), intervals)
+                            _LOGGER.debug("Forecast data for %s contains %d of 48 intervals and may produce inaccurate forecast data", day.strftime('%Y-%m-%d'), assessment['intervals'])
         except Exception as e:
             _LOGGER.error("Exception in __check_data_records(): %s: %s", e, traceback.format_exc())
