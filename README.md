@@ -702,8 +702,10 @@ v4.2.5
 * Proportionally limit site breakdowns by @autoSteve
 * Calculate daily site tally correctly based on hard limit by @autoSteve
 * Immediate application of dampening to future forecasts by @autoSteve
+* Fix daylight time transition issues by @autoSteve
 * Fix system health output exception by @autoSteve
 * Logging improvements for info situational awareness by @auoSteve
+* Update Polish translation, with thanks to @erepeo
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.4...v4.2.5
 
