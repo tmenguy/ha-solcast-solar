@@ -704,7 +704,7 @@ v4.2.5
 * Immediate application of dampening to future forecasts by @autoSteve
 * Fix daylight time transition issues by @autoSteve
 * Fix system health output exception by @autoSteve
-* Logging improvements for info situational awareness by @auoSteve
+* Logging improvements for info situational awareness by @autoSteve
 * Update Polish translation, with thanks to @erepeo
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.4...v4.2.5
