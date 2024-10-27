@@ -15,7 +15,7 @@ This custom component integrates the Solcast PV Forecast for hobbyists into Home
 
 It allows forecast visualisation in the Energy dashboard, and supports flexible forecast dampening, the application of a hard limit for over-sized PV systems, a comprehensive set of sensor and configuration entities, along with sensor attributes containg full forecast detail to support automation and visualisation.
 
-It is a mature integration with an active community, and responsive developers.
+It is a mature integration with an active community, and responsive developers. This integraton is not created by, maintained, endorsed or approved by Solcast.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png)
 
@@ -37,6 +37,7 @@ The integration is not currently in the HACS database, but this is planned. [Thi
 > Solcast have altered their API limits. They now only offer new hobbyist account creators a limit of 10 API calls per day (this used to be 50). Original hobbyist users still have 50 API calls.
 
 # Table of contents
+1. [Key Solcast concepts](#key-solcast-concepts)
 1. [Solcast requirements](#solcast-requirements)
 1. [Installation](#installation)
     1. [HACS recommended](#hacs-recommended)
@@ -55,7 +56,6 @@ The integration is not currently in the HACS database, but this is planned. [Thi
         1. [Reading dampening values](#reading-dampening-values)
     1. [Sensor attributes configuration](#sensor-attributes-configuration)
     1. [Hard limit configuration](#hard-limit-configuration)
-1. [Key Solcast concepts](#key-solcast-concepts)
 1. [Actions, sensors, configuration, diagnostic](#actions,-sensors,-configuration,-diagnostic)
     1. [Actions](#actions)
     1. [Sensors](#sensors)
@@ -65,6 +65,21 @@ The integration is not currently in the HACS database, but this is planned. [Thi
 1. [Sample Apex chart for dashboard](#sample-apex-chart-for-dashboard)
 1. [Known issues](#known-issues)
 1. [Changes](#Changes)
+
+## Key Solcast concepts
+
+Solcast will produce a forecast of solar PV generation for today, tomorrow, the day after (day 3), ... up to day 7. Each of these forecasts is stored by the integration in a separate sensor, with the value being the total predicted solar generation for each day.
+
+Separate sensors are also available that retrieve or calculate the expected peak generation power, peak generation time, and various forecasts of next hour, 30 minutes, and more.
+
+If multiple arrays exist on different roof orientations, these can be configured in Solcast as separate 'sites' with differing azimuth, tilt and generation, to a maximum of two sites for a free hobbyist account. These sites are combined in the integration sensors.
+
+Three solar PV generation estimates are produced by Solcast for every half hour period of all days available.
+- 'central' or 50% or most likely to occur PV forecast is exposed as the `forecast` by the integration.
+- '10%' or 1 in 10 'worst case' PV forecast assuming more cloud coverage, and is exposed as `forecast10`.
+- '90%' or 1 in 10 'best case' PV forecast assuming less cloud coverage, and is exposed as `forecast90`.
+
+The detail of these different forecast estimates can be found in sensor attributes, which contain both 30 minute daily intervals, and calculated hourly invervals across the day. Separate attributes sum the available estimates.
 
 ## Solcast requirements
 
@@ -475,21 +490,6 @@ The scenario requiring use of this limit is straightforward, but note that hardl
 Consider a scenario where you have a single 6kW string inverter, and attached are two strings each of 5.5kW potential generation pointing in separate directions. This is considered "over-sized" from an inverter point of view. It is not possible to set an AC generation limit for Solcast that suits this scenario when configured as two sites, as in the mid-morning or afternoon in Summer a string may in fact be generating 5.5kW DC, with 5kW AC resulting, and the other string will probably be generating as well. So setting an AC limit in Solcast for each string to 3kW (half the inverter) does not make sense. Setting it to 6kW for each string also does not make sense, as Solcast will almost certainly over-state potential generation.
 
 The hard limit may be set in the integration configuration, or set via manually invoking the action in `Developer Tools`.
-
-## Key Solcast concepts
-
-Solcast will produce a forecast of solar PV generation for today, tomorrow, the day after (day 3), ... up to day 7.
-Each of these forecasts will be in a separate sensor (see [Sensors](#sensors) below) and the sensor value will be the total predicted solar generation for your Solcast account for each day.
-Separate sensors contain peak solar generation power, peak solar generation time, and various forecasts of next hour, 30 minutes, etc.
-
-If you have multiple arrays on different roof orientations, these can be configured in Solcast as separate 'sites' with differing azimuth, tilt and generation, to a maximum of two sites for a free hobbyist account.
-
-Three solar PV generation estimates are produced by the Solcast integration:
-- 'central' or 50% or most likely to occur PV forecast (or the `forecast`),
-- '10%' or 1 in 10 'worst case' PV forecast assuming more cloud coverage (`forecast10`)
-- '90%' or 1 in 10 'best case' PV forecast assuming less cloud coverage (`forecast90`)
-
-The detail of these different forecast estimates can be found in sensor attributes, broken down by 30 minute and hourly invervals across the day. Separate attributes sum the different estimates for each day.
 
 ## Actions, sensors, configuration, diagnostic
 
