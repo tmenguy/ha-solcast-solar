@@ -234,7 +234,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not solcast.previously_loaded:
         hard_limit_set, _ = solcast.hard_limit_set()
         if hard_limit_set:
-            _LOGGER.info("Inverter hard limit value is set to limit maximum forecast values")
+            _LOGGER.info("Hard limit is set to limit peak forecast values (%s)", ', '.join(f"{h}kW" for h in solcast.hard_limit.split(',')))
 
     hass.data[DOMAIN]['has_loaded'] = True
 

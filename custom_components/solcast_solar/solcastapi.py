@@ -69,6 +69,23 @@ GRANULAR_DAMPENING_ON = True
 JSON_VERSION = 4
 SET_ALLOW_RESET = True
 
+# HTTP status code translation.
+# A 418 error is included here for fun. This introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
+STATUS_TRANSLATE = {
+    200: 'Success',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'Not found',
+    418: 'I\'m a teapot',
+    429: 'Try again later',
+    500: 'Internal web server error',
+    501: 'Not implemented',
+    502: 'Bad gateway',
+    503: 'Service unavailable',
+    504: 'Gateway timeout',
+}
+
+
 _LOGGER = logging.getLogger(__name__)
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -132,40 +149,6 @@ class JSONDecoder(json.JSONDecoder):
                 ret[key] = value
         return ret
 
-class DaylightTransition(Enum):
-    """Sensor update policy"""
-    NO = 0
-    TO_DAYLIGHT = 1
-    TO_STANDARD = 2
-
-# HTTP status code translation.
-# A 418 error is included here for fun. This introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
-__status_translate = {
-    200: 'Success',
-    401: 'Unauthorized',
-    403: 'Forbidden',
-    404: 'Not found',
-    418: 'I\'m a teapot',
-    429: 'Try again later',
-    500: 'Internal web server error',
-    501: 'Not implemented',
-    502: 'Bad gateway',
-    503: 'Service unavailable',
-    504: 'Gateway timeout',
-}
-
-def translate(status) -> str | Any:
-    """Translate HTTP status code to a human-readable translation.
-
-    Arguments:
-        status (int): A HTTP status code.
-
-    Returns:
-        str: Human readable HTTP status.
-    """
-    return (f"{str(status)}/{__status_translate[status]}") if __status_translate.get(status) else status
-
-
 @dataclass
 class ConnectionOptions:
     """Solcast options for the integration."""
@@ -196,6 +179,7 @@ class SolcastApi: # pylint: disable=R0904
         get_forecast_update: Request forecast data for all sites.
         get_data: Reurn the data dictionary.
         build_forecast_data: Build the forecast, adjusting if dampening or setting a hard limit.
+        check_data_records: Verify that forecasts for day 0..7 contain all forecast periods
 
         get_forecast_list: Service event to get list of forecasts.
         delete_solcast_file: Service event to delete the solcast.json file.
@@ -359,6 +343,17 @@ class SolcastApi: # pylint: disable=R0904
                 return True
         return False
 
+    def __translate(self, status) -> str | Any:
+        """Translate HTTP status code to a human-readable translation.
+
+        Arguments:
+            status (int): A HTTP status code.
+
+        Returns:
+            str: Human readable HTTP status.
+        """
+        return (f"{str(status)}/{STATUS_TRANSLATE[status]}") if STATUS_TRANSLATE.get(status) else status
+
     def __redact_api_key(self, api_key) -> str:
         """Obfuscate API key.
 
@@ -502,7 +497,7 @@ class SolcastApi: # pylint: disable=R0904
                             resp: ClientResponse = await self._aiohttp_session.get(url=url, params=params, headers=self.headers, ssl=False)
 
                             status = resp.status
-                            (_LOGGER.info if status == 200 else _LOGGER.warning)("HTTP session returned status %s in __sites_data()%s", translate(status), ", trying cache" if status != 200 else "")
+                            (_LOGGER.info if status == 200 else _LOGGER.warning)("HTTP session returned status %s in __sites_data()%s", self.__translate(status), ", trying cache" if status != 200 else "")
                             try:
                                 resp_json = await resp.json(content_type=None)
                             except json.decoder.JSONDecodeError:
@@ -538,7 +533,7 @@ class SolcastApi: # pylint: disable=R0904
                             continue
                         if not success:
                             if not use_cache_immediate:
-                                _LOGGER.warning("Retries exhausted gathering sites, last call result: %s, using cached data if it exists", translate(status))
+                                _LOGGER.warning("Retries exhausted gathering sites, last call result: %s, using cached data if it exists", self.__translate(status))
                             status = 404
                             if cache_exists:
                                 async with aiofiles.open(cache_filename) as f:
@@ -568,7 +563,7 @@ class SolcastApi: # pylint: disable=R0904
                     if not self.previously_loaded:
                         _LOGGER.info("Sites loaded%s", (" for " + self.__redact_api_key(api_key)) if self.__is_multi_key() else "")
                 else:
-                    _LOGGER.error("%s HTTP status error %s in __sites_data() while gathering sites", self.options.host, translate(status))
+                    _LOGGER.error("%s HTTP status error %s in __sites_data() while gathering sites", self.options.host, self.__translate(status))
                     raise Exception("HTTP __sites_data() error: gathering sites")
         except ConnectionRefusedError as e:
             _LOGGER.error("Connection refused in __sites_data(): %s", e)
@@ -1041,7 +1036,7 @@ class SolcastApi: # pylint: disable=R0904
                     self._weather = d.get("forecast_descriptor", None).get("description", None)
                     _LOGGER.debug("Weather description: %s", self._weather)
                 else:
-                    raise Exception(f"Gathering weather description failed. request returned: {translate(status)} - Response: {resp_json}.")
+                    raise Exception(f"Gathering weather description failed. request returned: {self.__translate(status)} - Response: {resp_json}.")
 
         except json.decoder.JSONDecodeError:
             _LOGGER.error("JSONDecodeError in get_weather(): Solcast could be having problems")
@@ -2480,21 +2475,21 @@ class SolcastApi: # pylint: disable=R0904
                         elif status == 1000: # An unexpected response.
                             return None
                         else:
-                            _LOGGER.error("API returned status %s, API used is %d/%d", translate(status), self._api_used[api_key], self._api_limit[api_key])
+                            _LOGGER.error("API returned status %s, API used is %d/%d", self.__translate(status), self._api_used[api_key], self._api_limit[api_key])
                             return None
                     else:
                         _LOGGER.warning("API polling limit exhausted, not getting forecast for site %s, API used is %d/%d", site, self._api_used[api_key], self._api_limit[api_key])
                         return None
 
                 _LOGGER.debug("HTTP session returned data type %s", type(resp_json))
-                _LOGGER.debug("HTTP session status %s", translate(status))
+                _LOGGER.debug("HTTP session status %s", self.__translate(status))
 
             if status == 429:
                 _LOGGER.warning("API is too busy, try again later")
             elif status == 400:
-                _LOGGER.warning("Status %s: The site is likely missing capacity, please specify capacity or provide historic data for tuning", translate(status))
+                _LOGGER.warning("Status %s: The site is likely missing capacity, please specify capacity or provide historic data for tuning", self.__translate(status))
             elif status == 404:
-                _LOGGER.error("The site cannot be found, status %s returned", translate(status))
+                _LOGGER.error("The site cannot be found, status %s returned", self.__translate(status))
             elif status == 200:
                 d = cast(dict, resp_json)
                 if FORECAST_DEBUG_LOGGING:
@@ -2692,7 +2687,7 @@ class SolcastApi: # pylint: disable=R0904
             await build_data(self._data_undampened, commencing_undampened, forecasts_undampened, self._site_data_forecasts_undampened, self._sites_hard_limit_undampened)
             self._data_forecasts_undampened = sorted(forecasts_undampened.values(), key=itemgetter("period_start"))
 
-            await self.__check_data_records()
+            await self.check_data_records()
             await self.recalculate_splines()
 
             return True
@@ -2722,7 +2717,7 @@ class SolcastApi: # pylint: disable=R0904
         return idx
 
 
-    async def __check_data_records(self):
+    async def check_data_records(self):
         """Log whether all records are present for each day."""
         try:
             contiguous = 0
@@ -2739,20 +2734,20 @@ class SolcastApi: # pylint: disable=R0904
                 end_utc = self.get_day_start_utc(future=future_day+1)
                 st_i, end_i = self.__get_forecast_list_slice(self._data_forecasts, start_utc, end_utc)
 
-                dst_change = DaylightTransition.NO
+                expected_intervals = 48
                 for interval in range(st_i, end_i):
                     if interval == st_i:
                         _is_dst = is_dst(self._data_forecasts[interval]['period_start'])
                     else:
                         i = is_dst(self._data_forecasts[interval]['period_start'])
                         if i is not None and i != _is_dst:
-                            dst_change = DaylightTransition.TO_STANDARD if _is_dst else DaylightTransition.TO_DAYLIGHT
+                            expected_intervals = 50 if _is_dst else 46
                 intervals = end_i - st_i
                 forecasts_date = dt.now(self._tz).date() + timedelta(days=future_day)
 
                 def set_assessment(is_correct: bool):
-                    nonlocal interval_assessment, forecasts_date, intervals, contiguous, all_records_good, contiguous_end_date
-                    interval_assessment[forecasts_date] = {'intervals': intervals, 'correct': is_correct} # pylint: disable=W0640
+                    nonlocal contiguous, all_records_good, contiguous_end_date
+                    interval_assessment[forecasts_date] = {'expected_intervals': expected_intervals, 'intervals': intervals, 'correct': is_correct} # pylint: disable=W0640
                     if is_correct:
                         if all_records_good:
                             contiguous += 1
@@ -2760,21 +2755,10 @@ class SolcastApi: # pylint: disable=R0904
                     else:
                         all_records_good = False
 
-                match intervals:
-                    case 48:
-                        set_assessment(True)
-                    case 46:
-                        if dst_change == DaylightTransition.TO_DAYLIGHT:
-                            set_assessment(True)
-                        else:
-                            set_assessment(False)
-                    case 50:
-                        if dst_change == DaylightTransition.TO_STANDARD:
-                            set_assessment(True)
-                        else:
-                            set_assessment(False)
-                    case _:
-                        set_assessment(False)
+                if intervals == expected_intervals:
+                    set_assessment(True)
+                else:
+                    set_assessment(False)
                 if future_day == 0 and interval_assessment[forecasts_date]['correct']:
                     contiguous_start_date = forecasts_date
             if contiguous > 1:
@@ -2789,6 +2773,11 @@ class SolcastApi: # pylint: disable=R0904
                         case True:
                             _LOGGER.debug("Forecast data for %s contains all intervals", day.strftime('%Y-%m-%d'))
                         case False:
-                            _LOGGER.debug("Forecast data for %s contains %d of 48 intervals and may produce inaccurate forecast data", day.strftime('%Y-%m-%d'), assessment['intervals'])
+                            _LOGGER.warning(
+                                "Forecast data for %s contains %d of %d intervals, so is missing forecast data",
+                                day.strftime('%Y-%m-%d'),
+                                assessment['intervals'],
+                                assessment['expected_intervals'],
+                            )
         except Exception as e:
-            _LOGGER.error("Exception in __check_data_records(): %s: %s", e, traceback.format_exc())
+            _LOGGER.error("Exception in check_data_records(): %s: %s", e, traceback.format_exc())

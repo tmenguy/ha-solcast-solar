@@ -158,6 +158,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     async def __update_midnight_spline_recalc(self, *args):
         """Re-calculates splines at midnight local time."""
         try:
+            await self.solcast.check_data_records()
             await self.solcast.recalculate_splines()
         except:
             _LOGGER.error("Exception in __update_midnight_spline_recalc(): %s", traceback.format_exc())
