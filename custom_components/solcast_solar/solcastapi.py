@@ -2746,10 +2746,7 @@ class SolcastApi: # pylint: disable=R0904
                     else:
                         i = is_dst(self._data_forecasts[interval]['period_start'])
                         if i is not None and i != _is_dst:
-                            if _is_dst:
-                                dst_change = DaylightTransition.TO_STANDARD
-                            else:
-                                dst_change = DaylightTransition.TO_DAYLIGHT
+                            dst_change = DaylightTransition.TO_STANDARD if _is_dst else DaylightTransition.TO_DAYLIGHT
                 intervals = end_i - st_i
                 forecasts_date = dt.now(self._tz).date() + timedelta(days=future_day)
 
@@ -2760,8 +2757,8 @@ class SolcastApi: # pylint: disable=R0904
                         if all_records_good:
                             contiguous += 1
                             contiguous_end_date = forecasts_date # pylint: disable=W0640
-                        else:
-                            all_records_good = False
+                    else:
+                        all_records_good = False
 
                 match intervals:
                     case 48:
