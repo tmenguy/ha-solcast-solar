@@ -69,7 +69,7 @@ JSON_VERSION = 4
 SET_ALLOW_RESET = True
 
 # HTTP status code translation.
-# A 418 error is included here for fun. This introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
+# A 418 error is included here for fun. This was introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
 STATUS_TRANSLATE = {
     200: 'Success',
     401: 'Unauthorized',
@@ -217,7 +217,7 @@ class SolcastApi: # pylint: disable=R0904
         self,
         aiohttp_session: ClientSession,
         options: ConnectionOptions,
-        api_cache_enabled: bool = False
+        api_cache_enabled: bool=False
     ):
         """Initialisation.
 
