@@ -496,7 +496,11 @@ class SolcastApi: # pylint: disable=R0904
                             resp: ClientResponse = await self._aiohttp_session.get(url=url, params=params, headers=self.headers, ssl=False)
 
                             status = resp.status
-                            (_LOGGER.info if status == 200 else _LOGGER.warning)("HTTP session returned status %s in __sites_data()%s", self.__translate(status), ", trying cache" if status != 200 else "")
+                            (_LOGGER.info if status == 200 else _LOGGER.warning)(
+                                "HTTP session returned status %s in __sites_data()%s",
+                                self.__translate(status),
+                                ", trying cache" if status != 200 else ""
+                            )
                             try:
                                 resp_json = await resp.json(content_type=None)
                             except json.decoder.JSONDecodeError:
@@ -674,7 +678,11 @@ class SolcastApi: # pylint: disable=R0904
                         self._api_limit[api_key] = usage.get("daily_limit", 10)
                         self._api_used[api_key] = usage.get("daily_limit_consumed", 0)
                         self._api_used_reset[api_key] = usage.get("reset", self.__get_utc_previous_midnight())
-                        _LOGGER.debug("Usage cache for %s last reset %s", self.__redact_api_key(api_key), self._api_used_reset[api_key].astimezone(self._tz).strftime(DATE_FORMAT))
+                        _LOGGER.debug(
+                            "Usage cache for %s last reset %s",
+                            self.__redact_api_key(api_key),
+                            self._api_used_reset[api_key].astimezone(self._tz).strftime(DATE_FORMAT)
+                        )
                         if self._api_used_reset[api_key] < earliest_reset:
                             earliest_reset = self._api_used_reset[api_key]
                         if usage['daily_limit'] != quota[api_key]: # Limit has been adjusted, so rewrite the cache.
@@ -1139,7 +1147,12 @@ class SolcastApi: # pylint: disable=R0904
                         configured_sites = [s['resource_id'] for s in self.sites]
                         for s in cache_sites:
                             if s not in configured_sites:
-                                _LOGGER.warning("Site resource id %s is no longer configured, will remove saved data from cached files %s, %s", s, self._filename, self._filename_undampened)
+                                _LOGGER.warning(
+                                    "Site resource id %s is no longer configured, will remove saved data from cached files %s, %s",
+                                    s,
+                                    self._filename,
+                                    self._filename_undampened
+                                )
                                 remove_sites.append(s)
                     except Exception  as e:
                         raise f"Exception while determining stale sites for {self._filename}, {self._filename_undampened}: {e}"
@@ -2439,7 +2452,8 @@ class SolcastApi: # pylint: disable=R0904
                                 break
                             elif status == 429:
                                 try:
-                                    # Test for API limit exceeded {"response_status":{"error_code":"TooManyRequests","message":"You have exceeded your free daily limit.","errors":[]}}.
+                                    # Test for API limit exceeded.
+                                    # {"response_status":{"error_code":"TooManyRequests","message":"You have exceeded your free daily limit.","errors":[]}}
                                     resp_json = await resp.json(content_type=None)
                                     rs = resp_json.get('response_status')
                                     if rs is not None:
@@ -2636,7 +2650,9 @@ class SolcastApi: # pylint: disable=R0904
                                 if estimate is not None and total_estimate is not None:
                                     if total_estimate == 0:
                                         continue
-                                    sites_hard_limit[api_key][pv_estimate][period] = {site: estimate[site] / total_estimate * hard_limit for site in sites if estimate[site] is not None}
+                                    sites_hard_limit[api_key][pv_estimate][period] = {
+                                        site: estimate[site] / total_estimate * hard_limit for site in sites if estimate[site] is not None
+                                    }
                     _LOGGER.debug("Build hard limit processing took %.3f seconds for %s", round(time.time() - st_time, 4), 'dampened' if update_tally else 'un-dampened')
                 else:
                     if multi_key:
