@@ -1838,7 +1838,11 @@ class SolcastApi: # pylint: disable=R0904
 
         n_min (int): Minute of the day.
         """
-        return self._forecasts_moment['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
+        try:
+            return self._forecasts_moment['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
+        except IndexError:
+            _LOGGER.debug("Get moment %d for %s caused index error", n_min, currentFuncName(2))
+            return 0
 
     def __get_remaining(self, site, _data_field, n_min) -> float:
         """Get a remaining value at a given five-minute point from a reducing spline.
@@ -1851,7 +1855,11 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             float: A splined forecasted remaining value as kWh.
         """
-        return self._forecasts_remaining['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
+        try:
+            return self._forecasts_remaining['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
+        except IndexError:
+            _LOGGER.debug("Get remaining %d for %s caused index error", n_min, currentFuncName(2))
+            return 0
 
     def __get_forecast_pv_remaining(self, start_utc, end_utc=None, site=None, _use_data_field=None) -> float:
         """Return estimate remaining for a period.
