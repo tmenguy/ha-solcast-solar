@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Optional, Any, Dict
 from datetime import datetime as dt
 
 import logging
@@ -414,7 +414,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
             _LOGGER.error(traceback.format_exc())
 
     @property
-    def extra_state_attributes(self) -> (Dict[str, Any] | None):
+    def extra_state_attributes(self) -> Optional[Dict[str, Any]]:
         """Return the state extra attributes of the sensor.
 
         Returns:
@@ -427,7 +427,7 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
             return None
 
     @property
-    def native_value(self) -> (int | dt | float | Any | str | bool | None):
+    def native_value(self) -> Optional[int | dt | float | str | bool]:
         """Return the current value of the sensor.
 
         Returns:
@@ -567,11 +567,11 @@ class RooftopSensor(CoordinatorEntity, SensorEntity):
             return None
 
     @property
-    def native_value(self) -> (int | dt | float | Any | str | bool | None):
+    def native_value(self) -> Optional[int | dt | float | str | bool]:
         """Return the current value of the sensor.
 
         Returns:
-            int | dt | float | Any | str | bool | None: The current value of a sensor.
+            int | dt | float | str | bool | None: The current value of a sensor.
         """
         return self._sensor_data
 

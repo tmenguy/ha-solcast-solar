@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime as dt
 from datetime import timedelta
 
-from typing import Any, Dict
+from typing import Optional, Any, Dict
 
 import logging
 import traceback
@@ -163,7 +163,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except:
             _LOGGER.error("Exception in __update_midnight_spline_recalc(): %s", traceback.format_exc())
 
-    def __auto_update_setup(self, init=False):
+    def __auto_update_setup(self, init: bool=False):
         """Daily set up of auto-updates."""
         try:
             match self.solcast.options.auto_update:
@@ -197,7 +197,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self._sunset.astimezone(self.solcast.options.tz).strftime('%H:%M:%S')
         )
 
-    def __calculate_forecast_updates(self, init=False):
+    def __calculate_forecast_updates(self, init: bool=False):
         """Calculate all automated forecast update UTC events for the day.
 
         This is an even spread between sunrise and sunset.
@@ -230,7 +230,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except:
             _LOGGER.error("Exception in __calculate_forecast_updates(): %s", traceback.format_exc())
 
-    async def __forecast_update(self, force=False):
+    async def __forecast_update(self, force: bool=False):
         """Get updated forecast data."""
 
         _LOGGER.debug("Checking for stale usage cache")
@@ -305,7 +305,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """
         return self._data_updated
 
-    def set_data_updated(self, updated):
+    def set_data_updated(self, updated: bool):
         """Set the state of the data updated flag.
 
         Arguments:
@@ -321,7 +321,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """
         return self._date_changed
 
-    def get_sensor_value(self, key="") -> (int | dt | float | Any | str | bool | None):
+    def get_sensor_value(self, key: str="") -> Optional[int | dt | float | str | bool]:
         """Return the value of a sensor."""
         def unit_adjusted(hard_limit):
             if hard_limit >= 1000000:
@@ -394,7 +394,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                             return unit_adjusted(hard_limit)
                 return None
 
-    def get_sensor_extra_attributes(self, key="") -> (Dict[str, Any] | None):
+    def get_sensor_extra_attributes(self, key="") -> Optional[Dict[str, Any]]:
         """Return the attributes for a sensor."""
         match key:
             case "forecast_this_hour":
@@ -450,7 +450,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case _:
                 return None
 
-    def get_site_sensor_value(self, roof_id, key) -> (float | None):
+    def get_site_sensor_value(self, roof_id: str, key: str) -> Optional[float]:
         """Get the site total for today."""
         match key:
             case "site_data":
@@ -458,7 +458,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case _:
                 return None
 
-    def get_site_sensor_extra_attributes(self, roof_id, key) -> (dict[str, Any] | None):
+    def get_site_sensor_extra_attributes(self, roof_id: str, key: str) -> Optional[dict[str, Any]]:
         """Get the attributes for a sensor."""
         match key:
             case "site_data":

@@ -3,7 +3,7 @@
 # pylint: disable=C0304, E0401, W0702, W0703
 
 from __future__ import annotations
-from typing import Any
+from typing import Optional, Any
 
 import os
 from os.path import exists as file_exists
@@ -71,7 +71,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
         return SolcastSolarOptionFlowHandler(entry)
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
+        self, user_input: Optional[dict[str, Any]]=None
     ) -> FlowResult:
         """Handle a flow initiated by the user.
 
@@ -299,7 +299,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             errors=errors
         )
 
-    async def async_step_dampen(self, user_input: dict[str, Any] | None = None) -> FlowResult: #user_input=None):
+    async def async_step_dampen(self, user_input: Optional[dict[str, Any]]=None) -> FlowResult: #user_input=None):
         """Manage the hourly dampening factors sub-option.
 
         Note that the config option "site_damp" is not exposed in any way to the user. This is a

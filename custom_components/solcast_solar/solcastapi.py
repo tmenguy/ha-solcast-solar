@@ -24,7 +24,6 @@ from os.path import exists as file_exists
 from os.path import dirname
 from typing import Optional, Any, Dict, Tuple, cast
 from collections import OrderedDict, defaultdict
-from enum import Enum
 
 import async_timeout # type: ignore
 import aiofiles # type: ignore
@@ -1279,7 +1278,7 @@ class SolcastApi: # pylint: disable=R0904
         """
         return dt.fromisoformat(self._data["last_updated"])
 
-    def get_rooftop_site_total_today(self, site) -> float:
+    def get_rooftop_site_total_today(self, site: str) -> float:
         """Return total kW for today for a site.
 
         Arguments:
@@ -1292,7 +1291,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.warning("Site total kW forecast today is currently unavailable for %s", site)
         return self._tally.get(site)
 
-    def get_rooftop_site_extra_data(self, site="") -> Dict[str, Any]:
+    def get_rooftop_site_extra_data(self, site: str="") -> Dict[str, Any]:
         """Return information about a site.
 
         Arguments:
@@ -1321,7 +1320,7 @@ class SolcastApi: # pylint: disable=R0904
             if ret[key] is None: ret.pop(key, None)
         return ret
 
-    def get_day_start_utc(self, future:int=0) -> dt:
+    def get_day_start_utc(self, future: int=0) -> dt:
         """Datetime helper.
 
         Returns:
@@ -1446,7 +1445,7 @@ class SolcastApi: # pylint: disable=R0904
                     res[f"detailedHourly-{site['resource_id']}"] = hourlytups[site['resource_id']]
         return res
 
-    def get_forecast_n_hour(self, n_hour, site=None, _use_data_field=None) -> int:
+    def get_forecast_n_hour(self, n_hour: int, site: str=None, _use_data_field: str=None) -> int:
         """Return forecast for the Nth hour.
 
         Arguments:
@@ -1483,7 +1482,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_forecast_n_hour(n_hour, _use_data_field=_data_field)
         return res
 
-    def get_forecast_custom_hours(self, n_hours:int, site:str=None, _use_data_field:str=None) -> int:
+    def get_forecast_custom_hours(self, n_hours: int, site: str=None, _use_data_field: str=None) -> int:
         """Return forecast for the next N hours.
 
         Arguments:
@@ -1499,7 +1498,7 @@ class SolcastApi: # pylint: disable=R0904
         res = round(1000 * self.__get_forecast_pv_remaining(start_utc, end_utc=end_utc, site=site, _use_data_field=_use_data_field))
         return res
 
-    def get_forecasts_custom_hours(self, n_hours) -> Dict[str, Any]:
+    def get_forecasts_custom_hours(self, n_hours: int) -> Dict[str, Any]:
         """Return forecast for the next N hours for all sites and individual sites.
 
         Arguments:
@@ -1520,7 +1519,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_forecast_custom_hours(n_hours, _use_data_field=_data_field)
         return res
 
-    def get_power_n_mins(self, n_mins, site=None, _use_data_field=None) -> int:
+    def get_power_n_mins(self, n_mins: int, site: str=None, _use_data_field: str=None) -> int:
         """Return expected power generation in the next N minutes.
 
         Arguments:
@@ -1534,7 +1533,7 @@ class SolcastApi: # pylint: disable=R0904
         time_utc = self.get_now_utc() + timedelta(minutes=n_mins)
         return round(1000 * self.__get_forecast_pv_moment(time_utc, site=site, _use_data_field=_use_data_field))
 
-    def get_sites_power_n_mins(self, n_mins) -> Dict[str, Any]:
+    def get_sites_power_n_mins(self, n_mins: int) -> Dict[str, Any]:
         """Return expected power generation in the next N minutes for all sites and individual sites.
 
         Arguments:
@@ -1555,7 +1554,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_power_n_mins(n_mins, site=None, _use_data_field=_data_field)
         return res
 
-    def get_peak_w_day(self, n_day, site=None, _use_data_field=None) -> int:
+    def get_peak_w_day(self, n_day: int, site: str=None, _use_data_field: str=None) -> int:
         """Return maximum forecast Watts for N days ahead.
 
         Arguments:
@@ -1572,7 +1571,7 @@ class SolcastApi: # pylint: disable=R0904
         res = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, _use_data_field=_data_field)
         return 0 if res is None else round(1000 * res[_data_field])
 
-    def get_sites_peak_w_day(self, n_day) -> Dict[str, Any]:
+    def get_sites_peak_w_day(self, n_day: int) -> Dict[str, Any]:
         """Return maximum forecast Watts for N days ahead for all sites and individual sites.
 
         Arguments:
@@ -1593,7 +1592,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_peak_w_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
-    def get_peak_w_time_day(self, n_day, site=None, _use_data_field=None) -> dt:
+    def get_peak_w_time_day(self, n_day: int, site: str=None, _use_data_field: str=None) -> dt:
         """Return hour of max generation for site N days ahead.
 
         Arguments:
@@ -1609,7 +1608,7 @@ class SolcastApi: # pylint: disable=R0904
         res = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, _use_data_field=_use_data_field)
         return res if res is None else res["period_start"]
 
-    def get_sites_peak_w_time_day(self, n_day) -> Dict[str, Any]:
+    def get_sites_peak_w_time_day(self, n_day: int) -> Dict[str, Any]:
         """Return hour of max generation for site N days ahead for all sites and individual sites.
 
         Arguments:
@@ -1630,7 +1629,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_peak_w_time_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
-    def get_forecast_remaining_today(self, site=None, _use_data_field=None) -> float:
+    def get_forecast_remaining_today(self, site: str=None, _use_data_field: str=None) -> float:
         """Return remaining forecasted production for today.
 
         Arguments:
@@ -1663,7 +1662,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_forecast_remaining_today(_use_data_field=_data_field)
         return res
 
-    def get_total_kwh_forecast_day(self, n_day, site=None, _use_data_field=None) -> float:
+    def get_total_kwh_forecast_day(self, n_day: int, site: str=None, _use_data_field: str=None) -> float:
         """Return forecast production total for N days ahead.
 
         Arguments:
@@ -1679,7 +1678,7 @@ class SolcastApi: # pylint: disable=R0904
         res = round(0.5 * self.__get_forecast_pv_estimates(start_utc, end_utc, site=site, _use_data_field=_use_data_field), 4)
         return res
 
-    def get_sites_total_kwh_forecast_day(self, n_day) -> Dict[str, Any]:
+    def get_sites_total_kwh_forecast_day(self, n_day: int) -> Dict[str, Any]:
         """Return forecast production total for N days ahead for all sites and individual sites.
 
         Arguments:
@@ -1700,7 +1699,7 @@ class SolcastApi: # pylint: disable=R0904
                 res[_data_field.replace('pv_','')] = self.get_total_kwh_forecast_day(n_day, site=None, _use_data_field=_data_field)
         return res
 
-    def __get_forecast_list_slice(self, _data, start_utc, end_utc=None, search_past=False) -> tuple[int, int]:
+    def __get_forecast_list_slice(self, _data: list, start_utc: dt, end_utc: dt=None, search_past: bool=False) -> tuple[int, int]:
         """Return forecast data list slice start and end indexes for interval.
 
         Arguments:
@@ -1735,7 +1734,7 @@ class SolcastApi: # pylint: disable=R0904
             end_i = 0
         return st_i, end_i
 
-    def __get_spline(self, spline, st, xx, _data, data_fields, reducing=False):
+    def __get_spline(self, spline: dict, st: int, xx: list, _data: list, data_fields: list, reducing: bool=False):
         """Build a forecast spline, momentary or day reducing.
 
         Arguments:
@@ -1759,7 +1758,7 @@ class SolcastApi: # pylint: disable=R0904
         if SPLINE_DEBUG_LOGGING:
             _LOGGER.debug(str(spline))
 
-    def __sanitise_spline(self, spline, _data_field, xx, y, reducing=False):
+    def __sanitise_spline(self, spline: dict, _data_field: str, xx: list, y: list, reducing: bool=False):
         """Ensures that no negative values are returned, and also shifts the spline to account for half-hour average input values.
 
         Arguments:
@@ -1788,7 +1787,7 @@ class SolcastApi: # pylint: disable=R0904
         else:
             spline[_data_field] = ([0]*3) + spline[_data_field]
 
-    def __build_splines(self, variant, reducing=False):
+    def __build_splines(self, variant: list, reducing: bool=False):
         """Build cubic splines for interpolated inter-interval momentary or reducing estimates.
 
         Arguments:
@@ -1833,10 +1832,16 @@ class SolcastApi: # pylint: disable=R0904
         await self.__spline_moments()
         await self.__spline_remaining()
 
-    def __get_moment(self, site, _data_field, n_min) -> float:
+    def __get_moment(self, site: str, _data_field: str, n_min: int) -> float:
         """Get a time value from a moment spline.
 
-        n_min (int): Minute of the day.
+        Arguments:
+            site (str): A Solcast site ID.
+            _data_field (str): The forecast type, pv_forecast, pv_forecast10 or pv_forecast90.
+            n_min (int): Minute of the day.
+
+        Returns:
+            float: A splined forecasted value as kW.
         """
         try:
             return self._forecasts_moment['all' if site is None else site][self._use_data_field if _data_field is None else _data_field][int(n_min / 300)]
@@ -1844,7 +1849,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.debug("Get moment %d for %s caused index error", n_min, currentFuncName(2))
             return 0
 
-    def __get_remaining(self, site, _data_field, n_min) -> float:
+    def __get_remaining(self, site: str, _data_field: str, n_min: int) -> float:
         """Get a remaining value at a given five-minute point from a reducing spline.
 
         Arguments:
@@ -1861,7 +1866,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.debug("Get remaining %d for %s caused index error", n_min, currentFuncName(2))
             return 0
 
-    def __get_forecast_pv_remaining(self, start_utc, end_utc=None, site=None, _use_data_field=None) -> float:
+    def __get_forecast_pv_remaining(self, start_utc: dt, end_utc: dt=None, site: str=None, _use_data_field: str=None) -> float:
         """Return estimate remaining for a period.
 
         The start_utc and end_utc will be adjusted to the most recent five-minute period start. Where
@@ -1913,7 +1918,7 @@ class SolcastApi: # pylint: disable=R0904
             raise
             #return 0
 
-    def __get_forecast_pv_estimates(self, start_utc, end_utc, site=None, _use_data_field=None) -> float:
+    def __get_forecast_pv_estimates(self, start_utc: dt, end_utc: dt, site: str=None, _use_data_field: str=None) -> float:
         """Return energy total for a period.
 
         Arguments:
@@ -1953,7 +1958,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.error("Exception in __get_forecast_pv_estimates(): %s: %s", e, traceback.format_exc())
             return 0
 
-    def __get_forecast_pv_moment(self, time_utc, site=None, _use_data_field=None) -> float:
+    def __get_forecast_pv_moment(self, time_utc: dt, site: str=None, _use_data_field: str=None) -> float:
         """Return forecast power for a point in time.
 
         Arguments:
@@ -1980,7 +1985,7 @@ class SolcastApi: # pylint: disable=R0904
             raise
             #return 0
 
-    def __get_max_forecast_pv_estimate(self, start_utc, end_utc, site=None, _use_data_field=None) -> float:
+    def __get_max_forecast_pv_estimate(self, start_utc: dt, end_utc: dt, site: str=None, _use_data_field: str=None) -> float:
         """Return forecast maximum for a period.
 
         Arguments:
@@ -2033,7 +2038,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.error("Exception in get_energy_data(): %s: %s", e, traceback.format_exc())
             return None
 
-    async def get_forecast_update(self, do_past=False, force=False, next_update=None) -> str:
+    async def get_forecast_update(self, do_past: bool=False, force: bool=False, next_update: str=None) -> str:
         """Request forecast data for all sites.
 
         Arguments:
@@ -2239,7 +2244,7 @@ class SolcastApi: # pylint: disable=R0904
             forecasts = sorted(list(forecasts.values()), key=itemgetter("period_start"))
             self._data['siteinfo'].update({site:{'forecasts': copy.deepcopy(forecasts)}})
 
-    async def __http_data_call(self, site=None, api_key=None, do_past=False, force=False) -> bool:
+    async def __http_data_call(self, site: str=None, api_key: str=None, do_past: bool=False, force: bool=False) -> bool:
         """Request forecast data via the Solcast API.
 
         Arguments:
@@ -2382,7 +2387,7 @@ class SolcastApi: # pylint: disable=R0904
         return False
 
 
-    async def __fetch_data(self, hours, path="error", site="", api_key="", cachedname="forecasts", force=False) -> Optional[dict[str, Any]]:
+    async def __fetch_data(self, hours: int, path: str="error", site: str="", api_key: str="", cachedname: str="forecasts", force: bool=False) -> Optional[dict[str, Any]]:
         """Fetch forecast data.
         
         Arguments:
@@ -2561,7 +2566,7 @@ class SolcastApi: # pylint: disable=R0904
                 limit_set = True
         return limit_set, multi_key
 
-    def __hard_limit_for_key(self, api_key):
+    def __hard_limit_for_key(self, api_key: str):
         hard_limit = self.hard_limit.split(',')
         if len(hard_limit) == 1:
             return float(hard_limit[0])
@@ -2704,7 +2709,7 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.error("Exception in get_forecast_update(): %s", traceback.format_exc())
             return False
 
-    def __calc_forecast_start_index(self, _data) -> int:
+    def __calc_forecast_start_index(self, _data: list) -> int:
         """Get the start of forecasts as-at just before midnight.
 
         Doesn't stop at midnight because some sensors may need the previous interval,
