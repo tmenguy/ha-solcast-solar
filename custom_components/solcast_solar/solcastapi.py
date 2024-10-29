@@ -1100,7 +1100,7 @@ class SolcastApi: # pylint: disable=R0904
                                     await self.__serialise_data(data, filename)
                                 if json_version < 5:
                                     data["version"] = 5
-                                    data["last_attempt"] = data["last_updated"]
+                                    data["last_attempt"] = data["last_updated"] - timedelta(minutes=15)
                                     data["auto_updated"] = self.options.auto_update > 0
                                     json_version = 5
                                     await self.__serialise_data(data, filename)
