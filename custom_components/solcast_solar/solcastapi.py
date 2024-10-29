@@ -174,12 +174,13 @@ class ConnectionOptions:
 class SolcastApi: # pylint: disable=R0904
     """The Solcast API.
 
-    Functions:
+    Public functions:
         get_forecast_update: Request forecast data for all sites.
         get_data: Reurn the data dictionary.
         build_forecast_data: Build the forecast, adjusting if dampening or setting a hard limit.
         check_data_records: Verify that forecasts for day 0..7 contain all forecast periods
 
+        get_real_now_utc: Get the complete time now, including seconds and microseconds
         get_forecast_list: Service event to get list of forecasts.
         delete_solcast_file: Service event to delete the solcast.json file.
         get_sites_and_usage: Get the sites and usage, and validate API key changes against the cache files in use.
@@ -692,7 +693,7 @@ class SolcastApi: # pylint: disable=R0904
                         else:
                             if not self.previously_loaded:
                                 _LOGGER.info("Usage loaded%s", (" for " + self.__redact_api_key(api_key)) if self.__is_multi_key() else "")
-                        if self._api_used_reset[api_key] is not None and self.__get_real_now_utc() > self._api_used_reset[api_key] + timedelta(hours=24):
+                        if self._api_used_reset[api_key] is not None and self.get_real_now_utc() > self._api_used_reset[api_key] + timedelta(hours=24):
                             _LOGGER.warning("Resetting usage for %s, last reset was more than 24-hours ago", self.__redact_api_key(api_key))
                             self._api_used[api_key] = 0
                             await self.__serialise_usage(api_key, reset=True)
@@ -1361,7 +1362,7 @@ class SolcastApi: # pylint: disable=R0904
         """
         return dt.now(self._tz).replace(second=0, microsecond=0).astimezone(timezone.utc)
 
-    def __get_real_now_utc(self) -> dt:
+    def get_real_now_utc(self) -> dt:
         """Datetime helper.
 
         Returns:

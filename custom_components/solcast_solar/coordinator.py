@@ -57,6 +57,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._sunrise_tomorrow: dt = None
         self._sunset_tomorrow: dt = None
         self._intervals: list[dt] = []
+        self.interval_just_passed = None
 
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
@@ -122,26 +123,29 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Check for an auto forecast update event."""
         try:
             if self.solcast.options.auto_update:
-                if len(self._intervals) > 0 and self._intervals[0] < self.solcast.get_now_utc() + timedelta(minutes=5):
-                    update_in = (self._intervals[0] - self.solcast.get_now_utc()).total_seconds()
-                    if self.tasks.get('pending_update') is not None:
-                        # An update is already tasked
-                        _LOGGER.debug("Update already tasked. Updating in %d seconds", update_in)
-                        return
-                    _LOGGER.debug("Forecast will update in %d seconds", update_in)
-                    async def wait_for_fetch():
-                        try:
-                            await asyncio.sleep(update_in)
-                            # Proceed with forecast update if not cancelled
-                            _LOGGER.info("Auto update: Fetching forecast")
-                            self._intervals = self._intervals[1:]
-                            await self.__forecast_update()
-                        except asyncio.CancelledError:
-                            _LOGGER.info("Auto update: Cancelled next scheduled update")
-                        finally:
-                            if self.tasks.get('pending_update') is not None:
-                                self.tasks.pop('pending_update')
-                    self.tasks['pending_update'] = asyncio.create_task(wait_for_fetch())
+                if len(self._intervals) > 0:
+                    _now = self.solcast.get_real_now_utc().replace(microsecond=0)
+                    _from = _now.replace(minute=int(_now.minute/5)*5, second=0)
+                    if _from <= self._intervals[0] <= _from + timedelta(seconds=299):
+                        update_in = (self._intervals[0] - _now).total_seconds()
+                        if self.tasks.get('pending_update') is not None:
+                            # An update is already tasked
+                            _LOGGER.debug("Update already tasked and updating in %d seconds", update_in)
+                            return
+                        _LOGGER.debug("Forecast will update in %d seconds", update_in)
+                        async def wait_for_fetch():
+                            try:
+                                await asyncio.sleep(update_in)
+                                # Proceed with forecast update if not cancelled
+                                _LOGGER.info("Auto update: Fetching forecast")
+                                self._intervals = self._intervals[1:]
+                                await self.__forecast_update()
+                            except asyncio.CancelledError:
+                                _LOGGER.info("Auto update: Cancelled next scheduled update")
+                            finally:
+                                if self.tasks.get('pending_update') is not None:
+                                    self.tasks.pop('pending_update')
+                        self.tasks['pending_update'] = asyncio.create_task(wait_for_fetch())
         except:
             _LOGGER.error("Exception in __check_forecast_fetch(): %s", traceback.format_exc())
 
@@ -209,7 +213,14 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 seconds = int((sunset - sunrise).total_seconds())
                 interval = int(seconds / divisions)
                 intervals = [(sunrise + timedelta(seconds=interval) * i) for i in range(0, divisions)]
-                intervals = [i for i in intervals if i > self.solcast.get_now_utc()]
+                _now = self.solcast.get_real_now_utc()
+                for i in intervals:
+                    if i < _now:
+                        self.interval_just_passed = i
+                    else:
+                        break
+                _LOGGER.debug("Auto-update interval just passed: %s", self.interval_just_passed)
+                intervals = [i for i in intervals if i > _now]
                 if log:
                     _LOGGER.debug("Auto update total seconds: %d, divisions: %d, interval: %d seconds", seconds, divisions, interval)
                     if init:

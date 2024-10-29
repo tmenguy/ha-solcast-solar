@@ -242,10 +242,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if solcast.is_stale_data():
         try:
             _LOGGER.info("First start, or integration has been failed for some time, retrieving forecasts (or your update automation has not been running - see readme)")
-            await coordinator.service_event_update()
+            if solcast.options.auto_update == 0:
+                await coordinator.service_event_update()
+            else:
+                await coordinator.service_event_force_update()
         except Exception as e:
             _LOGGER.error("Exception fetching data on stale/initial start: %s: %s", e, traceback.format_exc())
             _LOGGER.warning("Continuing...")
+
+    # If a restart event causes a skipped auto-update then update now.
+    # TODO: This will require a solcast.json schema upgrade to add 'last_attempted', which would be the time of fetch start, because completion cannot be used
+    # if solcast.options.auto_update > 0:
+    #     if coordinator.interval_just_passed > solcast.get_data()['last_attempted'):
+    #         await coordinator.service_event_force_update()
 
     async def action_call_update_forecast(call: ServiceCall):
         """Handle action.
