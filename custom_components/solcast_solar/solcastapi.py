@@ -2820,7 +2820,7 @@ class SolcastApi: # pylint: disable=R0904
                         case True:
                             _LOGGER.debug("Forecast data for %s contains all intervals", day.strftime('%Y-%m-%d'))
                         case False:
-                            _LOGGER.warning(
+                            (_LOGGER.debug if contiguous == 7 else _LOGGER.warning)(
                                 "Forecast data for %s contains %d of %d intervals, so is missing forecast data",
                                 day.strftime('%Y-%m-%d'),
                                 assessment['intervals'],
