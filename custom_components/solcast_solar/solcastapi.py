@@ -65,7 +65,7 @@ currentFuncName = lambda n=0: sys._getframe(n + 1).f_code.co_name # pylint: disa
 
 GRANULAR_DAMPENING_OFF = False
 GRANULAR_DAMPENING_ON = True
-JSON_VERSION = 4
+JSON_VERSION = 5
 SET_ALLOW_RESET = True
 
 # HTTP status code translation.
@@ -142,9 +142,12 @@ class JSONDecoder(json.JSONDecoder):
         """Required hook."""
         ret = {}
         for key, value in obj.items():
-            if key in {'period_start', 'reset'}:
-                ret[key] = dt.fromisoformat(value)
-            else:
+            try:
+                if re.search(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', value):
+                    ret[key] = dt.fromisoformat(value)
+                else:
+                    ret[key] = value
+            except:
                 ret[key] = value
         return ret
 
@@ -190,7 +193,7 @@ class SolcastApi: # pylint: disable=R0904
         granular_dampening_data: Read the current granular dampening file.
         get_dampening: Return the currently set dampening factors for a service call.
 
-        get_last_updated_datetime: Return when the data was last updated.
+        get_last_updated: Return when the data was last updated.
         is_stale_data: Return whether the forecast was last updated some time ago (i.e. is stale).
         get_api_limit: Return API polling limit for this UTC 24hr period (minimum of all API keys).
         get_api_used_count: Return API polling count for this UTC 24hr period (minimum of all API keys).
@@ -252,7 +255,13 @@ class SolcastApi: # pylint: disable=R0904
         self._api_limit = {}
         self._api_used = {}
         self._api_used_reset = {}
-        self._data = {'siteinfo': {}, 'last_updated': dt.fromtimestamp(0, timezone.utc).isoformat(), 'version': JSON_VERSION}
+        self._data = {
+            'siteinfo': {},
+            'last_updated': dt.fromtimestamp(0, timezone.utc),
+            'last_attempt': dt.fromtimestamp(0, timezone.utc),
+            'auto_updated': False,
+            'version': JSON_VERSION
+        }
         self._data_energy = {}
         self._data_forecasts = []
         self._data_forecasts_undampened = []
@@ -328,7 +337,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             bool: True for stale, False if updated recently.
         """
-        return self.get_last_updated_datetime() < self.get_day_start_utc(future=-1)
+        return self.get_last_updated() < self.get_day_start_utc(future=-1)
 
     def is_stale_usage_cache(self) -> bool:
         """Return whether the usage cache was last reset over 24-hours ago (i.e. is stale).
@@ -444,7 +453,7 @@ class SolcastApi: # pylint: disable=R0904
             If the _loaded_data flag is True, yet last_updated is 1/1/1970 then data has not been loaded
             properly for some reason, or no forecast has been received since startup so abort the save.
             """
-            if data['last_updated'] == dt.fromtimestamp(0, timezone.utc).isoformat():
+            if data['last_updated'] == dt.fromtimestamp(0, timezone.utc):
                 _LOGGER.error("Internal error: Forecast cache %s last updated date has not been set, not saving data", filename)
                 return False
             payload = json.dumps(data, ensure_ascii=False, cls=DateTimeEncoder)
@@ -1078,22 +1087,23 @@ class SolcastApi: # pylint: disable=R0904
                             #self._weather = json_data.get("weather", "unknown")
                             _LOGGER.debug("Data cache %s exists, file type is %s", filename, type(json_data))
                             data = json_data
-                            if json_version != JSON_VERSION:
-                                _LOGGER.warning("%s version is not latest (%d vs. %d), upgrading", filename, json_version, JSON_VERSION)
-                                # Future: If the file structure changes then upgrade it
-                                if json_version < 4:
-                                    data['version'] = 4
-                                    json_version = 4
-                                    await self.__serialise_data(data, filename)
-                                #if json_version < 5:
-                                #    upgrade in future...
-                                #    data['version'] = 5
-                                #    json_version = 5
-                                #    await self.__serialise_data(data, filename)
                             if set_loaded:
                                 self._loaded_data = True
-                        if not self.previously_loaded:
-                            _LOGGER.info("%s data loaded", "Dampened" if filename == self._filename else "Undampened")
+                            if not self.previously_loaded:
+                                _LOGGER.info("%s data loaded", "Dampened" if filename == self._filename else "Undampened")
+                            if json_version != JSON_VERSION:
+                                _LOGGER.info("Upgrading %s version from v%d to v%d", filename, json_version, JSON_VERSION)
+                                # Future: If the file structure changes then upgrade it
+                                if json_version < 4:
+                                    data["version"] = 4
+                                    json_version = 4
+                                    await self.__serialise_data(data, filename)
+                                if json_version < 5:
+                                    data["version"] = 5
+                                    data["last_attempt"] = data["last_updated"]
+                                    data["auto_updated"] = self.options.auto_update > 0
+                                    json_version = 5
+                                    await self.__serialise_data(data, filename)
                         return data
                     else:
                         return None
@@ -1130,12 +1140,13 @@ class SolcastApi: # pylint: disable=R0904
 
                     if len(new_sites.keys()) > 0:
                         # Some site data does not exist yet so get it.
+                        # Do not alter self._data['last_attempt'], as not a scheduled thing
                         _LOGGER.info("New site(s) have been added, so getting forecast data for them")
                         for site, api_key in new_sites.items():
                             await self.__http_data_call(site=site, api_key=api_key, do_past=True)
 
-                        self._data["last_updated"] = dt.now(timezone.utc).isoformat()
-                        self._data_undampened["last_updated"] = dt.now(timezone.utc).isoformat()
+                        self._data["last_updated"] = dt.now(timezone.utc).replace(microsecond=0)
+                        self._data_undampened["last_updated"] = dt.now(timezone.utc).replace(microsecond=0)
                         self._data["version"] = JSON_VERSION
                         self._data_undampened["version"] = JSON_VERSION
                         serialise = True
@@ -1284,13 +1295,13 @@ class SolcastApi: # pylint: disable=R0904
     #     """Return weather description."""
     #     return self._weather
 
-    def get_last_updated_datetime(self) -> dt:
+    def get_last_updated(self) -> dt:
         """Return when the data was last updated.
 
         Returns:
             datetime: The last successful forecast fetch.
         """
-        return dt.fromisoformat(self._data["last_updated"])
+        return self._data["last_updated"]
 
     def get_rooftop_site_total_today(self, site: str) -> float:
         """Return total kW for today for a site.
@@ -2062,9 +2073,10 @@ class SolcastApi: # pylint: disable=R0904
             str: An error message, or an empty string for no error.
         """
         try:
+            last_attempt = dt.now(timezone.utc).isoformat()
             status = ''
-            if self.get_last_updated_datetime() + timedelta(minutes=1) > dt.now(timezone.utc):
-                status = f"Not requesting a solar forecast because time is within one minute of last update ({self.get_last_updated_datetime().astimezone(self._tz)})"
+            if self.get_last_updated() + timedelta(minutes=1) > dt.now(timezone.utc):
+                status = f"Not requesting a solar forecast because time is within one minute of last update ({self.get_last_updated().astimezone(self._tz)})"
                 _LOGGER.warning(status)
                 return status
 
@@ -2099,8 +2111,10 @@ class SolcastApi: # pylint: disable=R0904
                     break
 
             if sites_attempted > 0 and not failure:
-                self._data["last_updated"] = dt.now(timezone.utc).isoformat()
-                self._data_undampened["last_updated"] = dt.now(timezone.utc).isoformat()
+                self._data["last_updated"] = dt.now(timezone.utc).replace(microsecond=0)
+                self._data["last_attempt"] = last_attempt
+                self._data["auto_updated"] = self.options.auto_update > 0
+                self._data_undampened["last_updated"] = dt.now(timezone.utc).replace(microsecond=0)
                 #self._data["weather"] = self._weather
 
                 b_status = await self.build_forecast_data()
@@ -2156,7 +2170,7 @@ class SolcastApi: # pylint: disable=R0904
                 self._data_undampened['siteinfo'].update({site:{'forecasts': copy.deepcopy(forecasts_undampened)}})
 
             if len(apply_dampening) > 0:
-                self._data_undampened["last_updated"] = dt.now(timezone.utc).isoformat()
+                self._data_undampened["last_updated"] = dt.now(timezone.utc).replace(microsecond=0)
                 await self.__serialise_data(self._data_undampened, self._filename_undampened)
 
             valid_granular_dampening = self.__valid_granular_dampening()

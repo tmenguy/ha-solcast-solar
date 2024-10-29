@@ -159,7 +159,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except:
             _LOGGER.error("Exception in __update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
 
-    async def __update_midnight_spline_recalc(self, *args):
+    async def __update_midnight_spline_recalc(self):
         """Re-calculates splines at midnight local time."""
         try:
             await self.solcast.check_data_records()
@@ -219,8 +219,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                         self.interval_just_passed = i
                     else:
                         break
-                _LOGGER.debug("Auto-update interval just passed: %s", self.interval_just_passed)
                 intervals = [i for i in intervals if i > _now]
+                if len(intervals) < divisions:
+                    _LOGGER.debug("Previous auto update was at: %s (if auto-update was enabled at the time)", self.interval_just_passed.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
                 if log:
                     _LOGGER.debug("Auto update total seconds: %d, divisions: %d, interval: %d seconds", seconds, divisions, interval)
                     if init:
@@ -262,18 +263,21 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         await self.update_integration_listeners()
         self._data_updated = False
 
-    async def service_event_update(self, *args):
+    async def service_event_update(self, **kwargs):
         """Get updated forecast data when requested by a service call.
+
+        Arguments:
+            kwargs (dict): If a key of "ignore_auto_enabled" exists (regardless of the value), then the API counter will be incremented.
 
         Raises:
             ServiceValidationError: Notify Home Assistant that an error has occurred, with translation.
         """
-        if self.solcast.options.auto_update > 0:
+        if self.solcast.options.auto_update > 0 and 'ignore_auto_enabled' not in kwargs.keys(): # pylint: disable=C0201
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="auto_use_force")
         else:
             self.tasks['forecast_update'] = asyncio.create_task(self.__forecast_update())
 
-    async def service_event_force_update(self, *args):
+    async def service_event_force_update(self):
         """Force the update of forecast data when requested by a service call. Ignores API usage/limit counts.
 
         Raises:
@@ -284,7 +288,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         else:
             self.tasks['forecast_update'] = asyncio.create_task(self.__forecast_update(force=True))
 
-    async def service_event_delete_old_solcast_json_file(self, *args):
+    async def service_event_delete_old_solcast_json_file(self):
         """Delete the solcast.json file when requested by a service call."""
         await self.solcast.delete_solcast_file()
 
@@ -384,7 +388,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "api_limit":
                 return self.solcast.get_api_limit()
             case "lastupdated":
-                return self.solcast.get_last_updated_datetime()
+                return self.solcast.get_last_updated()
             case "hard_limit":
                 hard_limit = float(self.solcast.hard_limit.split(',')[0])
                 if hard_limit == 100:

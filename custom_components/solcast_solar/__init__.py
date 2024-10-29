@@ -7,6 +7,7 @@ import traceback
 import random
 import os
 import json
+from datetime import timedelta
 from typing import Final, Dict, Any
 import asyncio
 import aiofiles # type: ignore
@@ -36,6 +37,7 @@ from .const import (
     BRK_HOURLY,
     BRK_SITE_DETAILED,
     CUSTOM_HOUR_SENSOR,
+    DATE_FORMAT,
     DOMAIN,
     HARD_LIMIT,
     HARD_LIMIT_API,
@@ -250,11 +252,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Exception fetching data on stale/initial start: %s: %s", e, traceback.format_exc())
             _LOGGER.warning("Continuing...")
 
-    # If a restart event causes a skipped auto-update then update now.
-    # TODO: This will require a solcast.json schema upgrade to add 'last_attempted', which would be the time of fetch start, because completion cannot be used
-    # if solcast.options.auto_update > 0:
-    #     if coordinator.interval_just_passed > solcast.get_data()['last_attempted'):
-    #         await coordinator.service_event_force_update()
+    # If a restart event caused a skipped auto-update then update immediately.
+    if solcast.options.auto_update > 0:
+        if solcast.get_data()['auto_updated']:
+            _LOGGER.debug("Checking whether auto update forecast is stale")
+            if coordinator.interval_just_passed is not None and solcast.get_data()['last_attempt'] < coordinator.interval_just_passed - timedelta(minutes=1):
+                _LOGGER.info(
+                    "Last auto update forecast (%s) was prior to expected update at (%s), fetching",
+                    solcast.get_data()['last_attempt'].astimezone(tz).strftime(DATE_FORMAT),
+                    coordinator.interval_just_passed.astimezone(tz).strftime(DATE_FORMAT)
+                )
+                await coordinator.service_event_update(ignore_auto_enabled=True)
+            else:
+                _LOGGER.debug("Auto update forecast is fresh")
 
     async def action_call_update_forecast(call: ServiceCall):
         """Handle action.
