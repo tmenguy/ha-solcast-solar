@@ -258,7 +258,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.debug("Checking whether auto update forecast is stale")
             if coordinator.interval_just_passed is not None and solcast.get_data()['last_attempt'] < coordinator.interval_just_passed - timedelta(minutes=1):
                 _LOGGER.info(
-                    "Last auto update forecast (%s) is prior to expected update at (%s), fetching",
+                    "Last auto update forecast recorded (%s) is older than expected, should be (%s), updating forecast",
                     solcast.get_data()['last_attempt'].astimezone(tz).strftime(DATE_FORMAT),
                     coordinator.interval_just_passed.astimezone(tz).strftime(DATE_FORMAT)
                 )
