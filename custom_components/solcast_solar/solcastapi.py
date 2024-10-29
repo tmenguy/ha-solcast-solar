@@ -1094,15 +1094,18 @@ class SolcastApi: # pylint: disable=R0904
                             if json_version != JSON_VERSION:
                                 _LOGGER.info("Upgrading %s version from v%d to v%d", filename, json_version, JSON_VERSION)
                                 # Future: If the file structure changes then upgrade it
-                                if json_version < 4:
+                                on_version = json_version
+
+                                if json_version < 4: # What happened before v4 stays before v4. BJReplay has no visibility of ancient.
                                     data["version"] = 4
                                     json_version = 4
-                                    await self.__serialise_data(data, filename)
                                 if json_version < 5:
                                     data["version"] = 5
                                     data["last_attempt"] = data["last_updated"] - timedelta(minutes=15)
                                     data["auto_updated"] = self.options.auto_update > 0
                                     json_version = 5
+
+                                if json_version > on_version:
                                     await self.__serialise_data(data, filename)
                         return data
                     else:
