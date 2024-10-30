@@ -781,6 +781,7 @@ v4.2.5
 * Fix daylight time transition issues by @autoSteve
 * Fix system health output exception by @autoSteve
 * Logging improvements for info situational awareness by @autoSteve
+* Auto-update tolerate restart right before scheduled fetch by @autoSteve
 * Update Polish translation, with thanks to @erepeo
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.4...v4.2.5
