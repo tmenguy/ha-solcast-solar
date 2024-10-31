@@ -195,6 +195,7 @@ class SolcastApi: # pylint: disable=R0904
 
         get_last_updated: Return when the data was last updated.
         is_stale_data: Return whether the forecast was last updated some time ago (i.e. is stale).
+        is_stale_usage_cache: Return whether the API usage cache needs to be reset
         get_api_limit: Return API polling limit for this UTC 24hr period (minimum of all API keys).
         get_api_used_count: Return API polling count for this UTC 24hr period (minimum of all API keys).
 
@@ -809,10 +810,13 @@ class SolcastApi: # pylint: disable=R0904
 
     async def reset_api_usage(self):
         """Reset the daily API usage counter."""
-        _LOGGER.debug("Reset API usage")
-        for api_key, _ in self._api_used.items():
-            self._api_used[api_key] = 0
-            await self.__serialise_usage(api_key, reset=True)
+        if self.is_stale_usage_cache():
+            _LOGGER.debug("Reset API usage")
+            for api_key, _ in self._api_used.items():
+                self._api_used[api_key] = 0
+                await self.__serialise_usage(api_key, reset=True)
+        else:
+            _LOGGER.debug("Usage cache is fresh, so not resetting")
 
     def __valid_granular_dampening(self) -> bool:
         """Verify that the in-memory granular dampening is going to work (already checked elsewhere for 24/48 length).
@@ -2084,7 +2088,7 @@ class SolcastApi: # pylint: disable=R0904
                 return status
 
             if next_update is not None:
-                next_update = f", next update at {next_update}"
+                next_update = f", next auto update at {next_update}"
             else:
                 next_update = ''
             await self.refresh_granular_dampening_data()

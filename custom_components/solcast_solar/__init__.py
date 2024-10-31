@@ -243,7 +243,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # If the integration has been failed for some time and then is restarted retrieve forecasts (i.e Home Assistant down for a while).
     if solcast.is_stale_data():
         try:
-            _LOGGER.info("First start, or integration has been failed for some time, retrieving forecasts (or your update automation has not been running - see readme)")
+            _LOGGER.info("The update automation has not been running, updating forecast")
             if solcast.options.auto_update == 0:
                 await coordinator.service_event_update()
             else:

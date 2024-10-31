@@ -52,6 +52,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._last_day: dt = None
         self._date_changed: bool = False
         self._data_updated: bool = False
+        self._sunrise_yesterday: dt = None
+        self._sunset_yesterday: dt = None
         self._sunrise: dt = None
         self._sunset: dt = None
         self._sunrise_tomorrow: dt = None
@@ -176,9 +178,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                     self.__calculate_forecast_updates(init=init)
                 case 2:
                     self._sunrise = self.solcast.get_day_start_utc()
-                    self._sunset = self._sunrise + timedelta(hours=24)
+                    self._sunset = self.solcast.get_day_start_utc(future=1)
                     self._sunrise_tomorrow = self._sunset
-                    self._sunset_tomorrow = self._sunrise_tomorrow + timedelta(hours=24)
+                    self._sunset_tomorrow = self.solcast.get_day_start_utc(future=2)
                     self.__calculate_forecast_updates(init=init)
                 case _:
                     pass
@@ -193,8 +195,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             sunset = get_astral_event_next(self._hass, "sunset", daystart).replace(microsecond=0)
             return sunrise, sunset
 
+        self._sunrise_yesterday, self._sunset_yesterday = sun_rise_set(self.solcast.get_day_start_utc(future=-1))
         self._sunrise, self._sunset = sun_rise_set(self.solcast.get_day_start_utc())
-        self._sunrise_tomorrow, self._sunset_tomorrow = sun_rise_set(self.solcast.get_day_start_utc() + timedelta(hours=24))
+        self._sunrise_tomorrow, self._sunset_tomorrow = sun_rise_set(self.solcast.get_day_start_utc(future=1))
         _LOGGER.debug(
             "Sun rise / set today: %s / %s",
             self._sunrise.astimezone(self.solcast.options.tz).strftime('%H:%M:%S'),
@@ -210,9 +213,13 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             divisions = int(self.solcast.get_api_limit() / round(len(self.solcast.sites) / len(self.solcast.options.api_key.split(",")), 0))
 
             def get_intervals(sunrise: dt, sunset: dt, log=True):
+                intervals_yesterday = []
+                if sunrise == self._sunrise:
+                    seconds = int((self._sunset_yesterday - self._sunrise_yesterday).total_seconds())
+                    intervals_yesterday = [(self._sunrise_yesterday + timedelta(seconds=int(seconds / divisions)) * i) for i in range(0, divisions)]
                 seconds = int((sunset - sunrise).total_seconds())
                 interval = int(seconds / divisions)
-                intervals = [(sunrise + timedelta(seconds=interval) * i) for i in range(0, divisions)]
+                intervals = intervals_yesterday + [(sunrise + timedelta(seconds=interval) * i) for i in range(0, divisions)]
                 _now = self.solcast.get_real_now_utc()
                 for i in intervals:
                     if i < _now:
@@ -220,12 +227,16 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                     else:
                         break
                 intervals = [i for i in intervals if i > _now]
-                if len(intervals) < divisions:
-                    _LOGGER.debug("Previous auto update was at: %s (if auto-update was enabled at the time)", self.interval_just_passed.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT))
                 if log:
                     _LOGGER.debug("Auto update total seconds: %d, divisions: %d, interval: %d seconds", seconds, divisions, interval)
                     if init:
-                        _LOGGER.debug("Auto update will update forecasts %d times %s", divisions, "over 24 hours" if self.solcast.options.auto_update > 1 else "between sunrise and sunset")
+                        _LOGGER.debug("Auto update will update forecasts %s", "over 24 hours" if self.solcast.options.auto_update > 1 else "between sunrise and sunset")
+                if sunrise == self._sunrise:
+                    if self.interval_just_passed in intervals_yesterday:
+                        just_passed = self.interval_just_passed.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT)
+                    else:
+                        just_passed = self.interval_just_passed.astimezone(self.solcast.options.tz).strftime('%H:%M:%S')
+                    _LOGGER.debug("Previous auto update would have been at: %s", just_passed)
                 return intervals
 
             def format_intervals(intervals):
