@@ -240,10 +240,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN]['has_loaded'] = True
 
+    check_data_records_here = True
+
     # If the integration has been failed for some time and then is restarted retrieve forecasts (i.e Home Assistant down for a while).
     if solcast.is_stale_data():
         try:
             _LOGGER.info("The update automation has not been running, updating forecast")
+            check_data_records_here = False
             if solcast.options.auto_update == 0:
                 await coordinator.service_event_update()
             else:
@@ -262,9 +265,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     solcast.get_data()['last_attempt'].astimezone(tz).strftime(DATE_FORMAT),
                     coordinator.interval_just_passed.astimezone(tz).strftime(DATE_FORMAT)
                 )
+                check_data_records_here = False
                 await coordinator.service_event_update(ignore_auto_enabled=True)
             else:
                 _LOGGER.debug("Auto update forecast is fresh")
+
+    if check_data_records_here:
+        await solcast.check_data_records()
 
     async def action_call_update_forecast(call: ServiceCall):
         """Handle action.

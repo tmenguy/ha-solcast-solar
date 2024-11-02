@@ -2075,7 +2075,9 @@ class SolcastApi: # pylint: disable=R0904
 
         Arguments:
             do_past (bool): A optional flag to indicate that past actual forecasts should be retrieved.
- 
+            force (bool): A forced update, which does not update the internal API use counter.
+            next_update (str): A string containing the time that the next auto update will occur (or date/time if the next update is tomorrow).
+
         Returns:
             str: An error message, or an empty string for no error.
         """
@@ -2112,9 +2114,10 @@ class SolcastApi: # pylint: disable=R0904
                                 "Forecast update for the last site queued failed (%s)%s%s", site['resource_id'],
                                 " - API use count may be odd" if not force else "", next_update
                             )
+                        status = 'At least one site forecast get failed'
                     else:
                         _LOGGER.warning("Forecast update failed%s", next_update)
-                    status = 'At least one site forecast get failed'
+                        status = 'Forecast get failed'
                     break
 
             if sites_attempted > 0 and not failure:
@@ -2286,6 +2289,7 @@ class SolcastApi: # pylint: disable=R0904
             site (str): A Solcast site ID
             api_key (str): A Solcast API key appropriate to use for the site
             do_past (bool): A optional flag to indicate that past actual forecasts should be retrieved.
+            force (bool): A forced update, which does not update the internal API use counter.
 
         Returns:
             bool: A flag indicating success or failure
@@ -2293,7 +2297,7 @@ class SolcastApi: # pylint: disable=R0904
         try:
             lastday = self.get_day_start_utc(future=8)
             numhours = math.ceil((lastday - self.get_now_utc()).total_seconds() / 3600)
-            _LOGGER.debug("Polling API for site %s lastday %s numhours %d", site, lastday.strftime('%Y-%m-%d'), numhours)
+            _LOGGER.debug("Polling API for site %s, last day %s, %d hours", site, lastday.strftime('%Y-%m-%d'), numhours)
 
             new_data = []
 
@@ -2431,6 +2435,7 @@ class SolcastApi: # pylint: disable=R0904
             site (str): A Solcast site ID.
             api_key (str): A Solcast API key appropriate to use for the site.
             cachedname (str): "forecasts" or "actuals".
+            force (bool): A forced update, which does not update the internal API use counter.
 
         Returns:
             dict: Raw forecast data points, or None if unsuccessful.
@@ -2825,10 +2830,11 @@ class SolcastApi: # pylint: disable=R0904
                             _LOGGER.debug("Forecast data for %s contains all intervals", day.strftime('%Y-%m-%d'))
                         case False:
                             (_LOGGER.debug if contiguous == 7 else _LOGGER.warning)(
-                                "Forecast data for %s contains %d of %d intervals, so is missing forecast data",
+                                "Forecast data for %s contains %d of %d intervals%s",
                                 day.strftime('%Y-%m-%d'),
                                 assessment['intervals'],
                                 assessment['expected_intervals'],
+                                ", which is expected" if contiguous == 7 else ", so is missing forecast data"
                             )
         except Exception as e:
             _LOGGER.error("Exception in check_data_records(): %s: %s", e, traceback.format_exc())
