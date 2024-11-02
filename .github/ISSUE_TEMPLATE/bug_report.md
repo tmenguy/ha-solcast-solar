@@ -40,7 +40,7 @@ logger:
     custom_components.solcast_solar: debug
 ```
 
-To inspect and collect debug logs examine `/config/home-assistant.log` using File Editor or Studio Code Server.
+To inspect and collect debug logs examine `/config/home-assistant.log` using File Editor or Visual Studio Code Server.
 
 If you are using docker, it sometimes can be easier to gather logs using `docker compose logs -n 500 -f homeassistant` or similar
 
