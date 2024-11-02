@@ -25,6 +25,11 @@ If applicable, add screenshots to help explain your problem.
 
 **Logs**
 
+I confirm:
+- [ ] I have attached **debug** logs 
+- [ ] I have embedded **debug** logs in the issue description (enclosed in tick marks ``` for proper formatting)
+- [ ] Confirmed **debug** logs are not required for this issue
+
 Make sure you include logs from HA listing the output from the Solcast integration showing the error - this is particularly useful in debugging issues and helping to determine whether the issue is with the integration or the Solcast service
 
 To add detailed debug information, add the following to your configuration.yaml and restart HA:
