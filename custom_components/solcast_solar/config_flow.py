@@ -66,7 +66,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             entry (ConfigEntry): The integration entry instance, contains the configuration.
 
         Returns:
-            SolcastSolarOptionFlowHandler: The congig flow handler instance.
+            SolcastSolarOptionFlowHandler: The config flow handler instance.
         """
         return SolcastSolarOptionFlowHandler(entry)
 
@@ -178,7 +178,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         api_key = self.config_entry.options.get(CONF_API_KEY)
         api_quota = self.config_entry.options[API_QUOTA]
         auto_update = self.config_entry.options[AUTO_UPDATE]
-        customhoursensor = self.config_entry.options[CUSTOM_HOUR_SENSOR]
+        custom_hour_sensor = self.config_entry.options[CUSTOM_HOUR_SENSOR]
         hard_limit = self.config_entry.options.get(HARD_LIMIT_API)
         key_estimate = self.config_entry.options.get(KEY_ESTIMATE, "estimate")
         estimate_breakdown = self.config_entry.options[BRK_ESTIMATE]
@@ -214,10 +214,10 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
                 all_config_data[AUTO_UPDATE] = int(user_input[AUTO_UPDATE])
 
-                customhoursensor = user_input[CUSTOM_HOUR_SENSOR]
-                if customhoursensor < 1 or customhoursensor > 144:
+                custom_hour_sensor = user_input[CUSTOM_HOUR_SENSOR]
+                if custom_hour_sensor < 1 or custom_hour_sensor > 144:
                     return self.async_abort(reason="Custom sensor not between 1 and 144")
-                all_config_data[CUSTOM_HOUR_SENSOR] = customhoursensor
+                all_config_data[CUSTOM_HOUR_SENSOR] = custom_hour_sensor
 
                 hard_limit = user_input[HARD_LIMIT_API]
                 to_set = []
@@ -284,7 +284,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     vol.Required(KEY_ESTIMATE, default=key_estimate): SelectSelector(
                         SelectSelectorConfig(options=forecasts, mode=SelectSelectorMode.DROPDOWN, translation_key="key_estimate")
                     ),
-                    vol.Required(CUSTOM_HOUR_SENSOR, default=customhoursensor): int,
+                    vol.Required(CUSTOM_HOUR_SENSOR, default=custom_hour_sensor): int,
                     vol.Required(HARD_LIMIT_API, default=hard_limit): str,
                     vol.Optional(BRK_ESTIMATE10, default=estimate_breakdown10): bool,
                     vol.Optional(BRK_ESTIMATE, default=estimate_breakdown): bool,

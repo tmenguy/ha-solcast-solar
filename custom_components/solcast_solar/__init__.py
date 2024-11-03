@@ -109,25 +109,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry (ConfigEntry): The integration entry instance, contains the configuration.
 
     Raises:
-        ConfigEntryNotReady: Instructs Home Assistant that the integration is not yet ready when a load failure occurrs.
+        ConfigEntryNotReady: Instructs Home Assistant that the integration is not yet ready when a load failure occurs.
 
     Returns:
         bool: Whether setup has completed successfully.
     """
     random.seed()
 
-    optdamp = {}
+    dampening_option = {}
     try:
         # If something ever goes wrong with the damp factors create a default list of no dampening
         for a in range(0,24):
-            optdamp[str(a)] = entry.options[f"damp{str(a).zfill(2)}"]
+            dampening_option[str(a)] = entry.options[f"damp{str(a).zfill(2)}"]
     except:
         new = {**entry.options}
         for a in range(0,24):
             new[f"damp{str(a).zfill(2)}"] = 1.0
         entry.options = {**new}
         for a in range(0,24):
-            optdamp[str(a)] = 1.0
+            dampening_option[str(a)] = 1.0
 
     # async_get_time_zone() mandated in HA core 2024.6.0
     try:
@@ -147,7 +147,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.config.path(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json"),
         tz,
         entry.options.get(AUTO_UPDATE, 0),
-        optdamp,
+        dampening_option,
         entry.options.get(CUSTOM_HOUR_SENSOR, 1),
         entry.options.get(KEY_ESTIMATE, "estimate"),
         entry.options.get(HARD_LIMIT_API,'100.0'),
@@ -373,7 +373,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_error_parsing") #pylint: disable=W0707
             if out_of_range:
-                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_ouside_range")
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_outside_range")
 
             opt = {**entry.options}
 
@@ -549,7 +549,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
-        entry (ConfigEntry): Not ussed.
+        entry (ConfigEntry): Not used.
         device: The device instance.
 
     Returns:

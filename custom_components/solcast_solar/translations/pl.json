@@ -226,7 +226,7 @@
         "damp_error_parsing": {
             "message": "Błąd podczas analizy współczynnika tłumienia liczb oddzielonych przecinkami."
         },
-        "damp_ouside_range": {
+        "damp_outside_range": {
             "message": "Występuje wartość współczynnika tłumienia, która nie mieści się w przedziale od 0,0 do 1,0."
         },
         "hard_empty": {

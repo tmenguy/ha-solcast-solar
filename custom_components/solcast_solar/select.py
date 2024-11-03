@@ -1,4 +1,4 @@
-"""Selector to allow users to select the pv_ data field to use for calcualtions."""
+"""Selector to allow users to select the pv_ data field to use for calculations."""
 
 # pylint: disable=C0304, E0401, W0212
 

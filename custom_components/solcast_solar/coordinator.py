@@ -190,9 +190,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
     def __get_sun_rise_set(self):
         """Get the sunrise and sunset times for today and tomorrow."""
 
-        def sun_rise_set(daystart):
-            sunrise = get_astral_event_next(self._hass, "sunrise", daystart).replace(microsecond=0)
-            sunset = get_astral_event_next(self._hass, "sunset", daystart).replace(microsecond=0)
+        def sun_rise_set(day_start):
+            sunrise = get_astral_event_next(self._hass, "sunrise", day_start).replace(microsecond=0)
+            sunset = get_astral_event_next(self._hass, "sunset", day_start).replace(microsecond=0)
             return sunrise, sunset
 
         self._sunrise_yesterday, self._sunset_yesterday = sun_rise_set(self.solcast.get_day_start_utc(future=-1))

@@ -20,9 +20,9 @@ async def test():
     """Testing..."""
     print('This script is for development purposes only')
     try:
-        optdamp = {}
+        dampening_option  = {}
         for a in range(0,24):
-            optdamp[str(a)] = 1.0
+            dampening_option [str(a)] = 1.0
 
         options = ConnectionOptions(
             "apikeygoeshere",
@@ -31,7 +31,7 @@ async def test():
             "/config",
             "Australia/Sydney",
             False,
-            optdamp,
+            dampening_option ,
             1,
             "estimate",
             100,

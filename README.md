@@ -67,18 +67,23 @@ The integration is not currently in the HACS database, but this is planned. [Thi
 
 ## Key Solcast concepts
 
-Solcast will produce a forecast of solar PV generation for today, tomorrow, the day after (day 3), ... up to day 7. Each of these forecasts is stored by the integration in a separate sensor, with the value being the total predicted solar generation for each day.
+Solcast will produce a forecast of solar PV generation from today through seven days into the future. Each of these day forecasts are exposed by the integration as a separate sensor, with the value being the total predicted solar generation for each day.
 
-Separate sensors are also available that retrieve or calculate the expected peak generation power, peak generation time, and various forecasts of next hour, 30 minutes, and more.
+Separate sensors are also available that contain the expected peak generation power, peak generation time, and various forecasts of next hour, 30 minutes, and more.
 
-If multiple arrays exist on different roof orientations, these can be configured in Solcast as separate 'sites' with differing azimuth, tilt and generation, to a maximum of two sites for a free hobbyist account. These sites are combined in the integration sensors.
+If multiple arrays exist on different roof orientations, these can be configured in Solcast as separate 'sites' with differing azimuth, tilt and peak generation, to a maximum of two sites for a free hobbyist account. These sites are combined to form the integration sensor values.
 
-Three solar PV generation estimates are produced by Solcast for every half hour period of all days available.
-- 'central' or 50% or most likely to occur PV forecast is exposed as the `forecast` by the integration.
-- '10%' or 1 in 10 'worst case' PV forecast assuming more cloud coverage and is exposed as `forecast10`.
-- '90%' or 1 in 10 'best case' PV forecast assuming less cloud coverage and is exposed as `forecast90`.
+Three solar generation estimates are produced by Solcast for every half hour period of all forecasted days.
 
-The detail of these different forecast estimates can be found in sensor attributes, which contain both 30-minute daily intervals, and calculated hourly intervals across the day. Separate attributes sum the available estimates.
+* 'central' or 50% or most likely to occur forecast is exposed as the `forecast` by the integration.
+* '10%' or 1 in 10 'worst case' forecast assuming more cloud coverage than expected, exposed as `forecast10`.
+* '90%' or 1 in 10 'best case' forecast assuming less cloud coverage than expected, exposed as `forecast90`.
+
+The detail of these different forecast estimates can be found in sensor attributes, which contain both 30-minute daily intervals, and calculated hourly intervals across the day. Separate attributes sum the available estimates or break things down by site.
+
+The Energy dashboard in Home Assistant is populated with a specific data structure that is provided by the integration. (This does not come from sensor data.) Manipulation of forecasted values to account for shading is possible by setting dampening factors for hourly or half-hourly periods, and a "hard limit" may be set for over-sized solar arrays where expected generation cannot exceed an inverter maximum rating. These two mechanisms are the only ways to manipulate the data.
+
+Historical forecast data is retained by the integration for up to two years, and this is stored in an integration data file. Forecast history is not stored as Home Assistant statistics.
 
 ## Solcast requirements
 
@@ -308,16 +313,16 @@ mode: single
 > Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration cannot start correctly, and it will retry continuously.
 
 ```
-INFO (MainThread) [custom_components.solcast_solar.solcastapi] Getting forecast update for Solcast site 1234-5678-9012-3456
-DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Polling API for rooftop_id 1234-5678-9012-3456
+INFO (MainThread) [custom_components.solcast_solar.solcastapi] Getting forecast update for site 1234-5678-9012-3456
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Polling API for site 1234-5678-9012-3456
 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Fetch data url - https://api.solcast.com.au/rooftop_sites/1234-5678-9012-3456/forecasts
 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Fetching forecast
 WARNING (MainThread) [custom_components.solcast_solar.solcastapi] Solcast API is busy, pausing 55 seconds before retry
 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Fetching forecast
 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] API returned data. API Counter incremented from 35 to 36
 DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] Writing usage cache
-DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] HTTP ssession returned data type in fetch_data() is <class 'dict'>
-DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] HTTP session status in fetch_data() is 200/Success
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] HTTP session returned data type <class 'dict'>
+DEBUG (MainThread) [custom_components.solcast_solar.solcastapi] HTTP session status is 200/Success
 ```
 
 ### Set up HA energy dashboard settings
@@ -345,7 +350,7 @@ Dampening is applied to future forecasts whenever a forecast is fetched, so fore
 
 > [!NOTE]
 >
-> Retained dampened historical forecasts is a recent change, and may require automation modification to read undampened forecast history instead. See [Reading forecast values in an automation](#reading-forecast-values-in-an-automation) and [Changes](#changes) below.
+> Retained dampened historical forecasts is a recent change, and may require automation modification to read un-dampened forecast history instead. See [Reading forecast values in an automation](#reading-forecast-values-in-an-automation) and [Changes](#changes) below.
 
 Per-site and per-half hour dampening is possible only by using the `solcast_solar.set_dampening` action or modifying a dampening configuration file. See [Granular dampening](#granular-dampening) below.
 
@@ -427,7 +432,7 @@ Example of half-hourly dampening for all sites:
 
 #### Reading forecast values in an automation
 
-When calculating dampening using an automation it may be beneficial to use undampened forecast values as input.
+When calculating dampening using an automation it may be beneficial to use un-dampened forecast values as input.
 
 This is possible by using the action `solcast_solar.query_forecast_data`, and including `undampened: true` in the parameters. If using granular dampening then the site may also be included in the action parameters:
 
@@ -440,7 +445,7 @@ data:
   #site: 1111-aaaa-bbbb-2222
 ```
 
-Undampened forecast history is retained for just 14 days.
+Un-dampened forecast history is retained for just 14 days.
 
 #### Reading dampening values
 
@@ -940,7 +945,7 @@ Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.39...v
 v4.0.39
 * Updates to sensor descriptions, and alter some sensor names by @isorin (Potentially breaking for UI/automations/etc. should these these sensors be in use. Power in 30/60 minutes, and custom X hours sensor.)
 * Remove dependency on scipy library by @autoSteve
-* Add granular configuration options for attributes by @autosteve
+* Add granular configuration options for attributes by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.38...v4.0.39
 
@@ -990,7 +995,7 @@ v4.0.33
   * Reduced the update interval of sensors to 5 minutes
   * Split the sensors into two groups: sensors that need to be updated every 5 minutes and sensors that need to be updated only when the data is refreshed or the date changes (daily values)
   * Fixed issues with removing the past forecasts (older than 2 years), broken code
-  * Improve the functionality of the forecasts, for exmaple "forecast_remaining_today" is updated every 5 minutes by calculating the remaining energy from the current 30 minute interval. Same for "now/next hour" sensors.
+  * Improve the functionality of the forecasts, for example "forecast_remaining_today" is updated every 5 minutes by calculating the remaining energy from the current 30 minute interval. Same for "now/next hour" sensors.
 * Redaction of Solcast API key in logs by @isorin
 * Revert Oziee '4.0.23' async_update_options #54 by @autoSteve, which was causing dampening update issues
 
@@ -1007,7 +1012,7 @@ v4.0.32
 - Bug fix: Independent API use counter for each Solcast account by @autoSteve
 - Bug fix: Force all caches to /config/ for all platforms (fixes Docker deployments) #43 by @autoSteve
 - Improve forecast fetch/retry logging debug, info, warning choice by @autoSteve
-- Suppression of consecutive forecast fetches within fifteen minutes (fixes strange mutliple fetches should a restart occur exactly when automation for fetch is triggered) by @autoSteve
+- Suppression of consecutive forecast fetches within fifteen minutes (fixes strange multiple fetches should a restart occur exactly when automation for fetch is triggered) by @autoSteve
 - Work-around: Prevent error when 'tally' is unavailable during retry by #autoSteve
 - Fix for earlier HA versions not recognising version= for async_update_entry() #40 by autoSteve
 
@@ -1073,7 +1078,7 @@ v4.0.25
 
 v4.0.24
 - More changes to remove links to https://github.com/oziee that were missed the first time around
-- More changes to prepare to submit to HACSs
+- More changes to prepare to submit to HACS
 
 v4.0.23
 - Changed Owner to @BJReplay
@@ -1146,7 +1151,7 @@ v4.0.7
 
 v4.0.6
 - fixed divide by zero errors if there is no returned data
-- fixed renaining today forecast value. now includes current 30min block forecast in the calculation
+- fixed remaining today forecast value. now includes current 30min block forecast in the calculation
 
 v4.0.5
 - PR #192 - updated German translation.. thanks @florie1706
@@ -1160,29 +1165,29 @@ v4.0.4
 v4.0.3
 - updated German thanks to @florie1706 PR#179 and removed all other localisation files
 - added new attribute `detailedHourly` to each daily forecast sensor listing hourly forecasts in kWh
-- if there is data missing, sensors will still show something but a debug log will outpout that the sensor is missing data
+- if there is data missing, sensors will still show something but a debug log will output that the sensor is missing data
 
 
 v4.0.2
-- sensor names **have** changed!! this is due to locali(s/z)ation strings of the integration
-- decimal percision changed for forecast tomorrow from 0 to 2
+- sensor names **have** changed!! this is due to localisation strings of the integration
+- decimal precision changed for forecast tomorrow from 0 to 2
 - fixed 7th day forecast missing data that was being ignored
 - added new sensor `Power Now`
 - added new sensor `Power Next 30 Mins`
 - added new sensor `Power Next Hour`
-- added locali(s/z)ation for all objects in the integation.. thanks to @ViPeR5000 for getting me started on thinking about this (google translate used, if you find anything wrong PR and i can update the translations)
+- added localisation for all objects in the integration.. thanks to @ViPeR5000 for getting me started on thinking about this (google translate used, if you find anything wrong PR and i can update the translations)
 
 v4.0.1
 - rebased from 3.0.55
 - keeps the last 730 days (2 years) of forecast data
 - some sensors have have had their device_class and native_unit_of_measurement updated to a correct type
-- API polling count is read directly from Solcast and is no longer calcuated
+- API polling count is read directly from Solcast and is no longer calculated
 - no more auto polling.. its now up to every one to create an automation to poll for data when you want. This is due to so many users now only have 10 api calls a day
 - striped out saving UTC time changing and keeping solcast data as it is so timezone data can be changed when needed
-- history items went missing due to the sensor renamed. no longer using the HA history and instead just dtoring the data in the solcast.json file
-- removed update actuals service.. actuals data from solcast is no longer polled (it is used on the first install to get past data so the integration works and i dont get issue reports because solcast do not give full day data, only data from when you call)
+- history items went missing due to the sensor renamed. no longer using the HA history and instead just storing the data in the solcast.json file
+- removed update actual service.. actual data from solcast is no longer polled (it is used on the first install to get past data so the integration works and i don't get issue reports because solcast do not give full day data, only data from when you call)
 - lots of the logging messages have been updated to be debug,info,warning or errors
-- some sensors **COULD** possibly no longer have extra attribute values or attribute values may have been renamed or have changed to the data storaged within
+- some sensors **COULD** possibly no longer have extra attribute values or attribute values may have been renamed or have changed to the data stored within
 - greater in depth diagnostic data to share when needed to help debug any issues
 - some of @rany2 work has been now integrated
 
@@ -1203,7 +1208,7 @@ v3.0.47
 {{ state_attr('sensor.solcast_forecast_D7', 'dayname') }}
 
 v3.0.46
-- possile Maria DB problem - possible fix
+- possible Maria DB problem - possible fix
 
 v3.0.45
 - pre release
@@ -1212,7 +1217,7 @@ v3.0.45
 
 v3.0.44
 - pre release
-- better diagnotic data
+- better diagnostic data
 - just for testing
 - wont hurt anything if you do install it
 
@@ -1226,8 +1231,8 @@ v3.0.42
 v3.0.41
 - recoded logging. Re-worded. More debug vs info vs error logging.
 - API usage counter was not recorded when reset to zero at UTC midnight
-- added a new service where you can call to update the Solcast Actuals data for the forecasts
-- added the version info to the intergation UI
+- added a new service where you can call to update the Solcast actual data for the forecasts
+- added the version info to the integration UI
 
 v3.0.40
 - someone left some unused code in 3.0.39 causing problems
@@ -1272,7 +1277,7 @@ v3.0.29
 
 
 v3.0.27
-- changed unit for peak measurement #86 tbanks Ivesvdf
+- changed unit for peak measurement #86 thanks Ivesvdf
 - some other minor text changes for logs
 - changed service call thanks 696GrocuttT
 - including fix for issue #83
@@ -1282,7 +1287,7 @@ v3.0.26
 
 v3.0.25
 - removed PR for 3.0.24 - caused errors in the forecast graph
-- fixed HA 2022.11 cant add forcast to solar dashboard
+- fixed HA 2022.11 cant add forecast to solar dashboard
 
 v3.0.24
 - merged PR from @696GrocuttT 
@@ -1336,7 +1341,7 @@ v3.0.9
 v3.0.6
 - **users upgrading from v3.0.x need to delete the 'solcast.json' file in the HA>config directory**
 - fixed lots of little bugs and problems.
-- added ability to add multiple solcast accounts. Just comma seperate the api_keys in the integration config.
+- added ability to add multiple solcast accounts. Just comma separate the api_keys in the integration config.
 - remained API Counter to API Left. shows how many is remaining rather than used count.
 - 'actual forecast' data is now only called once, the last api call at sunset. OR during integration install first run.
 - forecast data is still called every hour between sunrise and sunset and once at midnight every day.
