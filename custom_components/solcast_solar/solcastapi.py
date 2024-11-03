@@ -858,7 +858,7 @@ class SolcastApi: # pylint: disable=R0904
             try:
                 async with self._serialise_lock:
                     async with aiofiles.open(json_file, 'w') as f:
-                        await f.write(payload)
+                        await f.write(payload) # pylint: disable=E0606
                 self._granular_dampening_mtime = os.path.getmtime(json_file)
             except Exception as e:
                 _LOGGER.error("Exception writing site dampening for %s: %s", json_file, e)
