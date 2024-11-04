@@ -18,7 +18,6 @@ from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.const import CONF_API_KEY, Platform # type: ignore
 from homeassistant.core import (HomeAssistant, # type: ignore
                                 ServiceCall,
-                                ServiceResponse,
                                 SupportsResponse,)
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, ServiceValidationError # type: ignore
 from homeassistant.helpers import config_validation as cv # type: ignore
@@ -101,12 +100,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     * Load previously saved data.
     * Instantiate the coordinator.
     * Add unload hook on options change.
-    * Trigger a forecast update for new installs (or after a 'stale' start).
-    * Set up actions.
+    * Trigger a forecast update after a 'stale' start.
+    * Trigger a forecast update after a missed auto-update.
+    * Set up service call actions.
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
-        entry (ConfigEntry): The integration entry instance, contains the configuration.
+        entry (ConfigEntry): The integration entry instance, contains the options and other information.
 
     Raises:
         ConfigEntryNotReady: Instructs Home Assistant that the integration is not yet ready when a load failure occurs.
@@ -518,13 +518,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry.
+    """Unload config entry.
 
     This also removes the services available.
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
-        entry (ConfigEntry): The integration entry instance, contains the configuration.
+        entry (ConfigEntry): The integration entry instance.
 
     Returns:
         bool: Whether the unload completed successfully.
@@ -567,7 +567,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
-        entry (ConfigEntry): The integration entry instance, contains the configuration.
+        entry (ConfigEntry): The integration entry instance.
     """
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
@@ -686,7 +686,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
-        entry (ConfigEntry): The integration entry instance, contains the configuration.
+        entry (ConfigEntry): The integration entry instance, contains the options and other information.
 
     Returns:
         bool: Whether the config upgrade completed successfully.
