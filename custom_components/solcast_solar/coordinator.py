@@ -139,11 +139,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                             try:
                                 await asyncio.sleep(update_in)
                                 # Proceed with forecast update if not cancelled
-                                _LOGGER.info("Auto update: Fetching forecast")
+                                _LOGGER.info("Auto update forecast")
                                 self._intervals = self._intervals[1:]
                                 await self.__forecast_update()
                             except asyncio.CancelledError:
-                                _LOGGER.info("Auto update: Cancelled next scheduled update")
+                                _LOGGER.info("Auto update cancelled next scheduled update")
                             finally:
                                 if self.tasks.get('pending_update') is not None:
                                     self.tasks.pop('pending_update')
@@ -230,7 +230,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 if log:
                     _LOGGER.debug("Auto update total seconds: %d, divisions: %d, interval: %d seconds", seconds, divisions, interval)
                     if init:
-                        _LOGGER.debug("Auto update will update forecasts %s", "over 24 hours" if self.solcast.options.auto_update > 1 else "between sunrise and sunset")
+                        _LOGGER.debug("Auto update forecasts %s", "over 24 hours" if self.solcast.options.auto_update > 1 else "between sunrise and sunset")
                 if sunrise == self._sunrise:
                     if self.interval_just_passed in intervals_yesterday:
                         just_passed = self.interval_just_passed.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT)
@@ -247,9 +247,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self._intervals = intervals_today + intervals_tomorrow
 
             if len(intervals_today) > 0:
-                _LOGGER.info("Auto update: Forecast update%s for today at %s", 's' if len(intervals_today) > 1 else '', ', '.join(format_intervals(intervals_today)))
+                _LOGGER.info("Auto forecast update%s for today at %s", 's' if len(intervals_today) > 1 else '', ', '.join(format_intervals(intervals_today)))
             if len(intervals_today) < divisions: # Only log tomorrow if part-way though today, or today has no more updates
-                _LOGGER.info("Auto update: Forecast update%s for tomorrow at %s", 's' if len(intervals_tomorrow) > 1 else '', ', '.join(format_intervals(intervals_tomorrow)))
+                _LOGGER.info("Auto forecast update%s for tomorrow at %s", 's' if len(intervals_tomorrow) > 1 else '', ', '.join(format_intervals(intervals_tomorrow)))
         except:
             _LOGGER.error("Exception in __calculate_forecast_updates(): %s", traceback.format_exc())
 
