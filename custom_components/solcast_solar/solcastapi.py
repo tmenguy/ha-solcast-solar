@@ -2788,7 +2788,7 @@ class SolcastApi: # pylint: disable=R0904
             interval_assessment = {}
 
             def is_dst(_datetime: dt):
-                return _datetime.astimezone(self._tz).dst() == timedelta(hours=1) if _datetime is not None else None
+                return (_datetime.astimezone(self._tz).dst() == timedelta(hours=1)) if _datetime is not None else None
 
             for future_day in range(0, 8):
                 start_utc = self.get_day_start_utc(future=future_day)
