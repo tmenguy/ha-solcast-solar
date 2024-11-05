@@ -361,7 +361,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "peak_w_today":
                 return self.solcast.get_peak_power_day(0)
             case "peak_w_time_today":
-                return self.solcast.get_peak_power_time_day(0)
+                return self.solcast.get_peak_time_day(0)
             case "forecast_this_hour":
                 return self.solcast.get_forecast_n_hour(0)
             case "forecast_next_hour":
@@ -391,7 +391,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "peak_w_tomorrow":
                 return self.solcast.get_peak_power_day(1)
             case "peak_w_time_tomorrow":
-                return self.solcast.get_peak_power_time_day(1)
+                return self.solcast.get_peak_time_day(1)
             case "get_remaining_today":
                 return self.solcast.get_forecast_remaining_today()
             case "api_counter":
@@ -466,11 +466,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "peak_w_today":
                 return self.solcast.get_sites_peak_power_day(0)
             case "peak_w_time_today":
-                return self.solcast.get_sites_peak_power_time_day(0)
+                return self.solcast.get_sites_peak_time_day(0)
             case "peak_w_tomorrow":
                 return self.solcast.get_sites_peak_power_day(1)
             case "peak_w_time_tomorrow":
-                return self.solcast.get_sites_peak_power_time_day(1)
+                return self.solcast.get_sites_peak_time_day(1)
             case "get_remaining_today":
                 return self.solcast.get_forecasts_remaining_today()
             case _:

@@ -188,7 +188,7 @@ class SolcastApi: # pylint: disable=R0904
         granular_dampening_data: Read the current granular dampening file.
         get_dampening: Return the currently set dampening factors for a service call.
 
-        get_last_updated: Return when the data was last updated.
+        get_last_updated: Return when the forecast was last updated.
         is_stale_data: Return whether the forecast was last updated some time ago (i.e. is stale).
         is_stale_usage_cache: Return whether the API usage cache needs to be reset
         get_api_limit: Return API polling limit for this UTC 24hr period (minimum of all API keys).
@@ -196,7 +196,7 @@ class SolcastApi: # pylint: disable=R0904
 
         get_rooftop_site_total_today: Return total kW for today for a site.
         get_rooftop_site_extra_data: Return information about a site.
-        get_forecast_day: Return forecast data for the Nth day ahead.
+        get_forecast_day: Return forecast for the Nth day ahead.
         get_forecast_n_hour: Return forecast for the Nth hour. Based from prior hour point.
         get_forecasts_n_hour: Return forecast for the Nth hour for all sites and individual sites.
         get_forecast_custom_hours: Return forecast for the next N hours. Interpolated, based from prior 5-minute point.
@@ -205,8 +205,8 @@ class SolcastApi: # pylint: disable=R0904
         get_sites_power_n_minutes: Return expected power generation in the next N minutes for all sites and individual sites.
         get_peak_power_day: Return max kW for site N days ahead.
         get_sites_peak_power_day: Return max kW for site N days ahead for all sites and individual sites.
-        get_peak_power_time_day: Return hour of max kW for site N days ahead.
-        get_sites_peak_power_time_day: Return hour of max kW for site N days ahead for all sites and individual sites.
+        get_peak_time_day: Return hour of max kW for site N days ahead.
+        get_sites_peak_time_day: Return hour of max kW for site N days ahead for all sites and individual sites.
         get_forecast_remaining_today: Return remaining forecasted production for today. Interpolated, based from prior 5-minute point.
         get_forecasts_remaining_today: Return remaining forecasted production for today for all sites and individual sites.
         get_total_energy_forecast_day: Return forecast kWh total for site N days ahead.
@@ -226,7 +226,7 @@ class SolcastApi: # pylint: disable=R0904
         Arguments:
             aiohttp_session (ClientSession): The aiohttp client session provided by Home Assistant
             options (ConnectionOptions): The integration stored configuration options.
-            api_cache_enabled (bool): Utilise cached data instead of getting updates from Solcast (default: {False}).
+            api_cache_enabled (bool): Utilise cached data for development instead of getting updates from Solcast (default: {False}).
         """
 
         self.custom_hour_sensor = options.custom_hour_sensor
@@ -284,10 +284,10 @@ class SolcastApi: # pylint: disable=R0904
         _LOGGER.debug("Configuration directory is %s", self._config_dir)
 
     async def set_options(self, options: dict):
-        """Set the class option variables (used by __init__ to avoid an integration reload).
+        """Set the class option variables (called by __init__ to avoid an integration reload).
 
         Arguments:
-            options (dict): The data field to use for sensor values
+            options (dict): The integration entry options.
         """
         self.damp = {str(i): options[f"damp{i:02}"] for i in range(0,24)}
         self.options = ConnectionOptions(
@@ -1633,7 +1633,7 @@ class SolcastApi: # pylint: disable=R0904
                 result[forecast_confidence.replace('pv_','')] = self.get_peak_power_day(n_day, site=None, forecast_confidence=forecast_confidence)
         return result
 
-    def get_peak_power_time_day(self, n_day: int, site: str=None, forecast_confidence: str=None) -> dt:
+    def get_peak_time_day(self, n_day: int, site: str=None, forecast_confidence: str=None) -> dt:
         """Return hour of max generation for site N days ahead.
 
         Arguments:
@@ -1649,7 +1649,7 @@ class SolcastApi: # pylint: disable=R0904
         result = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence)
         return result if result is None else result["period_start"]
 
-    def get_sites_peak_power_time_day(self, n_day: int) -> Dict[str, Any]:
+    def get_sites_peak_time_day(self, n_day: int) -> Dict[str, Any]:
         """Return hour of max generation for site N days ahead for all sites and individual sites.
 
         Arguments:
@@ -1661,13 +1661,13 @@ class SolcastApi: # pylint: disable=R0904
         result = {}
         if self.options.attr_brk_site:
             for site in self.sites:
-                result[site['resource_id']] = self.get_peak_power_time_day(n_day, site=site['resource_id'])
+                result[site['resource_id']] = self.get_peak_time_day(n_day, site=site['resource_id'])
                 for forecast_confidence in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
                     if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_power_time_day(n_day, site=site['resource_id'], forecast_confidence=forecast_confidence)
+                        result[forecast_confidence.replace('pv_','')+'-'+site['resource_id']] = self.get_peak_time_day(n_day, site=site['resource_id'], forecast_confidence=forecast_confidence)
         for forecast_confidence in ('pv_estimate', 'pv_estimate10', 'pv_estimate90'):
             if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace('pv_','')] = self.get_peak_power_time_day(n_day, site=None, forecast_confidence=forecast_confidence)
+                result[forecast_confidence.replace('pv_','')] = self.get_peak_time_day(n_day, site=None, forecast_confidence=forecast_confidence)
         return result
 
     def get_forecast_remaining_today(self, site: str=None, forecast_confidence: str=None) -> float:
@@ -2573,7 +2573,7 @@ class SolcastApi: # pylint: disable=R0904
         Returns:
             dict: An energy dashboard compatible data structure.
         """
-        generation = {}
+        forecast_generation = {}
         try:
             last_value = -1
             last_period_start = -1
@@ -2582,19 +2582,19 @@ class SolcastApi: # pylint: disable=R0904
                 value = forecast[self._use_forecast_confidence]
                 if value == 0.0:
                     if last_value > 0.0:
-                        generation[period_start] = 0.0
-                        generation[last_period_start] = 0.0
+                        forecast_generation[period_start] = 0.0
+                        forecast_generation[last_period_start] = 0.0
                 else:
                     if last_value == 0.0:
-                        generation[last_period_start] = 0.0
-                    generation[period_start] = round(value * 500,0)
+                        forecast_generation[last_period_start] = 0.0
+                    forecast_generation[period_start] = round(value * 500,0)
 
                 last_period_start = period_start
                 last_value = value
         except:
             _LOGGER.error("Exception in __make_energy_dict(): %s", traceback.format_exc())
 
-        return {"wh_hours": generation}
+        return {"wh_hours": forecast_generation}
 
     def __site_api_key(self, site: str):
         for _site in self.sites:
