@@ -76,7 +76,6 @@ STATUS_TRANSLATE = {
     504: 'Gateway timeout',
 }
 
-
 _LOGGER = logging.getLogger(__name__)
 
 #Return the function name at a specified caller depth. 0=current, 1=caller, 2=caller of caller, etc.
@@ -96,9 +95,9 @@ class DateKeyEncoder(json.JSONEncoder):
         if isinstance(o, dt):
             return str(o)
         elif isinstance(o, dict):
-            return {self._preprocess_date(k): self._preprocess_date(v) for k,v in o.items()}
+            return {self._preprocess_date(key): self._preprocess_date(value) for key, value in o.items()}
         elif isinstance(o, list):
-            return [self._preprocess_date(i) for i in o]
+            return [self._preprocess_date(_object) for _object in o]
         return o
 
     def default(self, o):
@@ -289,7 +288,7 @@ class SolcastApi: # pylint: disable=R0904
         Arguments:
             options (dict): The integration entry options.
         """
-        self.damp = {str(i): options[f"damp{i:02}"] for i in range(0,24)}
+        self.damp = {str(hour): options[f"damp{hour:02}"] for hour in range(0,24)}
         self.options = ConnectionOptions(
             # All these options require a reload, and can not be dynamically set, hence retrieval from self.options...
             self.options.api_key,
@@ -502,7 +501,7 @@ class SolcastApi: # pylint: disable=R0904
                             response: ClientResponse = await self._aiohttp_session.get(url=url, params=params, headers=self.headers, ssl=False)
 
                             status = response.status
-                            (_LOGGER.info if status == 200 else _LOGGER.warning)(
+                            (_LOGGER.debug if status == 200 else _LOGGER.warning)(
                                 "HTTP session returned status %s in __sites_data()%s",
                                 self.__translate(status),
                                 ", trying cache" if status != 200 else ""
@@ -515,8 +514,8 @@ class SolcastApi: # pylint: disable=R0904
                                 raise
 
                             if status == 200:
-                                for i in response_json['sites']:
-                                    i['api_key'] = api_key
+                                for site in response_json['sites']:
+                                    site['api_key'] = api_key
                                 if response_json['total_records'] > 0:
                                     _LOGGER.debug("Writing sites cache")
                                     async with self._serialise_lock:
@@ -655,10 +654,10 @@ class SolcastApi: # pylint: disable=R0904
             api_keys = self.options.api_key.split(",")
             api_quota = self.options.api_quota.split(",")
             try:
-                for i in range(len(api_keys)): # If only one quota value is present, yet there are multiple sites then use the same quota.
-                    if len(api_quota) < i+1:
-                        api_quota.append(api_quota[i-1])
-                quota = { api_keys[i].strip(): int(api_quota[i].strip()) for i in range(len(api_quota)) }
+                for index in range(len(api_keys)): # If only one quota value is present, yet there are multiple sites then use the same quota.
+                    if len(api_quota) < index+1:
+                        api_quota.append(api_quota[index-1])
+                quota = { api_keys[index].strip(): int(api_quota[index].strip()) for index in range(len(api_quota)) }
             except Exception as e:
                 _LOGGER.error("Exception in __sites_usage(): %s", e)
                 _LOGGER.warning("Could not interpret API limit configuration string (%s), using default of 10", self.options.api_quota)
@@ -1784,10 +1783,10 @@ class SolcastApi: # pylint: disable=R0904
         """
         for forecast_confidence in confidences:
             if start > 0:
-                y = [data[start+i][forecast_confidence] for i in range(0, len(self._spline_period))]
+                y = [data[start+index][forecast_confidence] for index in range(0, len(self._spline_period))]
                 if reducing:
                     # Build a decreasing set of forecasted values instead.
-                    y = [0.5 * sum(y[i:]) for i in range(0, len(self._spline_period))]
+                    y = [0.5 * sum(y[index:]) for index in range(0, len(self._spline_period))]
                 spline[forecast_confidence] = cubic_interp(xx, self._spline_period, y)
                 self.__sanitise_spline(spline, forecast_confidence, xx, y, reducing=reducing)
             else: # The list slice was not found, so zero all values in the spline.
@@ -1805,19 +1804,19 @@ class SolcastApi: # pylint: disable=R0904
             y (list): The period momentary or reducing input data used for the spline calculation.
             reducing (bool): A flag to indicate whether the spline is momentary power, or reducing energy, default momentary.
         """
-        for j in xx:
-            i = int(j/300)
+        for interval in xx:
+            spline_index = int(interval/300) # Every five minutes
             # Suppress negative values.
-            if math.copysign(1.0, spline[forecast_confidence][i]) < 0:
-                spline[forecast_confidence][i] = 0.0
+            if math.copysign(1.0, spline[forecast_confidence][spline_index]) < 0:
+                spline[forecast_confidence][spline_index] = 0.0
             # Suppress spline bounce.
             if reducing:
-                if i+1 <= len(xx)-1 and spline[forecast_confidence][i+1] > spline[forecast_confidence][i]:
-                    spline[forecast_confidence][i+1] = spline[forecast_confidence][i]
+                if spline_index+1 <= len(xx)-1 and spline[forecast_confidence][spline_index+1] > spline[forecast_confidence][spline_index]:
+                    spline[forecast_confidence][spline_index+1] = spline[forecast_confidence][spline_index]
             else:
-                k = int(math.floor(j/1800))
-                if k+1 <= len(y)-1 and y[k] == 0 and y[k+1] == 0:
-                    spline[forecast_confidence][i] = 0.0
+                y_index = int(math.floor(interval/1800)) # Every half hour
+                if y_index+1 <= len(y)-1 and y[y_index] == 0 and y[y_index+1] == 0:
+                    spline[forecast_confidence][spline_index] = 0.0
         # Shift right by fifteen minutes because 30-minute averages, padding as appropriate.
         if reducing:
             spline[forecast_confidence] = ([spline[forecast_confidence][0]]*3) + spline[forecast_confidence]
@@ -2430,7 +2429,6 @@ class SolcastApi: # pylint: disable=R0904
             _LOGGER.error("Exception in __http_data_call(): %s: %s", e, traceback.format_exc())
         return False
 
-
     async def __fetch_data(self, hours: int, path: str="error", site: str="", api_key: str="", cached_name: str="forecasts", force: bool=False) -> Optional[dict[str, Any]]:
         """Fetch forecast data.
         
@@ -2770,13 +2768,12 @@ class SolcastApi: # pylint: disable=R0904
             int: The starting index of the data structure just prior to midnight local time.
         """
         midnight_utc = self.get_day_start_utc()
-        for idx in range(len(data)-1, -1, -1):
-            if data[idx]["period_start"] < midnight_utc:
+        for index in range(len(data)-1, -1, -1):
+            if data[index]["period_start"] < midnight_utc:
                 break
         #if SENSOR_DEBUG_LOGGING:
-        #    _LOGGER.debug("Calc forecast start index midnight: %s, idx %d, len %d", midnight_utc.strftime(DATE_FORMAT_UTC), idx, len(data))
-        return idx
-
+        #    _LOGGER.debug("Calc forecast start index midnight: %s, index %d, len %d", midnight_utc.strftime(DATE_FORMAT_UTC), index, len(data))
+        return index
 
     async def check_data_records(self):
         """Log whether all records are present for each day."""
@@ -2800,8 +2797,8 @@ class SolcastApi: # pylint: disable=R0904
                     if interval == start_index:
                         _is_dst = is_dst(self._data_forecasts[interval]['period_start'])
                     else:
-                        i = is_dst(self._data_forecasts[interval]['period_start'])
-                        if i is not None and i != _is_dst:
+                        is_daylight = is_dst(self._data_forecasts[interval]['period_start'])
+                        if is_daylight is not None and is_daylight != _is_dst:
                             expected_intervals = 50 if _is_dst else 46
                 intervals = end_index - start_index
                 forecasts_date = dt.now(self._tz).date() + timedelta(days=future_day)
