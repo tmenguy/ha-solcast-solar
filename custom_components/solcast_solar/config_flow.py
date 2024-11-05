@@ -51,7 +51,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     # 10 unreleased
     # 11 unreleased
     # 12 started 4.1.8
-    # 14 started 4.2.4????
+    # 14 started 4.2.4
 
     VERSION = 14
 

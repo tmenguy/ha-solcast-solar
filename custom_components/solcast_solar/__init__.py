@@ -122,10 +122,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for a in range(0,24):
             dampening_option[str(a)] = entry.options[f"damp{str(a).zfill(2)}"]
     except:
-        new = {**entry.options}
+        new_options = {**entry.options}
         for a in range(0,24):
-            new[f"damp{str(a).zfill(2)}"] = 1.0
-        entry.options = {**new}
+            new_options[f"damp{str(a).zfill(2)}"] = 1.0
+        entry.options = {**new_options}
         for a in range(0,24):
             dampening_option[str(a)] = 1.0
 
@@ -584,7 +584,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 
     try:
         reload = False
-        recalculate = False
+        recalculate_and_refresh = False
         recalculate_splines = False
 
         def changed(config):
@@ -599,17 +599,18 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
         # Dampening must be the first check with the code as-is...
         if not reload:
             damp_changed = False
-            d = {}
+            damp_factors = {}
             for i in range(0,24):
-                d.update({f"{i}": entry.options[f"damp{i:02}"]})
+                damp_factors.update({f"{i}": entry.options[f"damp{i:02}"]})
                 if changed(f"damp{i:02}"):
-                    recalculate = True
+                    recalculate_and_refresh = True
                     damp_changed = True
-            if recalculate:
-                coordinator.solcast.damp = d
+                    break
+            if recalculate_and_refresh:
+                coordinator.solcast.damp = damp_factors
 
             # Attribute changes, which will need a recalculation of splines
-            if not recalculate:
+            if not recalculate_and_refresh:
                 recalculate_splines = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE) or changed(KEY_ESTIMATE)
 
             if changed(SITE_DAMP):
@@ -622,19 +623,19 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                     else:
                         _LOGGER.debug("Granular dampening file not reset")
             if damp_changed:
-                recalculate = True
+                recalculate_and_refresh = True
                 await coordinator.solcast.reapply_forward_dampening()
 
         if reload:
             determination = 'The integration will reload'
-        elif recalculate:
+        elif recalculate_and_refresh:
             determination = 'Recalculate forecasts and refresh sensors'
         else:
-            determination = 'Refresh sensors only' + (' (with spline recalculate)' if recalculate_splines else '')
+            determination = 'Refresh sensors only' + (', with spline recalculate' if recalculate_splines else '')
         _LOGGER.debug("Options updated, action: %s", determination)
         if not reload:
             await coordinator.solcast.set_options(entry.options)
-            if recalculate:
+            if recalculate_and_refresh:
                 await coordinator.solcast.build_forecast_data()
             elif recalculate_splines:
                 await coordinator.solcast.recalculate_splines()
@@ -657,25 +658,28 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Upgrade configuration.
 
-    v4:  (?)        Remove option for auto-poll
+    v4:  (ancient)  Remove option for auto-poll
     v5:  (4.0.8)    Dampening factor for each hour
     v6:  (4.0.15)   Add custom sensor for next X hours
     v7:  (4.0.16)   Selectable estimate value to use estimate, estimate10, estimate90
     v8:  (4.0.39)   Selectable attributes for sensors
     v9:  (4.1.3)    API limit (because Solcast removed an API call)
-    v10: (4.1.8)    Day 1..7 detailed breakdown by site
-    v11: (4.1.8)    Auto-update as binaries, plus add missing hard limit
-    v12: (4.1.8)    Alter auto-update to 0=off, 1=sunrise/sunset, 2=24-hour
+    v10:            Day 1..7 detailed breakdown by site, incorporated in v12 (development version)
+    v11:            Auto-update as binaries (development version)
+    v12: (4.1.8)    Auto-update as 0=off, 1=sunrise/sunset, 2=24-hour, plus add missing hard limit
+    v13:            Unlucky for some, skipped
+    v14: (4.2.4)    Hard limit adjustable by Solcast account
 
     An upgrade of the integration will sequentially upgrade options to the current
     version, with this function needing to consider all upgrade history and new defaults.
 
     An integration downgrade must not cause any issues when future options have been
     configured, with future options then just being unused. To be clear, the intent or
-    characteristics of an option cannot change with an upgrade. These should also be
-    re-defaulted on subsequent upgrade.
+    characteristics of an option cannot change with an upgrade, so if an intent does change
+    then an new option must be used (for example, HARD_LIMIT to HARD_LIMIT_API). Prior
+    versions must cope with the absence of an option should one be deleted.
 
-    The present version (e.g. `VERSION = 9`) is specified in `config_flow.py`.
+    The present version (e.g. `VERSION = 14`) is specified in `config_flow.py`.
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
@@ -693,88 +697,88 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         pass
 
     if entry.version < 4:
-        new = {**entry.options}
-        new.pop("const_disableautopoll", None)
+        new_options = {**entry.options}
+        new_options.pop("const_disableautopoll", None)
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=4)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=4)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 4
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
 
     if entry.version < 5:
-        new = {**entry.options}
+        new_options = {**entry.options}
         for a in range(0,24):
-            new[f"damp{str(a).zfill(2)}"] = 1.0
+            new_options[f"damp{str(a).zfill(2)}"] = 1.0
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=5)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=5)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 5
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
 
     if entry.version < 6:
-        new = {**entry.options}
-        new[CUSTOM_HOUR_SENSOR] = 1
+        new_options = {**entry.options}
+        new_options[CUSTOM_HOUR_SENSOR] = 1
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=6)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=6)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 6
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
 
     if entry.version < 7:
-        new = {**entry.options}
-        new[KEY_ESTIMATE] = "estimate"
+        new_options = {**entry.options}
+        new_options[KEY_ESTIMATE] = "estimate"
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=7)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=7)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 7
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
 
     if entry.version < 8:
-        new = {**entry.options}
-        if new.get(BRK_ESTIMATE) is None: new[BRK_ESTIMATE] = True
-        if new.get(BRK_ESTIMATE10) is None: new[BRK_ESTIMATE10] = True
-        if new.get(BRK_ESTIMATE90) is None: new[BRK_ESTIMATE90] = True
-        if new.get(BRK_SITE) is None: new[BRK_SITE] = True
-        if new.get(BRK_HALFHOURLY)is None: new[BRK_HALFHOURLY] = True
-        if new.get(BRK_HOURLY) is None: new[BRK_HOURLY] = True
+        new_options = {**entry.options}
+        if new_options.get(BRK_ESTIMATE) is None: new_options[BRK_ESTIMATE] = True
+        if new_options.get(BRK_ESTIMATE10) is None: new_options[BRK_ESTIMATE10] = True
+        if new_options.get(BRK_ESTIMATE90) is None: new_options[BRK_ESTIMATE90] = True
+        if new_options.get(BRK_SITE) is None: new_options[BRK_SITE] = True
+        if new_options.get(BRK_HALFHOURLY)is None: new_options[BRK_HALFHOURLY] = True
+        if new_options.get(BRK_HOURLY) is None: new_options[BRK_HOURLY] = True
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=8)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=8)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 8
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
 
     if entry.version < 9:
-        new = {**entry.options}
+        new_options = {**entry.options}
         try:
             default = []
             _config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__) ,"../.."))
-            for spl in new[CONF_API_KEY].split(','):
-                api_cache_filename = f"{_config_dir}/solcast-usage{'' if len(new[CONF_API_KEY].split(',')) < 2 else '-' + spl.strip()}.json"
+            for spl in new_options[CONF_API_KEY].split(','):
+                api_cache_filename = f"{_config_dir}/solcast-usage{'' if len(new_options[CONF_API_KEY].split(',')) < 2 else '-' + spl.strip()}.json"
                 async with aiofiles.open(api_cache_filename) as f:
                     usage = json.loads(await f.read())
                 default.append(str(usage['daily_limit']))
@@ -782,78 +786,51 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except Exception as e:
             _LOGGER.warning("Could not load API usage cached limit while upgrading config, using default of ten: %s", e)
             default = '10'
-        if new.get(API_QUOTA) is None: new[API_QUOTA] = default
+        if new_options.get(API_QUOTA) is None: new_options[API_QUOTA] = default
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=9)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=9)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 9
-                hass.config_entries.async_update_entry(entry, options=new)
-                upgraded()
-            else:
-                raise
-
-    if entry.version < 10:
-        new = {**entry.options}
-        if new.get(BRK_SITE_DETAILED) is None: new[BRK_SITE_DETAILED] = False
-        try:
-            hass.config_entries.async_update_entry(entry, options=new, version=10)
-            upgraded()
-        except Exception as e:
-            if "unexpected keyword argument 'version'" in e:
-                entry.version = 10
-                hass.config_entries.async_update_entry(entry, options=new)
-                upgraded()
-            else:
-                raise
-
-    if entry.version < 11:
-        new = {**entry.options}
-        if new.get(AUTO_UPDATE) is None: new[AUTO_UPDATE] = False
-        if new.get("auto_24_hour") is None: new["auto_24_hour"] = False
-        if new.get(HARD_LIMIT) is None: new[HARD_LIMIT] = 100000
-        try:
-            hass.config_entries.async_update_entry(entry, options=new, version=11)
-            upgraded()
-        except Exception as e:
-            if "unexpected keyword argument 'version'" in e:
-                entry.version = 11
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
 
     if entry.version < 12:
-        new = {**entry.options}
+        new_options = {**entry.options}
         # Convert from short-lived options schema v11
-        new[AUTO_UPDATE] = int(new.get(AUTO_UPDATE, False))
-        if new.get("auto_24_hour", False): new[AUTO_UPDATE] = 2
-        new.pop("auto_24_hour", None)
+        new_options[AUTO_UPDATE] = int(new_options.get(AUTO_UPDATE, 0))
+        if new_options.get(BRK_SITE_DETAILED) is None: new_options[BRK_SITE_DETAILED] = False
+        if new_options.get(HARD_LIMIT) is None: new_options[HARD_LIMIT] = 100000
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=12)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=12)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 12
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
 
     if entry.version < 14:
-        new = {**entry.options}
-        if new.get(HARD_LIMIT_API) is None:
-            hard_limit = new.get(HARD_LIMIT,100000) / 1000
-            new[HARD_LIMIT_API] = f"{hard_limit:.1f}"
-            new.pop(HARD_LIMIT)
+        new_options = {**entry.options}
+        if new_options.get(HARD_LIMIT_API) is None:
+            hard_limit = new_options.get(HARD_LIMIT,100000) / 1000
+            new_options[HARD_LIMIT_API] = f"{hard_limit:.1f}"
+            try:
+                new_options.pop(HARD_LIMIT)
+            except:
+                pass
         try:
-            hass.config_entries.async_update_entry(entry, options=new, version=14)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=14)
             upgraded()
         except Exception as e:
             if "unexpected keyword argument 'version'" in e:
                 entry.version = 14
-                hass.config_entries.async_update_entry(entry, options=new)
+                hass.config_entries.async_update_entry(entry, options=new_options)
                 upgraded()
             else:
                 raise
