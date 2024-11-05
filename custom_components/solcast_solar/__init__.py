@@ -1,4 +1,4 @@
-"""Support for Solcast PV forecast, intialisation."""
+"""Solcast PV forecast, initialisation."""
 
 # pylint: disable=C0304, C0321, E0401, E1135, W0613, W0702, W0718
 
@@ -240,13 +240,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN]['has_loaded'] = True
 
-    check_data_records_here = True
-
     # If the integration has been failed for some time and then is restarted retrieve forecasts (i.e Home Assistant down for a while).
     if solcast.is_stale_data():
         try:
             _LOGGER.info("The update automation has not been running, updating forecast")
-            check_data_records_here = False
             if solcast.options.auto_update == 0:
                 await coordinator.service_event_update()
             else:
@@ -265,13 +262,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     solcast.get_data()['last_attempt'].astimezone(tz).strftime(DATE_FORMAT),
                     coordinator.interval_just_passed.astimezone(tz).strftime(DATE_FORMAT)
                 )
-                check_data_records_here = False
                 await coordinator.service_event_update(ignore_auto_enabled=True)
             else:
                 _LOGGER.debug("Auto update forecast is fresh")
-
-    if check_data_records_here:
-        await solcast.check_data_records()
 
     async def action_call_update_forecast(call: ServiceCall):
         """Handle action.
@@ -591,8 +584,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
 
     try:
         reload = False
-        recalc = False
-        respline = False
+        recalculate = False
+        recalculate_splines = False
 
         def changed(config):
             return hass.data[DOMAIN]['entry_options'].get(config) != entry.options.get(config)
@@ -610,14 +603,14 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             for i in range(0,24):
                 d.update({f"{i}": entry.options[f"damp{i:02}"]})
                 if changed(f"damp{i:02}"):
-                    recalc = True
+                    recalculate = True
                     damp_changed = True
-            if recalc:
+            if recalculate:
                 coordinator.solcast.damp = d
 
-            # Attribute changes, which will need a recalulation of splines
-            if not recalc:
-                respline = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE) or changed(KEY_ESTIMATE)
+            # Attribute changes, which will need a recalculation of splines
+            if not recalculate:
+                recalculate_splines = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE) or changed(KEY_ESTIMATE)
 
             if changed(SITE_DAMP):
                 damp_changed = True
@@ -629,21 +622,21 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
                     else:
                         _LOGGER.debug("Granular dampening file not reset")
             if damp_changed:
-                recalc = True
+                recalculate = True
                 await coordinator.solcast.reapply_forward_dampening()
 
         if reload:
             determination = 'The integration will reload'
-        elif recalc:
+        elif recalculate:
             determination = 'Recalculate forecasts and refresh sensors'
         else:
-            determination = 'Refresh sensors only' + (' (with spline recalc)' if respline else '')
+            determination = 'Refresh sensors only' + (' (with spline recalculate)' if recalculate_splines else '')
         _LOGGER.debug("Options updated, action: %s", determination)
         if not reload:
             await coordinator.solcast.set_options(entry.options)
-            if recalc:
+            if recalculate:
                 await coordinator.solcast.build_forecast_data()
-            elif respline:
+            elif recalculate_splines:
                 await coordinator.solcast.recalculate_splines()
             coordinator.set_data_updated(True)
             await coordinator.update_integration_listeners()

@@ -99,7 +99,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self._date_changed = current_day != self._last_day
             if self._date_changed:
                 self._last_day = current_day
-                await self.__update_midnight_spline_recalc()
+                await self.__update_midnight_spline_recalculate()
                 self.__auto_update_setup()
 
             await self.async_update_listeners()
@@ -161,13 +161,13 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except:
             _LOGGER.error("Exception in __update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
 
-    async def __update_midnight_spline_recalc(self):
+    async def __update_midnight_spline_recalculate(self):
         """Re-calculates splines at midnight local time."""
         try:
             await self.solcast.check_data_records()
             await self.solcast.recalculate_splines()
         except:
-            _LOGGER.error("Exception in __update_midnight_spline_recalc(): %s", traceback.format_exc())
+            _LOGGER.error("Exception in __update_midnight_spline_recalculate(): %s", traceback.format_exc())
 
     def __auto_update_setup(self, init: bool=False):
         """Daily set up of auto-updates."""
@@ -236,7 +236,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                         just_passed = self.interval_just_passed.astimezone(self.solcast.options.tz).strftime(DATE_FORMAT)
                     else:
                         just_passed = self.interval_just_passed.astimezone(self.solcast.options.tz).strftime('%H:%M:%S')
-                    _LOGGER.debug("Previous auto update would have been at: %s", just_passed)
+                    _LOGGER.debug("Previous auto update would have been at %s", just_passed)
                 return intervals
 
             def format_intervals(intervals):
@@ -359,9 +359,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
         match key:
             case "peak_w_today":
-                return self.solcast.get_peak_w_day(0)
+                return self.solcast.get_peak_power_day(0)
             case "peak_w_time_today":
-                return self.solcast.get_peak_w_time_day(0)
+                return self.solcast.get_peak_power_time_day(0)
             case "forecast_this_hour":
                 return self.solcast.get_forecast_n_hour(0)
             case "forecast_next_hour":
@@ -369,29 +369,29 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             case "forecast_custom_hours":
                 return self.solcast.get_forecast_custom_hours(self.solcast.custom_hour_sensor)
             case "total_kwh_forecast_today":
-                return self.solcast.get_total_kwh_forecast_day(0)
+                return self.solcast.get_total_energy_forecast_day(0)
             case "total_kwh_forecast_tomorrow":
-                return self.solcast.get_total_kwh_forecast_day(1)
+                return self.solcast.get_total_energy_forecast_day(1)
             case "total_kwh_forecast_d3":
-                return self.solcast.get_total_kwh_forecast_day(2)
+                return self.solcast.get_total_energy_forecast_day(2)
             case "total_kwh_forecast_d4":
-                return self.solcast.get_total_kwh_forecast_day(3)
+                return self.solcast.get_total_energy_forecast_day(3)
             case "total_kwh_forecast_d5":
-                return self.solcast.get_total_kwh_forecast_day(4)
+                return self.solcast.get_total_energy_forecast_day(4)
             case "total_kwh_forecast_d6":
-                return self.solcast.get_total_kwh_forecast_day(5)
+                return self.solcast.get_total_energy_forecast_day(5)
             case "total_kwh_forecast_d7":
-                return self.solcast.get_total_kwh_forecast_day(6)
+                return self.solcast.get_total_energy_forecast_day(6)
             case "power_now":
-                return self.solcast.get_power_n_mins(0)
+                return self.solcast.get_power_n_minutes(0)
             case "power_now_30m":
-                return self.solcast.get_power_n_mins(30)
+                return self.solcast.get_power_n_minutes(30)
             case "power_now_1hr":
-                return self.solcast.get_power_n_mins(60)
+                return self.solcast.get_power_n_minutes(60)
             case "peak_w_tomorrow":
-                return self.solcast.get_peak_w_day(1)
+                return self.solcast.get_peak_power_day(1)
             case "peak_w_time_tomorrow":
-                return self.solcast.get_peak_w_time_day(1)
+                return self.solcast.get_peak_power_time_day(1)
             case "get_remaining_today":
                 return self.solcast.get_forecast_remaining_today()
             case "api_counter":
@@ -431,46 +431,46 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 return self.solcast.get_forecasts_custom_hours(self.solcast.custom_hour_sensor)
             case "total_kwh_forecast_today":
                 ret = self.solcast.get_forecast_day(0)
-                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(0)}
+                ret = {**ret, **self.solcast.get_sites_total_energy_forecast_day(0)}
                 return ret
             case "total_kwh_forecast_tomorrow":
                 ret = self.solcast.get_forecast_day(1)
-                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(1)}
+                ret = {**ret, **self.solcast.get_sites_total_energy_forecast_day(1)}
                 return ret
             case "total_kwh_forecast_d3":
                 ret = self.solcast.get_forecast_day(2)
-                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(2)}
+                ret = {**ret, **self.solcast.get_sites_total_energy_forecast_day(2)}
                 return ret
             case "total_kwh_forecast_d4":
                 ret = self.solcast.get_forecast_day(3)
-                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(3)}
+                ret = {**ret, **self.solcast.get_sites_total_energy_forecast_day(3)}
                 return ret
             case "total_kwh_forecast_d5":
                 ret = self.solcast.get_forecast_day(4)
-                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(4)}
+                ret = {**ret, **self.solcast.get_sites_total_energy_forecast_day(4)}
                 return ret
             case "total_kwh_forecast_d6":
                 ret = self.solcast.get_forecast_day(5)
-                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(5)}
+                ret = {**ret, **self.solcast.get_sites_total_energy_forecast_day(5)}
                 return ret
             case "total_kwh_forecast_d7":
                 ret = self.solcast.get_forecast_day(6)
-                ret = {**ret, **self.solcast.get_sites_total_kwh_forecast_day(6)}
+                ret = {**ret, **self.solcast.get_sites_total_energy_forecast_day(6)}
                 return ret
             case "power_now":
-                return self.solcast.get_sites_power_n_mins(0)
+                return self.solcast.get_sites_power_n_minutes(0)
             case "power_now_30m":
-                return self.solcast.get_sites_power_n_mins(30)
+                return self.solcast.get_sites_power_n_minutes(30)
             case "power_now_1hr":
-                return self.solcast.get_sites_power_n_mins(60)
+                return self.solcast.get_sites_power_n_minutes(60)
             case "peak_w_today":
-                return self.solcast.get_sites_peak_w_day(0)
+                return self.solcast.get_sites_peak_power_day(0)
             case "peak_w_time_today":
-                return self.solcast.get_sites_peak_w_time_day(0)
+                return self.solcast.get_sites_peak_power_time_day(0)
             case "peak_w_tomorrow":
-                return self.solcast.get_sites_peak_w_day(1)
+                return self.solcast.get_sites_peak_power_day(1)
             case "peak_w_time_tomorrow":
-                return self.solcast.get_sites_peak_w_time_day(1)
+                return self.solcast.get_sites_peak_power_time_day(1)
             case "get_remaining_today":
                 return self.solcast.get_forecasts_remaining_today()
             case _:
