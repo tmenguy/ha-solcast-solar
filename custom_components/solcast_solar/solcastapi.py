@@ -2084,7 +2084,7 @@ class SolcastApi: # pylint: disable=R0904
             str: An error message, or an empty string for no error.
         """
         try:
-            last_attempt = dt.now(timezone.utc).isoformat()
+            last_attempt = dt.now(timezone.utc)
             status = ''
             if self.get_last_updated() + timedelta(minutes=1) > dt.now(timezone.utc):
                 status = f"Not requesting a solar forecast because time is within one minute of last update ({self.get_last_updated().astimezone(self._tz)})"
