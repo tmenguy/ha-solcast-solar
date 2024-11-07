@@ -1,4 +1,4 @@
-"""Support for Solcast PV forecast, initialisation."""
+"""Support for Solcast PV forecast, intialisation."""
 
 # pylint: disable=C0304, C0321, E0401, E1135, W0613, W0702, W0718
 
@@ -18,6 +18,7 @@ from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.const import CONF_API_KEY, Platform # type: ignore
 from homeassistant.core import (HomeAssistant, # type: ignore
                                 ServiceCall,
+                                ServiceResponse,
                                 SupportsResponse,)
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, ServiceValidationError # type: ignore
 from homeassistant.helpers import config_validation as cv # type: ignore
@@ -108,7 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry (ConfigEntry): The integration entry instance, contains the configuration.
 
     Raises:
-        ConfigEntryNotReady: Instructs Home Assistant that the integration is not yet ready when a load failure occurs.
+        ConfigEntryNotReady: Instructs Home Assistant that the integration is not yet ready when a load failure occurrs.
 
     Returns:
         bool: Whether setup has completed successfully.
@@ -359,13 +360,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             out_of_range = False
             try:
                 for i in sp:
-                    # This will fail when outside allowed range.
+                    # This will fail whan outside allowed range.
                     if float(i) < 0 or float(i) > 1:
                         out_of_range = True
             except:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_error_parsing") #pylint: disable=W0707
             if out_of_range:
-                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_outside_range")
+                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_ouside_range")
 
             opt = {**entry.options}
 
@@ -541,7 +542,7 @@ async def async_remove_config_entry_device(hass: HomeAssistant, entry: ConfigEnt
 
     Arguments:
         hass (HomeAssistant): The Home Assistant instance.
-        entry (ConfigEntry): Not used.
+        entry (ConfigEntry): Not ussed.
         device: The device instance.
 
     Returns:
@@ -607,7 +608,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             if recalc:
                 coordinator.solcast.damp = d
 
-            # Attribute changes, which will need a recalculation of splines
+            # Attribute changes, which will need a recalulation of splines
             if not recalc:
                 respline = changed(BRK_ESTIMATE) or changed(BRK_ESTIMATE10) or changed(BRK_ESTIMATE90) or changed(BRK_SITE) or changed(KEY_ESTIMATE)
 

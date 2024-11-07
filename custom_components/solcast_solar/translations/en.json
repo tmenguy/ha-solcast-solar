@@ -225,7 +225,7 @@
         "damp_error_parsing": {
             "message": "Error parsing dampening factor comma separated numbers."
         },
-        "damp_outside_range": {
+        "damp_ouside_range": {
             "message": "Dampening factor value present that is not between 0.0 and 1.0."
         },
         "hard_empty": {

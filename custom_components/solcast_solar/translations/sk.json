@@ -226,7 +226,7 @@
         "damp_error_parsing": {
             "message": "Chyba pri analýze tlmiaceho faktora oddelených čiarkami."
         },
-        "damp_outside_range": {
+        "damp_ouside_range": {
             "message": "Prítomná hodnota faktora tlmenia, ktorá nie je medzi 0,0 a 1,0."
         },
         "hard_empty": {
