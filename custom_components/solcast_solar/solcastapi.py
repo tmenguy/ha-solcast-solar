@@ -137,10 +137,7 @@ class JSONDecoder(json.JSONDecoder):
         result = {}
         for key, value in obj.items():
             try:
-                try:
-                    result[key] = dt.fromisoformat(value)
-                except:
-                    result[key] = value
+                result[key] = dt.fromisoformat(value)
             except:
                 result[key] = value
         return result
