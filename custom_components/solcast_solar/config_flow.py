@@ -102,12 +102,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 BRK_SITE_DETAILED: False,
             }
             damp = {f"damp{factor:02d}": 1.0 for factor in range(24)}
-
-            return self.async_create_entry(
-                title = TITLE,
-                data = {},
-                options = options | damp,
-            )
+            return self.async_create_entry(title=TITLE, data={}, options=options | damp)
 
         solcast_json_exists = file_exists(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json")
 
@@ -226,11 +221,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 if user_input.get(SITE_DAMP) is not None:
                     all_config_data[SITE_DAMP] = user_input[SITE_DAMP]
 
-                self.hass.config_entries.async_update_entry(
-                    self._entry,
-                    title=TITLE,
-                    options=all_config_data,
-                )
+                self.hass.config_entries.async_update_entry(self._entry, title=TITLE, options=all_config_data)
 
                 if user_input.get(CONFIG_DAMP):
                     return await self.async_step_dampen()
@@ -302,12 +293,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     all_config_data[f"damp{factor:02d}"] = user_input[f"damp{factor:02d}"]
                 all_config_data[SITE_DAMP] = False
 
-                self.hass.config_entries.async_update_entry(
-                    self._entry,
-                    title=TITLE,
-                    options=all_config_data,
-                )
-
+                self.hass.config_entries.async_update_entry(self._entry, title=TITLE, options=all_config_data)
                 return self.async_create_entry(title=TITLE, data=None)
             except:
                 errors["base"] = "unknown"
