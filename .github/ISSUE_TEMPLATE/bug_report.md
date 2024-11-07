@@ -25,11 +25,6 @@ If applicable, add screenshots to help explain your problem.
 
 **Logs**
 
-I confirm:
-- [ ] I have attached **debug** logs 
-- [ ] I have embedded **debug** logs in the issue description (enclosed in tick marks ``` for proper formatting)
-- [ ] Confirmed **debug** logs are not required for this issue
-
 Make sure you include logs from HA listing the output from the Solcast integration showing the error - this is particularly useful in debugging issues and helping to determine whether the issue is with the integration or the Solcast service
 
 To add detailed debug information, add the following to your configuration.yaml and restart HA:
@@ -39,10 +34,6 @@ logger:
   logs:
     custom_components.solcast_solar: debug
 ```
-
-To inspect and collect debug logs examine `/config/home-assistant.log` using File Editor or Visual Studio Code Server.
-
-If you are using docker, it sometimes can be easier to gather logs using `docker compose logs -n 500 -f homeassistant` or similar
 
 **Solcast Integration Version**
  - Integration Version [e.g. 4.0.29]
