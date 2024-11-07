@@ -1107,7 +1107,7 @@ class SolcastApi: # pylint: disable=R0904
                                     json_version = 4
                                 if json_version < 5: # Add "last_attempt" and "auto_updated" to cache structure as of v5, introduced v4.2.5.
                                     data["version"] = 5
-                                    data["last_attempt"] = data["last_updated"] - timedelta(minutes=15)
+                                    data["last_attempt"] = data["last_updated"]
                                     data["auto_updated"] = self.options.auto_update > 0
                                     json_version = 5
 
@@ -1154,6 +1154,7 @@ class SolcastApi: # pylint: disable=R0904
                         for site, api_key in new_sites.items():
                             await self.__http_data_call(site=site, api_key=api_key, do_past=True)
 
+                        self._data["last_attempt"] = dt.now(timezone.utc).isoformat()
                         self._data["last_updated"] = dt.now(timezone.utc).replace(microsecond=0)
                         self._data_undampened["last_updated"] = dt.now(timezone.utc).replace(microsecond=0)
                         self._data["version"] = JSON_VERSION

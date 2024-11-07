@@ -256,15 +256,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if solcast.options.auto_update > 0:
         if solcast.get_data()['auto_updated']:
             _LOGGER.debug("Checking whether auto update forecast is stale")
-            if coordinator.interval_just_passed is not None and solcast.get_data()['last_attempt'] < coordinator.interval_just_passed - timedelta(minutes=1):
-                _LOGGER.info(
-                    "Last auto update forecast recorded (%s) is older than expected, should be (%s), updating forecast",
-                    solcast.get_data()['last_attempt'].astimezone(tz).strftime(DATE_FORMAT),
-                    coordinator.interval_just_passed.astimezone(tz).strftime(DATE_FORMAT)
-                )
-                await coordinator.service_event_update(ignore_auto_enabled=True)
-            else:
-                _LOGGER.debug("Auto update forecast is fresh")
+            try:
+                if coordinator.interval_just_passed is not None and solcast.get_data()['last_attempt'] < coordinator.interval_just_passed - timedelta(minutes=1):
+                    _LOGGER.info(
+                        "Last auto update forecast recorded (%s) is older than expected, should be (%s), updating forecast",
+                        solcast.get_data()['last_attempt'].astimezone(tz).strftime(DATE_FORMAT),
+                        coordinator.interval_just_passed.astimezone(tz).strftime(DATE_FORMAT)
+                    )
+                    await coordinator.service_event_update(ignore_auto_enabled=True)
+                else:
+                    _LOGGER.debug("Auto update forecast is fresh")
+            except TypeError:
+                _LOGGER.warning('Auto update freshness could not be determined')
+            except Exception as e:
+                _LOGGER.error('Auto update freshness could not be determined: %s: %s', e, traceback.format_exc())
 
     async def action_call_update_forecast(call: ServiceCall):
         """Handle action.
@@ -800,7 +805,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if entry.version < 12:
         new_options = {**entry.options}
-        # Convert from short-lived options schema v11
         new_options[AUTO_UPDATE] = int(new_options.get(AUTO_UPDATE, 0))
         if new_options.get(BRK_SITE_DETAILED) is None: new_options[BRK_SITE_DETAILED] = False
         if new_options.get(HARD_LIMIT) is None: new_options[HARD_LIMIT] = 100000
