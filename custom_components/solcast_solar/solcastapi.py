@@ -137,9 +137,9 @@ class JSONDecoder(json.JSONDecoder):
         result = {}
         for key, value in obj.items():
             try:
-                if re.search(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', value):
+                try:
                     result[key] = dt.fromisoformat(value)
-                else:
+                except:
                     result[key] = value
             except:
                 result[key] = value
