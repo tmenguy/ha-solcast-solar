@@ -5,7 +5,6 @@ import contextlib
 from datetime import timedelta
 import json
 import logging
-from pathlib import Path
 import random
 import traceback
 from typing import Any, Final
@@ -146,9 +145,9 @@ async def __get_options(hass: HomeAssistant, entry: ConfigEntry) -> ConnectionOp
 
     return ConnectionOptions(
         entry.options[CONF_API_KEY],
-        entry.options[API_QUOTA],
+        entry.options.get(API_QUOTA, 10),
         SOLCAST_URL,
-        hass.config.path(f"{Path(Path(Path(__file__).parent ,'../..')).resolve()}/solcast.json"),
+        hass.config.path(f"{hass.config.config_dir}/solcast.json"),
         await __get_time_zone(hass),
         entry.options.get(AUTO_UPDATE, 0),
         dampening_option,
@@ -320,6 +319,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     await __check_stale_start(coordinator)
     await __check_auto_update_missed(coordinator)
     hass.data[DOMAIN]["has_loaded"] = True
+
+    # await __test_options_migration(hass, entry)
+    # __log_entry_options(entry)
+    # pass  # Set breakpoint here
 
     async def action_call_update_forecast(call: ServiceCall):
         """Handle action.
@@ -770,7 +773,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if entry.version < version:
             new_options = {**entry.options}
-            await upgrade_function(new_options)
+            await upgrade_function(hass, new_options)
             try:
                 hass.config_entries.async_update_entry(entry, options=new_options, version=version)
                 upgraded()
@@ -802,25 +805,25 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def __v4(new_options):
+async def __v4(hass: HomeAssistant, new_options):
     with contextlib.suppress(Exception):
         new_options.pop("const_disableautopoll", None)
 
 
-async def __v5(new_options):
+async def __v5(hass: HomeAssistant, new_options):
     for a in range(24):
         new_options[f"damp{str(a).zfill(2)}"] = 1.0
 
 
-async def __v6(new_options):
+async def __v6(hass: HomeAssistant, new_options):
     new_options[CUSTOM_HOUR_SENSOR] = 1
 
 
-async def __v7(new_options):
+async def __v7(hass: HomeAssistant, new_options):
     new_options[KEY_ESTIMATE] = "estimate"
 
 
-async def __v8(new_options):
+async def __v8(hass: HomeAssistant, new_options):
     new_options[BRK_ESTIMATE] = True
     new_options[BRK_ESTIMATE10] = True
     new_options[BRK_ESTIMATE90] = True
@@ -829,14 +832,11 @@ async def __v8(new_options):
     new_options[BRK_HOURLY] = True
 
 
-async def __v9(new_options):
+async def __v9(hass: HomeAssistant, new_options):
     try:
         default = []
-        _config_dir = Path(Path(Path(__file__).parent, "../..")).resolve()
         for api_key in new_options[CONF_API_KEY].split(","):
-            api_cache_filename = (
-                f"{_config_dir}/solcast-usage{'' if len(new_options[CONF_API_KEY].split(',')) < 2 else '-' + api_key.strip()}.json"
-            )
+            api_cache_filename = f"{hass.config.config_dir}/solcast-usage{'' if len(new_options[CONF_API_KEY].split(',')) < 2 else '-' + api_key.strip()}.json"
             async with aiofiles.open(api_cache_filename) as f:
                 usage = json.loads(await f.read())
             default.append(str(usage["daily_limit"]))
@@ -850,15 +850,55 @@ async def __v9(new_options):
     new_options[API_QUOTA] = default
 
 
-async def __v12(new_options):
+async def __v12(hass: HomeAssistant, new_options):
     new_options[AUTO_UPDATE] = int(new_options.get(AUTO_UPDATE, 0))
     new_options[BRK_SITE_DETAILED] = False
     if new_options.get(HARD_LIMIT) is None:  # May already exist.
         new_options[HARD_LIMIT] = 100000
 
 
-async def __v14(new_options):
+async def __v14(hass: HomeAssistant, new_options):
     hard_limit = new_options.get(HARD_LIMIT, 100000) / 1000
     new_options[HARD_LIMIT_API] = f"{hard_limit:.1f}"
     with contextlib.suppress(Exception):
         new_options.pop(HARD_LIMIT)
+
+
+async def __test_options_migration(hass: HomeAssistant, entry: ConfigEntry):
+    """Test entry options upgrade.
+
+    Doing this test will result in the integration repeatedlty restarting,
+    upgrading the options from V4 onwards at every start. Do not do this
+    outside of a dev environment with the ability to set a code breakboint
+    after calling the function.
+
+    Un-comment the call in async_setup_entry().
+    """
+
+    new_options = {**entry.options}
+    if new_options.get(CUSTOM_HOUR_SENSOR):
+        new_options.pop(CUSTOM_HOUR_SENSOR)
+    if new_options.get(KEY_ESTIMATE):
+        new_options.pop(KEY_ESTIMATE)
+    if new_options.get(BRK_ESTIMATE):
+        new_options.pop(BRK_ESTIMATE)
+    if new_options.get(BRK_ESTIMATE10):
+        new_options.pop(BRK_ESTIMATE10)
+    if new_options.get(BRK_ESTIMATE90):
+        new_options.pop(BRK_ESTIMATE90)
+    if new_options.get(BRK_SITE):
+        new_options.pop(BRK_SITE)
+    if new_options.get(BRK_HALFHOURLY):
+        new_options.pop(BRK_HALFHOURLY)
+    if new_options.get(BRK_HOURLY):
+        new_options.pop(BRK_HOURLY)
+    if new_options.get(API_QUOTA):
+        new_options.pop(API_QUOTA)
+    if new_options.get(AUTO_UPDATE):
+        new_options.pop(AUTO_UPDATE)
+    if new_options.get(BRK_SITE_DETAILED):
+        new_options.pop(BRK_SITE_DETAILED)
+    if new_options.get(HARD_LIMIT_API):
+        new_options.pop(HARD_LIMIT_API)
+    hass.config_entries.async_update_entry(entry, options=new_options, version=4)
+    await async_migrate_entry(hass, entry)
