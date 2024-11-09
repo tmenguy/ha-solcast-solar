@@ -322,7 +322,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     # await __test_options_migration(hass, entry)
     # __log_entry_options(entry)
-    # pass  # Set breakpoint here
+    # pass  # <<< Set breakpoint here, then "step over" once.
 
     async def action_call_update_forecast(call: ServiceCall):
         """Handle action.
@@ -876,10 +876,21 @@ async def __test_options_migration(hass: HomeAssistant, entry: ConfigEntry):
     """
 
     new_options = {**entry.options}
+    # Not sure.
+    if new_options.get(HARD_LIMIT):
+        new_options.pop(HARD_LIMIT)
+    # V5
+    for a in range(24):
+        f = f"damp{str(a).zfill(2)}"
+        if new_options.get(f):
+            new_options.pop(f)
+    # V6
     if new_options.get(CUSTOM_HOUR_SENSOR):
         new_options.pop(CUSTOM_HOUR_SENSOR)
+    # V7
     if new_options.get(KEY_ESTIMATE):
         new_options.pop(KEY_ESTIMATE)
+    # V8
     if new_options.get(BRK_ESTIMATE):
         new_options.pop(BRK_ESTIMATE)
     if new_options.get(BRK_ESTIMATE10):
@@ -892,12 +903,15 @@ async def __test_options_migration(hass: HomeAssistant, entry: ConfigEntry):
         new_options.pop(BRK_HALFHOURLY)
     if new_options.get(BRK_HOURLY):
         new_options.pop(BRK_HOURLY)
+    # V9
     if new_options.get(API_QUOTA):
         new_options.pop(API_QUOTA)
+    # V12
     if new_options.get(AUTO_UPDATE):
         new_options.pop(AUTO_UPDATE)
     if new_options.get(BRK_SITE_DETAILED):
         new_options.pop(BRK_SITE_DETAILED)
+    # V14
     if new_options.get(HARD_LIMIT_API):
         new_options.pop(HARD_LIMIT_API)
     hass.config_entries.async_update_entry(entry, options=new_options, version=4)
