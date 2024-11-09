@@ -104,7 +104,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             damp = {f"damp{factor:02d}": 1.0 for factor in range(24)}
             return self.async_create_entry(title=TITLE, data={}, options=options | damp)
 
-        solcast_json_exists = Path.exists(f"{Path.resolve(Path(Path(__file__).parent ,'../..'))}/solcast.json")
+        solcast_json_exists = Path(f"{Path(Path(Path(__file__).parent ,'../..')).resolve()}/solcast.json").is_file()
 
         update: list[SelectOptionDict] = [
             SelectOptionDict(label="none", value="0"),

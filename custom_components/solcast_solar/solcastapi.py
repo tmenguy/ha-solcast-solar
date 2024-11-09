@@ -3269,7 +3269,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 return float(hard_limit[index])
         return 100.0
 
-    async def build_forecast_data(self) -> bool:
+    async def build_forecast_data(self) -> bool:  # noqa: C901
         """Build data structures needed, adjusting if setting a hard limit.
 
         Returns:

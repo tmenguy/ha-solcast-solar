@@ -148,7 +148,7 @@ async def __get_options(hass: HomeAssistant, entry: ConfigEntry) -> ConnectionOp
         entry.options[CONF_API_KEY],
         entry.options[API_QUOTA],
         SOLCAST_URL,
-        hass.config.path(f"{Path.resolve(Path(Path(__file__).parent ,'../..'))}/solcast.json"),
+        hass.config.path(f"{Path(Path(Path(__file__).parent ,'../..')).resolve()}/solcast.json"),
         await __get_time_zone(hass),
         entry.options.get(AUTO_UPDATE, 0),
         dampening_option,
@@ -832,7 +832,7 @@ async def __v8(new_options):
 async def __v9(new_options):
     try:
         default = []
-        _config_dir = Path.resolve(Path(Path(__file__).parent, "../.."))
+        _config_dir = Path(Path(Path(__file__).parent, "../..")).resolve()
         for api_key in new_options[CONF_API_KEY].split(","):
             api_cache_filename = (
                 f"{_config_dir}/solcast-usage{'' if len(new_options[CONF_API_KEY].split(',')) < 2 else '-' + api_key.strip()}.json"
