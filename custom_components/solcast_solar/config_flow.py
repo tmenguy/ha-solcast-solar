@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,8 @@ from .const import (
     SITE_DAMP,
     TITLE,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @config_entries.HANDLERS.register(DOMAIN)
@@ -104,7 +107,11 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             damp = {f"damp{factor:02d}": 1.0 for factor in range(24)}
             return self.async_create_entry(title=TITLE, data={}, options=options | damp)
 
-        solcast_json_exists = Path(f"{Path(Path(Path(__file__).parent ,'../..')).resolve()}/solcast.json").is_file()
+        solcast_json_exists = Path(f"{self.hass.config.config_dir}/solcast.json").is_file()
+        _LOGGER.debug(
+            "File solcast.json %s",
+            "exists, defaulting to auto-update off" if solcast_json_exists else "does not exist, defaulting to auto-update on",
+        )
 
         update: list[SelectOptionDict] = [
             SelectOptionDict(label="none", value="0"),
