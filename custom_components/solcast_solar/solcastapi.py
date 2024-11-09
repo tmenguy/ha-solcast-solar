@@ -297,7 +297,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self._use_forecast_confidence = f"pv_{options.key_estimate}"
         # self._weather = ""
 
-        self._config_dir = Path(self._filename).parent
+        self._config_dir = hass.config.config_dir
         _LOGGER.debug("Configuration directory is %s", self._config_dir)
 
     async def set_options(self, options: dict):
@@ -928,8 +928,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 cleanup(api_keys, multi_usage[0], simple_usage)
 
             def list_files() -> tuple[list[str], list[str]]:
-                all_sites = [str(sites) for sites in Path("/config").glob("solcast-sites-*.json")]
-                all_usage = [str(usage) for usage in Path("/config").glob("solcast-usage-*.json")]
+                all_sites = [str(sites) for sites in Path(self._config_dir).glob("solcast-sites-*.json")]
+                all_usage = [str(usage) for usage in Path(self._config_dir).glob("solcast-usage-*.json")]
                 return all_sites, all_usage
 
             all_sites, all_usage = await self.hass.async_add_executor_job(list_files)
