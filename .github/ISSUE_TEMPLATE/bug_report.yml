@@ -66,7 +66,7 @@ body:
     attributes:
       label: Logs debug/info/error output
       description: Debug info, error message, or stack traces.
-      render: txt
+      render: Text
   - type: textarea
     attributes:
       label: Additional information
