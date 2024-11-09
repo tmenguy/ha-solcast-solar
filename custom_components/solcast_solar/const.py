@@ -1,8 +1,7 @@
 """Constants for the Solcast Solar integration."""
 
-# pylint: disable=C0304, E0401
-
 from __future__ import annotations
+
 from typing import Final
 
 # Development flags

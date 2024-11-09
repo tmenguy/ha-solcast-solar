@@ -1,24 +1,24 @@
 """Config flow for Solcast Solar integration."""
 
-# pylint: disable=C0304, E0401, W0702, W0703
-
 from __future__ import annotations
-from typing import Optional, Any
 
-import os
-from os.path import exists as file_exists
-import voluptuous as vol # type: ignore
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow # type: ignore
-from homeassistant.const import CONF_API_KEY # type: ignore
-from homeassistant.core import callback # type: ignore
-from homeassistant.data_entry_flow import FlowResult # type: ignore
-from homeassistant import config_entries # type: ignore
-from homeassistant.helpers.selector import ( # type: ignore
-    SelectSelector,
+from pathlib import Path
+from typing import Any
+
+import voluptuous as vol
+
+from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.const import CONF_API_KEY
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
     SelectOptionDict,
+    SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
 )
+
 from .const import (
     API_QUOTA,
     AUTO_UPDATE,
@@ -58,21 +58,20 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        entry: ConfigEntry,
+        config_entry: ConfigEntry,
     ) -> SolcastSolarOptionFlowHandler:
         """Get the options flow for this handler.
 
         Arguments:
-            entry (ConfigEntry): The integration entry instance, contains the configuration.
+            config_entry (ConfigEntry): The integration entry instance, contains the configuration.
 
         Returns:
             SolcastSolarOptionFlowHandler: The config flow handler instance.
-        """
-        return SolcastSolarOptionFlowHandler(entry)
 
-    async def async_step_user(
-        self, user_input: Optional[dict[str, Any]]=None
-    ) -> FlowResult:
+        """
+        return SolcastSolarOptionFlowHandler(config_entry)
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle a flow initiated by the user.
 
         Arguments:
@@ -80,6 +79,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
 
         Returns:
             FlowResult: The form to show.
+
         """
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
@@ -91,7 +91,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 AUTO_UPDATE: int(user_input[AUTO_UPDATE]),
                 # Remaining options set to default
                 CUSTOM_HOUR_SENSOR: 1,
-                HARD_LIMIT_API: '100.0',
+                HARD_LIMIT_API: "100.0",
                 KEY_ESTIMATE: "estimate",
                 BRK_ESTIMATE: True,
                 BRK_ESTIMATE10: True,
@@ -104,7 +104,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             damp = {f"damp{factor:02d}": 1.0 for factor in range(24)}
             return self.async_create_entry(title=TITLE, data={}, options=options | damp)
 
-        solcast_json_exists = file_exists(f"{os.path.abspath(os.path.join(os.path.dirname(__file__) ,'../..'))}/solcast.json")
+        solcast_json_exists = Path.exists(f"{Path.resolve(Path(Path(__file__).parent ,'../..'))}/solcast.json")
 
         update: list[SelectOptionDict] = [
             SelectOptionDict(label="none", value="0"),
@@ -129,16 +129,17 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
 class SolcastSolarOptionFlowHandler(OptionsFlow):
     """Handle options."""
 
-    def __init__(self, entry: ConfigEntry):
+    def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize options flow.
 
         Arguments:
-            entry (ConfigEntry): The integration entry instance, contains the configuration.
-        """
-        self._entry = entry
-        self._options = entry.options
+            config_entry (ConfigEntry): The integration entry instance, contains the configuration.
 
-    async def async_step_init(self, user_input: dict=None) -> Any:
+        """
+        self._entry = config_entry
+        self._options = config_entry.options
+
+    async def async_step_init(self, user_input: dict | None = None) -> Any:
         """Initialise main dialogue step.
 
         Arguments:
@@ -146,6 +147,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
         Returns:
             Any: Either an error, or the configuration dialogue results.
+
         """
 
         errors = {}
@@ -168,14 +170,14 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             try:
                 all_config_data = {**self._options}
 
-                api_key = user_input["api_key"].replace(" ","")
-                api_key = [s for s in api_key.split(',') if s]
+                api_key = user_input["api_key"].replace(" ", "")
+                api_key = [s for s in api_key.split(",") if s]
                 api_count = len(api_key)
-                api_key = ','.join(api_key)
+                api_key = ",".join(api_key)
                 all_config_data["api_key"] = api_key
 
-                api_quota = user_input[API_QUOTA].replace(" ","")
-                api_quota = [s for s in api_quota.split(',') if s]
+                api_quota = user_input[API_QUOTA].replace(" ", "")
+                api_quota = [s for s in api_quota.split(",") if s]
                 for q in api_quota:
                     if not q.isnumeric():
                         return self.async_abort(reason="API limit is not a number")
@@ -183,7 +185,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                         return self.async_abort(reason="API limit must be one  or greater!")
                 if len(api_quota) > api_count:
                     return self.async_abort(reason="There are more API limit counts entered than keys!")
-                api_quota = ','.join(api_quota)
+                api_quota = ",".join(api_quota)
                 all_config_data[API_QUOTA] = api_quota
 
                 all_config_data[AUTO_UPDATE] = int(user_input[AUTO_UPDATE])
@@ -195,15 +197,15 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
                 hard_limit = user_input[HARD_LIMIT_API]
                 to_set = []
-                for h in hard_limit.split(','):
+                for h in hard_limit.split(","):
                     h = h.strip()
-                    if not h.replace('.','',1).isdigit():
+                    if not h.replace(".", "", 1).isdigit():
                         return self.async_abort(reason="Hard limit is not a positive number")
                     val = float(h)
                     if val < 0:
                         return self.async_abort(reason="Hard limit is not a positive number")
                     to_set.append(f"{val:.1f}")
-                hard_limit = ','.join(to_set)
+                hard_limit = ",".join(to_set)
                 all_config_data[HARD_LIMIT_API] = hard_limit
 
                 all_config_data[KEY_ESTIMATE] = user_input[KEY_ESTIMATE]
@@ -227,7 +229,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     return await self.async_step_dampen()
 
                 return self.async_create_entry(title=TITLE, data=None)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 errors["base"] = str(e)
 
         update: list[SelectOptionDict] = [
@@ -263,13 +265,17 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     vol.Optional(BRK_HALFHOURLY, default=half_hourly): bool,
                     vol.Optional(BRK_HOURLY, default=hourly): bool,
                     vol.Optional(BRK_SITE_DETAILED, default=site_detailed): bool,
-                    (vol.Optional(CONFIG_DAMP, default=False) if not granular_dampening else vol.Optional(SITE_DAMP, default=granular_dampening)): bool,
+                    (
+                        vol.Optional(CONFIG_DAMP, default=False)
+                        if not granular_dampening
+                        else vol.Optional(SITE_DAMP, default=granular_dampening)
+                    ): bool,
                 }
             ),
-            errors=errors
+            errors=errors,
         )
 
-    async def async_step_dampen(self, user_input: Optional[dict[str, Any]]=None) -> FlowResult: #user_input=None):
+    async def async_step_dampen(self, user_input: dict[str, Any] | None = None) -> FlowResult:  # user_input=None):
         """Manage the hourly dampening factors sub-option.
 
         Note that the config option "site_damp" is not exposed in any way to the user. This is a
@@ -281,6 +287,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
         Returns:
             FlowResult: The configuration dialogue results.
+
         """
 
         errors = {}
@@ -295,15 +302,16 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
                 self.hass.config_entries.async_update_entry(self._entry, title=TITLE, options=all_config_data)
                 return self.async_create_entry(title=TITLE, data=None)
-            except:
+            except:  # noqa: E722
                 errors["base"] = "unknown"
 
         return self.async_show_form(
             step_id="dampen",
             data_schema=vol.Schema(
                 {
-                    vol.Required(f"damp{factor:02d}", description={"suggested_value": extant[f"damp{factor:02d}"]}):
-                        vol.All(vol.Coerce(float), vol.Range(min=0.0,max=1.0))
+                    vol.Required(f"damp{factor:02d}", description={"suggested_value": extant[f"damp{factor:02d}"]}): vol.All(
+                        vol.Coerce(float), vol.Range(min=0.0, max=1.0)
+                    )
                     for factor in range(24)
                 }
             ),
