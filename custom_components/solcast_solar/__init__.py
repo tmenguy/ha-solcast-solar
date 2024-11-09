@@ -140,7 +140,7 @@ async def __get_options(hass: HomeAssistant, entry: ConfigEntry) -> ConnectionOp
         new_options = {**entry.options}
         for a in range(24):
             new_options[f"damp{str(a).zfill(2)}"] = 1.0
-        entry.options = {**new_options}
+        hass.config_entries.async_update_entry(entry, options=new_options)
         dampening_option = {str(a): 1.0 for a in range(24)}
 
     return ConnectionOptions(
