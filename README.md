@@ -778,6 +778,12 @@ series:
 
 ## Changes
 
+v4.2.6
+* Fix an issue that was preventing new installs by @autoSteve
+* Fix an issue migrating from/to multi-API for Docker setup by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.5...v4.2.6
+
 v4.2.5
 * Add multi-API key hard limit by @autoSteve
 * Proportionally limit site breakdowns by @autoSteve
