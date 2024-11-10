@@ -239,9 +239,11 @@ async def __check_auto_update_missed(coordinator: SolcastUpdateCoordinator):
         if coordinator.solcast.get_data()["auto_updated"]:
             _LOGGER.debug("Checking whether auto update forecast is stale")
             try:
-                if coordinator.interval_just_passed is not None and coordinator.solcast.get_data()[
-                    "last_attempt"
-                ] < coordinator.interval_just_passed - timedelta(minutes=1):
+                if (
+                    coordinator.interval_just_passed is not None
+                    and coordinator.solcast.get_data()["auto_updated"]
+                    and coordinator.solcast.get_data()["last_attempt"] < coordinator.interval_just_passed - timedelta(minutes=1)
+                ):
                     _LOGGER.info(
                         "Last auto update forecast recorded (%s) is older than expected, should be (%s), updating forecast",
                         coordinator.solcast.get_data()["last_attempt"].astimezone(coordinator.solcast.options.tz).strftime(DATE_FORMAT),
