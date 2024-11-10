@@ -2665,7 +2665,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             else:
                 if sites_attempted > 0:
                     _LOGGER.error(
-                        "At least one site forecast failed to fetch, so forecast has not been built%s",
+                        "%site failed to fetch, so forecast has not been built%s",
+                        "At least one s" if len(self.sites) > 1 else "S",
                         next_update,
                     )
                 else:
