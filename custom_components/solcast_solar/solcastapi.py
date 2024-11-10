@@ -1051,7 +1051,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 e,
                 traceback.format_exc(),
             )
-            raising_exception = True
         return False
 
     async def granular_dampening_data(self, info_suppression: bool = False) -> bool:
@@ -1290,7 +1289,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             status = ""
             if len(self.sites) > 0:
 
-                async def load_data(filename, set_loaded=True) -> dict:
+                async def load_data(filename, set_loaded=True) -> dict | None:
                     if Path(filename).is_file():
                         async with aiofiles.open(filename) as data_file:
                             json_data = json.loads(await data_file.read(), cls=JSONDecoder)
@@ -1586,10 +1585,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             "install_date": site.get("install_date", None),
             "loss_factor": site.get("loss_factor", None),
         }
-        for key in tuple(result.keys()):
-            if result[key] is None:
-                result.pop(key, None)
-        return result
+        return {k: v for k, v in result.items() if v is not None}
 
     def get_day_start_utc(self, future: int = 0) -> dt:
         """Datetime helper.
@@ -3263,7 +3259,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         hard_limit = self.hard_limit.split(",")
         if len(hard_limit) == 1:
             return float(hard_limit[0])
-        index = 0
         for index, key in enumerate(self.options.api_key.split(",")):
             if key == api_key:
                 return float(hard_limit[index])
