@@ -2647,19 +2647,19 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     break
 
             if sites_attempted > 0 and not failure:
-                self._data["last_updated"] = dt.now(datetime.UTC).replace(microsecond=0)
-                self._data["last_attempt"] = last_attempt
-                self._data["auto_updated"] = self.options.auto_update > 0
-                self._data_undampened["last_updated"] = dt.now(datetime.UTC).replace(microsecond=0)
                 # self._data["weather"] = self._weather
-
                 b_status = await self.build_forecast_data()
-                self._data["version"] = JSON_VERSION
-                self._data_undampened["version"] = JSON_VERSION
+
+                async def set_metadata_and_serialise(data):
+                    data["last_updated"] = dt.now(datetime.UTC).replace(microsecond=0)
+                    data["last_attempt"] = last_attempt
+                    data["auto_updated"] = self.options.auto_update > 0
+                    return await self.__serialise_data(data, self._filename if data == self._data else self._filename_undampened)
+
+                s_status = await set_metadata_and_serialise(self._data)
+                await set_metadata_and_serialise(self._data_undampened)
                 self._loaded_data = True
 
-                s_status = await self.__serialise_data(self._data, self._filename)
-                await self.__serialise_data(self._data_undampened, self._filename_undampened)
                 if b_status and s_status:
                     _LOGGER.info("Forecast update completed successfully%s", next_update)
             else:
