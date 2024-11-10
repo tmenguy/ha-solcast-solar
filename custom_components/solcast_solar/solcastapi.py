@@ -495,7 +495,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 )
             except Exception as e:  # noqa: BLE001
                 _LOGGER.error("Exception writing forecast data: %s", e)
-            return False
+                return False
         return True
 
     async def __sites_data(self):  # noqa: C901
