@@ -233,6 +233,9 @@
         },
         "hard_not_positive_number": {
             "message": "Hard limit value is not a positive number."
+        },
+        "remove_cache_failed": {
+            "message": "Clear all Solcast data failed."
         }
     }
 }

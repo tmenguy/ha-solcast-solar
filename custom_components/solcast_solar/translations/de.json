@@ -234,6 +234,9 @@
         },
         "hard_not_positive_number": {
             "message": "Der harte Grenzwert ist keine positive Zahl."
+        },
+        "remove_cache_failed": {
+            "message": "Das Löschen aller Solcast-Daten ist fehlgeschlagen."
         }
     }
 }

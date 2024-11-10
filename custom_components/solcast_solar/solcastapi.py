@@ -1472,10 +1472,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 Path(self._filename).unlink()
             else:
                 _LOGGER.warning("There is no solcast.json to delete")
-                return
+                return False
             await self.load_saved_data()
         except Exception:  # noqa: BLE001
             _LOGGER.error("Action to delete old solcast.json file failed")
+            return False
+        return True
 
     async def get_forecast_list(self, *args) -> tuple[dict[Any] | None]:
         """Get forecasts.
