@@ -77,6 +77,14 @@ STATUS_TRANSLATE = {
     504: "Gateway timeout",
 }
 
+FRESH_DATA = {
+    "siteinfo": {},
+    "last_updated": dt.fromtimestamp(0, datetime.UTC),
+    "last_attempt": dt.fromtimestamp(0, datetime.UTC),
+    "auto_updated": False,
+    "version": JSON_VERSION,
+}
+
 _LOGGER = logging.getLogger(__name__)
 
 # Return the function name at a specified caller depth. 0=current, 1=caller, 2=caller of caller, etc.
@@ -268,17 +276,11 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self._api_limit = {}
         self._api_used = {}
         self._api_used_reset = {}
-        self._data = {
-            "siteinfo": {},
-            "last_updated": dt.fromtimestamp(0, datetime.UTC),
-            "last_attempt": dt.fromtimestamp(0, datetime.UTC),
-            "auto_updated": False,
-            "version": JSON_VERSION,
-        }
+        self._data = copy.deepcopy(FRESH_DATA)
         self._data_energy_dashboard = {}
         self._data_forecasts = []
         self._data_forecasts_undampened = []
-        self._data_undampened = copy.deepcopy(self._data)
+        self._data_undampened = copy.deepcopy(FRESH_DATA)
         self._filename = options.file_path
         self._filename_undampened = f"{file_path.parent / file_path.stem}-undampened{file_path.suffix}"
         self._forecasts_moment = {}
@@ -506,6 +508,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         result in Home Assistant repeatedly trying to initialise.
         """
         try:
+            self.sites = []
 
             def redact_lat_lon(s) -> str:
                 return re.sub(r"itude\': [0-9\-\.]+", "itude': **.******", s)
@@ -1422,13 +1425,20 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     await self.__migrate_undampened_history()
                     # Check for sites changes.
                     await adds_moves_changes()
+                else:
+                    # There is no cached data, so start fresh.
+                    self._data = copy.deepcopy(FRESH_DATA)
+                    self._data_undampened = copy.deepcopy(FRESH_DATA)
+                    self._loaded_data = False
 
                 if not self._loaded_data:
                     # No file to load.
                     _LOGGER.warning("There is no solcast.json to load, so fetching solar forecast, including past forecasts")
-                    # Could be a brand new install of the integration, or the file has been removed. Poll once now...
+                    # Could be a brand new install of the integration, or the file has been removed. Get the forecast and past actuals.
                     status = await self.get_forecast_update(do_past=True)
-                else:
+                    self._loaded_data = True
+
+                if self._loaded_data:
                     # Create an up to date forecast.
                     await self.build_forecast_data()
             else:
@@ -1463,7 +1473,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             else:
                 _LOGGER.warning("There is no solcast.json to delete")
                 return
-            await self.get_sites_and_usage()
             await self.load_saved_data()
         except Exception:  # noqa: BLE001
             _LOGGER.error("Action to delete old solcast.json file failed")
@@ -2605,7 +2614,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             sites_attempted = 0
             for site in self.sites:
                 sites_attempted += 1
-                _LOGGER.info("Getting forecast update for site %s", site["resource_id"])
+                _LOGGER.info("Getting forecast update for site %s%s", site["resource_id"], ", including past data" if do_past else "")
                 result = await self.__http_data_call(
                     site=site["resource_id"],
                     api_key=site["apikey"],
