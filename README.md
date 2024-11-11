@@ -813,11 +813,8 @@ v4.2.3
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.0...v4.2.3
 
-v4.2.2
-* Release pulled due to an issue
-
-v4.2.1
-* Release pulled due to an issue
+v4.2.1 / v4.2.2
+* Releases pulled due to issue
 
 v4.2.0
 * Generally available release of v4.1.8 and v4.1.9 pre-release features
@@ -827,14 +824,17 @@ Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.7...v4
 
 Most recent changes: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.9...v4.2.0
 
+### Prior changes
+<details><summary><i>Click here for changes back to v3.0</i></summary>
+
 v4.1.9 pre-release
 * Granular dampening to dampen per half hour period by @autoSteve and @isorin
-* Dampening applied at forecast fetch and not to forecast history @autoSteve and @isorin
+* Dampening applied at forecast fetch and not to forecast history by @autoSteve and @isorin
 * Retrieve un-dampened forecast values using service call by @autoSteve (thanks @Nilogax)
 * Get presently set dampening factors using service call by @autoSteve (thanks @Nilogax)
 * Migration of un-dampened forecast to un-dampened cache on startup by @autoSteve
 
-Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.9...v4.1.9
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.1.8...v4.1.9
 
 v4.1.8 pre-release
 * Automated forecast updates that do not require an automation by @autoSteve and @BJReplay
@@ -917,9 +917,6 @@ v4.1
 Release Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.31...v4.1.0
 
 Most recent changes: https://github.com/BJReplay/ha-solcast-solar/compare/v4.0.43...v4.1.0
-
-### Prior changes
-<details><summary><i>Click here for changes back to v3.0</i></summary>
 
 v4.0.43
 * Auto-fetch on startup when stale forecast data is detected by @autoSteve
