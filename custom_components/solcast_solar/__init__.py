@@ -208,9 +208,9 @@ def __get_session_headers(version: str):
 
 
 async def __get_granular_dampening(hass: HomeAssistant, entry: ConfigEntry, solcast: SolcastApi):
-    granular_dampening = await solcast.granular_dampening_data()
     opt = {**entry.options}
-    opt[SITE_DAMP] = granular_dampening  # Internal per-site dampening set flag. A hidden option until set.
+    # Set internal per-site dampening set flag. This is a hidden option until True.
+    opt[SITE_DAMP] = await solcast.granular_dampening_data()
     hass.config_entries.async_update_entry(entry, options=opt)
     hass.data[DOMAIN]["entry_options"] = entry.options
 
@@ -219,14 +219,15 @@ async def __check_stale_start(coordinator: SolcastUpdateCoordinator):
     # If the integration has been failed for some time and then is restarted retrieve forecasts (i.e Home Assistant down for a while).
     if coordinator.solcast.is_stale_data():
         try:
-            _LOGGER.info("The update automation has not been running, updating forecast")
             if coordinator.solcast.options.auto_update == 0:
+                _LOGGER.warning("The update automation has not been running, updating forecast")
                 await coordinator.service_event_update()
             else:
-                await coordinator.service_event_force_update()
+                _LOGGER.warning("Many auto updates have been missed, updating forecast")
+                await coordinator.service_event_update(ignore_auto_enabled=True)
         except Exception as e:  # noqa: BLE001
             _LOGGER.error(
-                "Exception fetching data on stale/initial start: %s: %s",
+                "Exception fetching data on stale start: %s: %s",
                 e,
                 traceback.format_exc(),
             )
