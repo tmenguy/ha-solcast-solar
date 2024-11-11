@@ -781,6 +781,8 @@ series:
 v4.2.6
 * Fix an issue that was preventing new installs by @autoSteve
 * Fix an issue migrating from/to multi-API for Docker setup by @autoSteve
+* Fix an issue clearing all forecast history by @autoSteve
+* Fix an issue where API count was not incremented on stale start fetch by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.2.5...v4.2.6
 
