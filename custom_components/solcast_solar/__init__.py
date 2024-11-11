@@ -107,8 +107,7 @@ def __log_init_message(version: str, solcast: SolcastApi):
 
 async def __get_version(hass: HomeAssistant) -> str:
     try:
-        integration = await loader.async_get_integration(hass, DOMAIN)
-        return str(integration.version)
+        return str((await loader.async_get_integration(hass, DOMAIN)).version)
     except loader.IntegrationNotFound:
         return ""
 
@@ -137,6 +136,7 @@ async def __get_options(hass: HomeAssistant, entry: ConfigEntry) -> ConnectionOp
         # If something goes wrong with the damp factors then create a default list of no dampening
         dampening_option = {str(a): entry.options[f"damp{str(a).zfill(2)}"] for a in range(24)}
     except:  # noqa: E722
+        _LOGGER.warning("Dampening factors corrupt or not found, setting to 1.0")
         new_options = {**entry.options}
         for a in range(24):
             new_options[f"damp{str(a).zfill(2)}"] = 1.0
@@ -193,7 +193,7 @@ def __log_hard_limit_set(solcast: SolcastApi):
         if hard_limit_set:
             _LOGGER.info(
                 "Hard limit is set to limit peak forecast values (%s)",
-                ", ".join(f"{h}kW" for h in solcast.hard_limit.split(",")),
+                ", ".join(f"{limit}kW" for limit in solcast.hard_limit.split(",")),
             )
 
 
@@ -372,18 +372,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         """
         try:
             _LOGGER.info("Action: Query forecast data")
-
-            start = call.data.get(EVENT_START_DATETIME, dt_util.now())
-            end = call.data.get(EVENT_END_DATETIME, dt_util.now())
-            site = call.data.get(SITE, "all")
-            undampened = call.data.get(UNDAMPENED, False)
-
-            d = await coordinator.service_query_forecast_data(dt_util.as_utc(start), dt_util.as_utc(end), site, undampened)
+            data = await coordinator.service_query_forecast_data(
+                start=dt_util.as_utc(call.data.get(EVENT_START_DATETIME, dt_util.now())),
+                end=dt_util.as_utc(call.data.get(EVENT_END_DATETIME, dt_util.now())),
+                site=call.data.get(SITE, "all"),
+                undampened=call.data.get(UNDAMPENED, False),
+            )
         except intent.IntentHandleError as e:
             raise HomeAssistantError(f"Error processing {SERVICE_QUERY_FORECAST_DATA}: {e}") from e
 
         if call.return_response:
-            return {"data": d}
+            return {"data": data}
 
         return None
 
@@ -409,23 +408,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             factors = factors.strip().replace(" ", "")
             if len(factors.split(",")) == 0:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_no_factors")
-            sp = factors.split(",")
-            if len(sp) not in (24, 48):
+            factors = factors.split(",")
+            if len(factors) not in (24, 48):
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_count_not_correct")
             if site is not None:
                 site = site.lower()
                 if site == "all":
-                    if (len(sp)) != 48:
+                    if (len(factors)) != 48:
                         raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_no_all_24")
                 elif site not in [s["resource_id"] for s in solcast.sites]:
                     raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_not_site")
-            elif len(sp) == 48:
+            elif len(factors) == 48:
                 site = "all"
             out_of_range = False
             try:
-                for i in sp:
-                    # This will fail whan outside allowed range.
-                    if float(i) < 0 or float(i) > 1:
+                for factor in factors:
+                    if float(factor) < 0 or float(factor) > 1:
                         out_of_range = True
             except:  # noqa: E722
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="damp_error_parsing") from None
@@ -434,22 +432,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
             opt = {**entry.options}
 
-            def update_options():
-                d = {}
-                for i in range(24):
-                    f = float(sp[i])
-                    d.update({f"{i}": f})
-                    opt[f"damp{i:02}"] = f
-                solcast.damp = d
-
             if site is None:
-                update_options()
+                damp_factors = {}
+                for i in range(24):
+                    factor = float(factors[i])
+                    damp_factors.update({f"{i}": factor})
+                    opt[f"damp{i:02}"] = factor
+                solcast.damp = damp_factors
                 if solcast.granular_dampening:
                     _LOGGER.debug("Clear granular dampening")
                     opt[SITE_DAMP] = False  # Clear "hidden" option.
             else:
                 await solcast.refresh_granular_dampening_data()  # Ensure latest file content gets updated
-                solcast.granular_dampening[site] = [float(sp[i]) for i in range(len(sp))]
+                solcast.granular_dampening[site] = [float(factors[i]) for i in range(len(factors))]
                 await solcast.serialise_granular_dampening()
                 old_damp = opt.get(SITE_DAMP, False)
                 opt[SITE_DAMP] = True  # Set "hidden" option.
@@ -475,12 +470,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             _LOGGER.info("Action: Get dampening")
 
             site = call.data.get(SITE, None)  # Optional site.
-            d = await solcast.get_dampening(site)
+            data = await solcast.get_dampening(site)
         except intent.IntentHandleError as e:
             raise HomeAssistantError(f"Error processing {SERVICE_GET_DAMPENING}: {e}") from e
 
         if call.return_response:
-            return {"data": d}
+            return {"data": data}
 
         return None
 
@@ -498,18 +493,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         try:
             _LOGGER.info("Action: Set hard limit")
 
-            hl = call.data.get(HARD_LIMIT, "100.0")
-            if hl is None:
+            hard_limit = call.data.get(HARD_LIMIT, "100.0")
+            if hard_limit is None:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key="hard_empty")
             to_set = []
-            for h in hl.split(","):
-                h = h.strip()
-                if not h.replace(".", "", 1).isdigit():
+            for limit in hard_limit.split(","):
+                limit = limit.strip()
+                if not limit.replace(".", "", 1).isdigit():
                     raise ServiceValidationError(
                         translation_domain=DOMAIN,
                         translation_key="hard_not_positive_number",
                     )
-                val = float(h)
+                val = float(limit)
                 if val < 0:  # If not a positive int print message and ask for input again.
                     raise ServiceValidationError(
                         translation_domain=DOMAIN,
