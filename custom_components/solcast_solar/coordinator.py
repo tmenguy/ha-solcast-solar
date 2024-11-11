@@ -76,7 +76,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 self.hass, self.__check_forecast_fetch, minute=range(0, 60, 5), second=0
             )
             self.tasks["midnight_update"] = async_track_utc_time_change(
-                self.hass, self.__update_utcmidnight_usage_sensor_data, hour=0, minute=0, second=0
+                self.hass, self.__update_utc_midnight_usage_sensor_data, hour=0, minute=0, second=0
             )
             for timer in self.tasks:
                 _LOGGER.debug("Started task %s", timer)
@@ -94,6 +94,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             current_day = dt.now(self.solcast.options.tz).day
             self._date_changed = current_day != self._last_day
             if self._date_changed:
+                _LOGGER.debug("Date has changed, recalculate splines and set up auto-updates")
                 self._last_day = current_day
                 await self.__update_midnight_spline_recalculate()
                 self.__auto_update_setup()
@@ -113,7 +114,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             except:  # noqa: E722
                 pass
             self.tasks["midnight_update"] = async_track_utc_time_change(
-                self.hass, self.__update_utcmidnight_usage_sensor_data, hour=0, minute=0, second=0
+                self.hass, self.__update_utc_midnight_usage_sensor_data, hour=0, minute=0, second=0
             )
             _LOGGER.debug("Started task midnight_update")
         except:  # noqa: E722
@@ -151,7 +152,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         except:  # noqa: E722
             _LOGGER.error("Exception in __check_forecast_fetch(): %s", traceback.format_exc())
 
-    async def __update_utcmidnight_usage_sensor_data(self, *args):
+    async def __update_utc_midnight_usage_sensor_data(self, *args):
         """Reset tracked API usage at midnight UTC."""
         try:
             await self.solcast.reset_api_usage()
@@ -159,7 +160,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             await self.update_integration_listeners()
             self._data_updated = False
         except:  # noqa: E722
-            _LOGGER.error("Exception in __update_utcmidnight_usage_sensor_data(): %s", traceback.format_exc())
+            _LOGGER.error("Exception in __update_utc_midnight_usage_sensor_data(): %s", traceback.format_exc())
 
     async def __update_midnight_spline_recalculate(self):
         """Re-calculates splines at midnight local time."""
@@ -170,14 +171,16 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Exception in __update_midnight_spline_recalculate(): %s", traceback.format_exc())
 
     def __auto_update_setup(self, init: bool = False):
-        """Daily set up of auto-updates."""
+        """Set up of auto-updates."""
         try:
             match self.solcast.options.auto_update:
                 case 1:
                     self.__get_sun_rise_set()
                     self.__calculate_forecast_updates(init=init)
                 case 2:
-                    self._sunrise = self.solcast.get_day_start_utc()
+                    self._sunrise_yesterday = self.solcast.get_day_start_utc(future=-1)
+                    self._sunset_yesterday = self.solcast.get_day_start_utc()
+                    self._sunrise = self._sunset_yesterday
                     self._sunset = self.solcast.get_day_start_utc(future=1)
                     self._sunrise_tomorrow = self._sunset
                     self._sunset_tomorrow = self.solcast.get_day_start_utc(future=2)
