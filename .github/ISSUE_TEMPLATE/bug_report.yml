@@ -6,13 +6,11 @@ body:
       value: |
         This issue form is for reporting bugs only!
         
-        # Do not just write 'it does not work, vX.X.X, HA, X.X.X'
-        ## If not enough information is supplied I may just ignore or close the issue 
+        Do not just write 'it does not work, vX.X.X, HA, X.X.X'
         
+        If not enough information is supplied the you may not get the support you hope for. 
 
-        If you have a feature or enhancement request, please use the [discussion forums][fr] section.
-
-        [fr]: https://github.com/BJReplay/ha-solcast-solar/discussions
+        If you have a feature or enhancement request, please use the feature request Issue Type.
   - type: textarea
     validations:
       required: true
@@ -68,11 +66,17 @@ body:
       required: true
     attributes:
       label: Logs debug/info/error output
+      placeholder: "paste debug logs below"
       description: >- 
         Debug info, error message, or stack traces.
         
-        Logs are essential for debugging issues, and unless you are reporting an issue where you are certain that debug logs are not required, please ensure that you have 
-        enabled debug logs as described (here)[https://github.com/BJReplay/ha-solcast-solar/discussions/38#discussioncomment-9792389]
+        Logs are essential for debugging issues, and must be supplied to debug issues.
+        
+        Please please ensure that you have enabled debug logs as described [here](https://github.com/BJReplay/ha-solcast-solar/discussions/38#discussioncomment-9792389) and paste the debug logs below
+
+        To inspect and collect debug logs examine `/config/home-assistant.log` using File Editor or Visual Studio Code Server.
+
+        If you are using docker, it sometimes can be easier to gather logs using `docker compose logs -n 500 -f homeassistant` or similar
       render: txt
   - type: textarea
     attributes:
