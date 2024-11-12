@@ -21,7 +21,7 @@ import re
 import sys
 import time
 import traceback
-from typing import Any, cast
+from typing import Any, Final, cast
 
 import aiofiles  # type: ignore  # noqa: PGH003
 from aiohttp import ClientConnectionError, ClientSession
@@ -56,14 +56,14 @@ from .const import (
 )
 from .spline import cubic_interp
 
-GRANULAR_DAMPENING_OFF = False
-GRANULAR_DAMPENING_ON = True
-JSON_VERSION = 5
-SET_ALLOW_RESET = True
+GRANULAR_DAMPENING_OFF: Final = False
+GRANULAR_DAMPENING_ON: Final = True
+JSON_VERSION: Final = 5
+SET_ALLOW_RESET: Final = True
 
 # HTTP status code translation.
 # A 418 error is included here for fun. This was introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
-STATUS_TRANSLATE = {
+STATUS_TRANSLATE: Final = {
     200: "Success",
     401: "Unauthorized",
     403: "Forbidden",
@@ -77,7 +77,7 @@ STATUS_TRANSLATE = {
     504: "Gateway timeout",
 }
 
-FRESH_DATA = {
+FRESH_DATA: Final = {
     "siteinfo": {},
     "last_updated": dt.fromtimestamp(0, datetime.UTC),
     "last_attempt": dt.fromtimestamp(0, datetime.UTC),

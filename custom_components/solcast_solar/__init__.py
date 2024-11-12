@@ -56,14 +56,12 @@ from .const import (
 from .coordinator import SolcastUpdateCoordinator
 from .solcastapi import ConnectionOptions, SolcastApi
 
-_LOGGER = logging.getLogger(__name__)
-
-DAMP_FACTOR = "damp_factor"
-SITE = "site"
-UNDAMPENED = "undampened"
-EVENT_END_DATETIME = "end_date_time"
-EVENT_START_DATETIME = "start_date_time"
-PLATFORMS = [
+DAMP_FACTOR: Final = "damp_factor"
+SITE: Final = "site"
+UNDAMPENED: Final = "undampened"
+EVENT_END_DATETIME: Final = "end_date_time"
+EVENT_START_DATETIME: Final = "start_date_time"
+PLATFORMS: Final = [
     Platform.SELECT,
     Platform.SENSOR,
 ]
@@ -91,6 +89,8 @@ SERVICE_QUERY_SCHEMA: Final = vol.All(
         vol.Optional(SITE): cv.string,
     }
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def __log_init_message(version: str, solcast: SolcastApi):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 from .coordinator import SolcastUpdateCoordinator
 
-TO_REDACT = [
+TO_REDACT: Final = [
     CONF_API_KEY,
 ]
 
