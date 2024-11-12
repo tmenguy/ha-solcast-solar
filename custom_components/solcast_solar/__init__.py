@@ -540,7 +540,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         except intent.IntentHandleError as e:
             raise HomeAssistantError(f"Error processing {SERVICE_REMOVE_HARD_LIMIT}: {e}") from e
 
-    SERVICE_ACTIONS = {
+    service_actions = {
         SERVICE_CLEAR_DATA: {"action": action_call_clear_solcast_data},
         SERVICE_FORCE_UPDATE: {"action": action_call_force_update_forecast},
         SERVICE_GET_DAMPENING: {
@@ -559,7 +559,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         SERVICE_UPDATE: {"action": action_call_update_forecast},
     }
 
-    for action, call in SERVICE_ACTIONS.items():
+    for action, call in service_actions.items():
         _LOGGER.debug("Register action: %s.%s", DOMAIN, action)
         if call.get("supports_response"):
             hass.services.async_register(DOMAIN, action, call["action"], call["schema"], call["supports_response"])
@@ -588,9 +588,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 
-    for action in hass.services.async_services_for_domain(DOMAIN):
-        _LOGGER.debug("Remove action: %s.%s", DOMAIN, action)
-        hass.services.async_remove(DOMAIN, action)
+        for action in hass.services.async_services_for_domain(DOMAIN):
+            _LOGGER.debug("Remove action: %s.%s", DOMAIN, action)
+            hass.services.async_remove(DOMAIN, action)
+    else:
+        _LOGGER.error("Unload failed")
 
     return unload_ok
 
