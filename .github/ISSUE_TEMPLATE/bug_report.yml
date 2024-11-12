@@ -70,7 +70,7 @@ body:
       description: >- 
         Debug info, error message, or stack traces.
         
-        Logs are essential for debugging issues, and must be supplied to debug issues.
+        Logs are essential for debugging issues, and **must be supplied** to debug issues.
         
         Please please ensure that you have enabled debug logs as described [here](https://github.com/BJReplay/ha-solcast-solar/discussions/38#discussioncomment-9792389) and paste the debug logs below
 
