@@ -568,6 +568,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             hass.services.async_register(DOMAIN, action, call["action"], call["schema"])
             continue
         hass.services.async_register(DOMAIN, action, call["action"])
+
     return True
 
 
@@ -586,11 +587,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-
         for action in hass.services.async_services_for_domain(DOMAIN):
             _LOGGER.debug("Remove action: %s.%s", DOMAIN, action)
             hass.services.async_remove(DOMAIN, action)
+
+        hass.data[DOMAIN].pop(entry.entry_id)
     else:
         _LOGGER.error("Unload failed")
 
