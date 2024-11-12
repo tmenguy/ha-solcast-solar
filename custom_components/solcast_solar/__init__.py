@@ -373,10 +373,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         try:
             _LOGGER.info("Action: Query forecast data")
             data = await coordinator.service_query_forecast_data(
-                start=dt_util.as_utc(call.data.get(EVENT_START_DATETIME, dt_util.now())),
-                end=dt_util.as_utc(call.data.get(EVENT_END_DATETIME, dt_util.now())),
-                site=call.data.get(SITE, "all"),
-                undampened=call.data.get(UNDAMPENED, False),
+                dt_util.as_utc(call.data.get(EVENT_START_DATETIME, dt_util.now())),
+                dt_util.as_utc(call.data.get(EVENT_END_DATETIME, dt_util.now())),
+                call.data.get(SITE, "all"),
+                call.data.get(UNDAMPENED, False),
             )
         except intent.IntentHandleError as e:
             raise HomeAssistantError(f"Error processing {SERVICE_QUERY_FORECAST_DATA}: {e}") from e
@@ -469,8 +469,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         try:
             _LOGGER.info("Action: Get dampening")
 
-            site = call.data.get(SITE, None)  # Optional site.
-            data = await solcast.get_dampening(site)
+            data = await solcast.get_dampening(call.data.get(SITE, None))  # Optional site.
         except intent.IntentHandleError as e:
             raise HomeAssistantError(f"Error processing {SERVICE_GET_DAMPENING}: {e}") from e
 
@@ -541,32 +540,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         except intent.IntentHandleError as e:
             raise HomeAssistantError(f"Error processing {SERVICE_REMOVE_HARD_LIMIT}: {e}") from e
 
-    hass.services.async_register(DOMAIN, SERVICE_UPDATE, action_call_update_forecast)
-    hass.services.async_register(DOMAIN, SERVICE_FORCE_UPDATE, action_call_force_update_forecast)
-    hass.services.async_register(DOMAIN, SERVICE_CLEAR_DATA, action_call_clear_solcast_data)
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_QUERY_FORECAST_DATA,
-        action_call_get_solcast_data,
-        SERVICE_QUERY_SCHEMA,
-        SupportsResponse.ONLY,
-    )
-    hass.services.async_register(DOMAIN, SERVICE_SET_DAMPENING, action_call_set_dampening, SERVICE_DAMP_SCHEMA)
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_GET_DAMPENING,
-        action_call_get_dampening,
-        SERVICE_DAMP_GET_SCHEMA,
-        SupportsResponse.ONLY,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_SET_HARD_LIMIT,
-        action_call_set_hard_limit,
-        SERVICE_HARD_LIMIT_SCHEMA,
-    )
-    hass.services.async_register(DOMAIN, SERVICE_REMOVE_HARD_LIMIT, action_call_remove_hard_limit)
+    SERVICE_ACTIONS = {
+        SERVICE_CLEAR_DATA: {"action": action_call_clear_solcast_data},
+        SERVICE_FORCE_UPDATE: {"action": action_call_force_update_forecast},
+        SERVICE_GET_DAMPENING: {
+            "action": action_call_get_dampening,
+            "schema": SERVICE_DAMP_GET_SCHEMA,
+            "supports_response": SupportsResponse.ONLY,
+        },
+        SERVICE_QUERY_FORECAST_DATA: {
+            "action": action_call_get_solcast_data,
+            "schema": SERVICE_QUERY_SCHEMA,
+            "supports_response": SupportsResponse.ONLY,
+        },
+        SERVICE_REMOVE_HARD_LIMIT: {"action": action_call_remove_hard_limit},
+        SERVICE_SET_DAMPENING: {"action": action_call_set_dampening, "schema": SERVICE_DAMP_SCHEMA},
+        SERVICE_SET_HARD_LIMIT: {"action": action_call_set_hard_limit, "schema": SERVICE_HARD_LIMIT_SCHEMA},
+        SERVICE_UPDATE: {"action": action_call_update_forecast},
+    }
 
+    for action, call in SERVICE_ACTIONS.items():
+        _LOGGER.debug("Register action: %s.%s", DOMAIN, action)
+        if call.get("supports_response"):
+            hass.services.async_register(DOMAIN, action, call["action"], call["schema"], call["supports_response"])
+            continue
+        if call.get("schema"):
+            hass.services.async_register(DOMAIN, action, call["action"], call["schema"])
+            continue
+        hass.services.async_register(DOMAIN, action, call["action"])
     return True
 
 
@@ -587,14 +588,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 
-    hass.services.async_remove(DOMAIN, SERVICE_UPDATE)
-    hass.services.async_remove(DOMAIN, SERVICE_FORCE_UPDATE)
-    hass.services.async_remove(DOMAIN, SERVICE_CLEAR_DATA)
-    hass.services.async_remove(DOMAIN, SERVICE_QUERY_FORECAST_DATA)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_DAMPENING)
-    hass.services.async_remove(DOMAIN, SERVICE_GET_DAMPENING)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_HARD_LIMIT)
-    hass.services.async_remove(DOMAIN, SERVICE_REMOVE_HARD_LIMIT)
+    for action in hass.services.async_services_for_domain(DOMAIN):
+        _LOGGER.debug("Remove action: %s.%s", DOMAIN, action)
+        hass.services.async_remove(DOMAIN, action)
 
     return unload_ok
 
