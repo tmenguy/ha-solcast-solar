@@ -37,6 +37,9 @@ body:
         Can be found in: Settings ⇒ Devices & Services ⇒ Solcast Solar ⇒ top left box Service info ⇒ Version.
 
   - type: input
+    id: haversion
+    validations:
+      required: true
     attributes:
       label: What version of Home Assistant are you using?
       placeholder: core-
@@ -65,7 +68,11 @@ body:
       required: true
     attributes:
       label: Logs debug/info/error output
-      description: Debug info, error message, or stack traces.
+      description: >- 
+        Debug info, error message, or stack traces.
+        
+        Logs are essential for debugging issues, and unless you are reporting an issue where you are certain that debug logs are not required, please ensure that you have 
+        enabled debug logs as described (here)[https://github.com/BJReplay/ha-solcast-solar/discussions/38#discussioncomment-9792389]
       render: txt
   - type: textarea
     attributes:
