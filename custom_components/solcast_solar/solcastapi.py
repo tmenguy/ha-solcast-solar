@@ -2459,6 +2459,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             if sites_attempted > 0 and not failure:
                 # self._data["weather"] = self._weather
                 b_status = await self.build_forecast_data()
+                self._loaded_data = True
 
                 async def set_metadata_and_serialise(data):
                     data["last_updated"] = dt.now(datetime.UTC).replace(microsecond=0)

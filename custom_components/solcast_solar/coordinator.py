@@ -360,6 +360,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Delete the solcast.json file when requested by a service call."""
         if not await self.solcast.delete_solcast_file():
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="remove_cache_failed")
+        self._data_updated = True
+        await self.update_integration_listeners()
+        self._data_updated = False
 
     async def service_query_forecast_data(self, *args) -> tuple:
         """Return forecast data requested by a service call."""
