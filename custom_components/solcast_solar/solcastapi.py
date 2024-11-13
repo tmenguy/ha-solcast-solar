@@ -230,7 +230,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         options: ConnectionOptions,
         hass: HomeAssistant,
         entry: ConfigEntry,
-        api_cache_enabled: bool = False,
     ) -> None:
         """Initialise the API interface.
 
@@ -239,7 +238,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             options (ConnectionOptions): The integration stored configuration options.
             hass (HomeAssistant): The Home Assistant instance.
             entry (ConfigEntry): The entry options.
-            api_cache_enabled (bool): Utilise cached data for development instead of getting updates from Solcast (default: False).
 
         """
 
@@ -262,7 +260,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         file_path = Path(options.file_path)
 
         self._aiohttp_session = aiohttp_session
-        self._api_cache_enabled = api_cache_enabled
         self._api_limit = {}
         self._api_used = {}
         self._api_used_reset = {}
@@ -515,112 +512,100 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             for api_key in api_keys:
                 api_key = api_key.strip()
                 async with asyncio.timeout(60):
-                    # async_timeout.timeout(60):
                     cache_filename = self.__get_sites_cache_filename(api_key)
                     _LOGGER.debug(
                         "%s",
                         "Sites cache " + ("exists" if Path(cache_filename).is_file() else "does not yet exist"),
                     )
-                    if self._api_cache_enabled and Path(cache_filename).is_file():
-                        _LOGGER.debug("Loading cached sites data")
-                        status = 404
-                        async with aiofiles.open(cache_filename) as file:
-                            response_json = json.loads(await file.read())
-                            status = 200
-                    else:
-                        url = f"{self.options.host}/rooftop_sites"
-                        params = {"format": "json", "api_key": api_key}
-                        _LOGGER.debug(
-                            "Connecting to %s?format=json&api_key=%s",
-                            url,
-                            self.__redact_api_key(api_key),
+                    url = f"{self.options.host}/rooftop_sites"
+                    params = {"format": "json", "api_key": api_key}
+                    _LOGGER.debug(
+                        "Connecting to %s?format=json&api_key=%s",
+                        url,
+                        self.__redact_api_key(api_key),
+                    )
+                    retries = 3
+                    retry = retries
+                    success = False
+                    use_cache_immediate = False
+                    cache_exists = Path(cache_filename).is_file()
+                    while retry >= 0:
+                        response: ClientResponse = await self._aiohttp_session.get(url=url, params=params, headers=self.headers, ssl=False)
+
+                        status = response.status
+                        (_LOGGER.debug if status == 200 else _LOGGER.warning)(
+                            "HTTP session returned status %s in __sites_data()%s",
+                            self.__translate(status),
+                            ", trying cache" if status != 200 else "",
                         )
-                        retries = 3
-                        retry = retries
-                        success = False
-                        use_cache_immediate = False
-                        cache_exists = Path(cache_filename).is_file()
-                        while retry >= 0:
-                            response: ClientResponse = await self._aiohttp_session.get(
-                                url=url, params=params, headers=self.headers, ssl=False
-                            )
+                        try:
+                            response_json = await response.json(content_type=None)
+                        except json.decoder.JSONDecodeError:
+                            _LOGGER.error("JSONDecodeError in __sites_data(): Solcast could be having problems")
+                        except:
+                            raise
 
-                            status = response.status
-                            (_LOGGER.debug if status == 200 else _LOGGER.warning)(
-                                "HTTP session returned status %s in __sites_data()%s",
+                        if status == 200:
+                            for site in response_json["sites"]:
+                                site["api_key"] = api_key
+                            if response_json["total_records"] > 0:
+                                _LOGGER.debug("Writing sites cache")
+                                async with (
+                                    self._serialise_lock,
+                                    aiofiles.open(cache_filename, "w") as file,
+                                ):
+                                    await file.write(json.dumps(response_json, ensure_ascii=False))
+                                success = True
+                                break
+                            _LOGGER.error(
+                                "No sites for the API key %s are configured at solcast.com",
+                                self.__redact_api_key(api_key),
+                            )
+                            break
+                        if cache_exists:
+                            use_cache_immediate = True
+                            break
+                        if status == 404:
+                            _LOGGER.error(
+                                "Error getting sites for the API key %s, is the key correct?",
+                                self.__redact_api_key(api_key),
+                            )
+                            break
+                        if retry > 0:
+                            _LOGGER.debug(
+                                "Will retry get sites, retry %d",
+                                (retries - retry) + 1,
+                            )
+                            await asyncio.sleep(5)
+                        retry -= 1
+                    if status == 404 and not use_cache_immediate:
+                        continue
+                    if not success:
+                        if not use_cache_immediate:
+                            _LOGGER.warning(
+                                "Retries exhausted gathering sites, last call result: %s, using cached data if it exists",
                                 self.__translate(status),
-                                ", trying cache" if status != 200 else "",
                             )
-                            try:
-                                response_json = await response.json(content_type=None)
-                            except json.decoder.JSONDecodeError:
-                                _LOGGER.error("JSONDecodeError in __sites_data(): Solcast could be having problems")
-                            except:
-                                raise
-
-                            if status == 200:
+                        status = 404
+                        if cache_exists:
+                            async with aiofiles.open(cache_filename) as file:
+                                response_json = json.loads(await file.read())
+                                status = 200
                                 for site in response_json["sites"]:
-                                    site["api_key"] = api_key
-                                if response_json["total_records"] > 0:
-                                    _LOGGER.debug("Writing sites cache")
-                                    async with (
-                                        self._serialise_lock,
-                                        aiofiles.open(cache_filename, "w") as file,
-                                    ):
-                                        await file.write(json.dumps(response_json, ensure_ascii=False))
-                                    success = True
-                                    break
-                                _LOGGER.error(
-                                    "No sites for the API key %s are configured at solcast.com",
-                                    self.__redact_api_key(api_key),
-                                )
-                                break
-                            if cache_exists:
-                                use_cache_immediate = True
-                                break
-                            if status == 404:
-                                _LOGGER.error(
-                                    "Error getting sites for the API key %s, is the key correct?",
-                                    self.__redact_api_key(api_key),
-                                )
-                                break
-                            if retry > 0:
-                                _LOGGER.debug(
-                                    "Will retry get sites, retry %d",
-                                    (retries - retry) + 1,
-                                )
-                                await asyncio.sleep(5)
-                            retry -= 1
-                        if status == 404 and not use_cache_immediate:
-                            continue
-                        if not success:
-                            if not use_cache_immediate:
-                                _LOGGER.warning(
-                                    "Retries exhausted gathering sites, last call result: %s, using cached data if it exists",
-                                    self.__translate(status),
-                                )
-                            status = 404
-                            if cache_exists:
-                                async with aiofiles.open(cache_filename) as file:
-                                    response_json = json.loads(await file.read())
-                                    status = 200
-                                    for site in response_json["sites"]:
-                                        if (
-                                            site.get("api_key") is None
-                                        ):  # If the API key is not in the site then assume the key has not changed
-                                            site["api_key"] = api_key
-                                        if site["api_key"] not in api_keys:
-                                            status = 429
-                                            _LOGGER.debug("API key has changed so sites cache is invalid, not loading cached data")
-                                            break
-                            else:
-                                _LOGGER.error(
-                                    "Cached sites are not yet available for %s to cope with API call failure",
-                                    self.__redact_api_key(api_key),
-                                )
-                                _LOGGER.error(
-                                    "At least one successful API 'get sites' call is needed, so the integration will not function correctly"
-                                )
+                                    if site.get("api_key") is None:  # If the API key is not in the site then assume the key has not changed
+                                        site["api_key"] = api_key
+                                    if site["api_key"] not in api_keys:
+                                        status = 429
+                                        _LOGGER.debug("API key has changed so sites cache is invalid, not loading cached data")
+                                        break
+                        else:
+                            _LOGGER.error(
+                                "Cached sites are not yet available for %s to cope with API call failure",
+                                self.__redact_api_key(api_key),
+                            )
+                            _LOGGER.error(
+                                "At least one successful API 'get sites' call is needed, so the integration will not function correctly"
+                            )
 
                 if status == 200:
                     sites_data = cast(dict, response_json)
@@ -2890,19 +2875,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             # async operation.
 
             async with asyncio.timeout(900):
-                # async_timeout.timeout(900):
-                if self._api_cache_enabled:
-                    api_cache_filename = self._config_dir + "/" + cached_name + "_" + site + ".json"
-                    if Path(api_cache_filename).is_file():
-                        status = 404
-                        async with aiofiles.open(api_cache_filename) as file:
-                            response_json = json.loads(await file.read())
-                            status = 200
-                            _LOGGER.debug(
-                                "Offline cached mode enabled, loaded data for site %s",
-                                site,
-                            )
-                elif self._api_used[api_key] < self._api_limit[api_key] or force:
+                if self._api_used[api_key] < self._api_limit[api_key] or force:
                     url = f"{self.options.host}/rooftop_sites/{site}/{path}"
                     params = {"format": "json", "api_key": api_key, "hours": hours}
                     _LOGGER.debug("Fetch data url: %s", url)
@@ -2963,13 +2936,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         else:
                             _LOGGER.debug("API returned data, using force fetch so not incrementing API counter")
                         response_json = await response.json(content_type=None)
-
-                        if self._api_cache_enabled:
-                            async with (
-                                self._serialise_lock,
-                                aiofiles.open(api_cache_filename, "w") as file,
-                            ):
-                                await file.write(json.dumps(response_json, ensure_ascii=False))
                     elif status == 998:  # Exceeded API limit.
                         _LOGGER.error(
                             "API allowed polling limit has been exceeded, API counter set to %d/%d",
