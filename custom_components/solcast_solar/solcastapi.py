@@ -94,7 +94,7 @@ FunctionName = lambda n=0: sys._getframe(n + 1).f_code.co_name  # noqa: E731, SL
 class DateTimeEncoder(json.JSONEncoder):
     """Helper to convert datetime dict values to ISO format."""
 
-    def default(self, o) -> str | Any:
+    def default(self, o: Any) -> str | Any:
         """Convert to ISO format if datetime."""
         if isinstance(o, dt):
             return o.isoformat()
@@ -104,7 +104,7 @@ class DateTimeEncoder(json.JSONEncoder):
 class DateKeyEncoder(json.JSONEncoder):
     """Helper to convert datetime dict keys and values to ISO format."""
 
-    def _preprocess_date(self, o):
+    def _preprocess_date(self, o: Any):
         """Convert datetime to string."""
         if isinstance(o, dt):
             return o.isoformat()
@@ -114,13 +114,13 @@ class DateKeyEncoder(json.JSONEncoder):
             return [self._preprocess_date(_object) for _object in o]
         return o
 
-    def default(self, o):
+    def default(self, o: Any):
         """Return the default."""
         if isinstance(o, dt):
             return o.isoformat()
         return super().default(o)
 
-    def iterencode(self, o, _one_shot=False):
+    def iterencode(self, o: Any, _one_shot: bool = False):
         """Return _preprocess_date value."""
         return super().iterencode(self._preprocess_date(o))
 
@@ -128,7 +128,7 @@ class DateKeyEncoder(json.JSONEncoder):
 class NoIndentEncoder(json.JSONEncoder):
     """Helper to output semi-indented json."""
 
-    def iterencode(self, o, _one_shot=False):
+    def iterencode(self, o: Any, _one_shot: bool = False):
         """Recursive encoder to indent only top level keys."""
         list_lvl = 0
         for s in super().iterencode(o, _one_shot=_one_shot):
@@ -153,10 +153,10 @@ class JSONDecoder(json.JSONDecoder):
         """Initialise the decoder."""
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)  # noqa: B026
 
-    def object_hook(self, obj) -> dict:  # pylint: disable=method-hidden
+    def object_hook(self, o: Any) -> dict:  # pylint: disable=method-hidden
         """Return converted datetimes."""
         result = {}
-        for key, value in obj.items():
+        for key, value in o.items():
             try:
                 result[key] = dt.fromisoformat(value)
             except:  # noqa: E722
@@ -339,7 +339,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             "pv_estimate90": options[BRK_ESTIMATE90],
         }
 
-    def get_data(self) -> dict[str, Any]:
+    def get_data(self) -> list[dict]:
         """Return the data dictionary.
 
         Returns:
@@ -470,7 +470,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         # The twin try/except blocks here are significant. If the two were combined with
         # `await file.write(json.dumps(self._data, ensure_ascii=False, cls=DateTimeEncoder))`
         # then should an exception occur during conversion from dict to JSON string it
-        # would result in an empty file.
+        # will result in an empty file.
         try:
             if not self._loaded_data:
                 _LOGGER.debug("Not saving forecast cache in __serialise_data() as no data has been loaded yet")
@@ -506,6 +506,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         The Solcast API is called here with a simple five-second retry mechanism. If
         the sites cannot be loaded then the integration cannot function, and this will
         result in Home Assistant repeatedly trying to initialise.
+
+        If the sites cache exists then it is loaded immediately on first error.
         """
         try:
             self.sites = []
@@ -1378,10 +1380,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         for site, api_key in new_sites.items():
                             await self.__http_data_call(site=site, api_key=api_key, do_past=True)
 
-                        self._data["last_attempt"] = dt.now(datetime.UTC).isoformat()
-                        self._data["last_updated"] = dt.now(datetime.UTC).replace(microsecond=0)
-                        self._data_undampened["last_updated"] = dt.now(datetime.UTC).replace(microsecond=0)
+                        _now = dt.now(datetime.UTC).replace(microsecond=0)
+                        self._data["last_updated"] = _now
+                        self._data["last_attempt"] = _now
                         self._data["version"] = JSON_VERSION
+                        self._data_undampened["last_updated"] = _now
+                        self._data_undampened["last_attempt"] = _now
                         self._data_undampened["version"] = JSON_VERSION
                         serialise = True
 
@@ -1474,8 +1478,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 _LOGGER.warning("There is no solcast.json to delete")
                 return False
             await self.load_saved_data()
-        except Exception:  # noqa: BLE001
-            _LOGGER.error("Action to delete old solcast.json file failed")
+        except Exception as e:  # noqa: BLE001
+            _LOGGER.error("Action failed deleting old solcast.json file: %s: %s", e, traceback.format_exc())
             return False
         return True
 
@@ -1514,8 +1518,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
             return tuple({**data, "period_start": data["period_start"].astimezone(self._tz)} for data in forecast_slice)
 
-        except Exception:  # noqa: BLE001
-            _LOGGER.error("Action to get list of forecasts failed")
+        except Exception as e:  # noqa: BLE001
+            _LOGGER.error("Action failed to get list of forecasts: %s: %s", e, traceback.format_exc())
             return None
 
     def get_api_used_count(self) -> int:

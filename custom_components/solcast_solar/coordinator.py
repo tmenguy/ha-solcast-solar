@@ -35,21 +35,21 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
         """
         self.hass: HomeAssistant = hass
-        self.solcast = solcast
-        self.tasks = {}
+        self.interval_just_passed: dt = None
+        self.solcast: SolcastApi = solcast
+        self.tasks: dict[str, Any] = {}
         self.version: str = version
 
-        self._last_day: dt = None
         self._date_changed: bool = False
         self._data_updated: bool = False
-        self._sunrise_yesterday: dt = None
-        self._sunset_yesterday: dt = None
-        self._sunrise: dt = None
-        self._sunset: dt = None
-        self._sunrise_tomorrow: dt = None
-        self._sunset_tomorrow: dt = None
         self._intervals: list[dt] = []
-        self.interval_just_passed = None
+        self._last_day: dt = None
+        self._sunrise: dt = None
+        self._sunrise_tomorrow: dt = None
+        self._sunrise_yesterday: dt = None
+        self._sunset: dt = None
+        self._sunset_tomorrow: dt = None
+        self._sunset_yesterday: dt = None
 
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
@@ -445,7 +445,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                         return unit_adjusted(hard_limit)
                 return None
 
-    def get_sensor_extra_attributes(self, key="") -> dict[str, Any] | None:
+    def get_sensor_extra_attributes(self, key: str = "") -> dict[str, Any] | None:
         """Return the attributes for a sensor."""
         match key:
             case "forecast_this_hour":
