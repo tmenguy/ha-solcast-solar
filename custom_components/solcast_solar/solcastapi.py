@@ -254,11 +254,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.damp = options.dampening
         self.entry = entry
         self.entry_options = {**entry.options}
-        self.estimate_set = {
-            "pv_estimate": options.attr_brk_estimate,
-            "pv_estimate10": options.attr_brk_estimate10,
-            "pv_estimate90": options.attr_brk_estimate90,
-        }
+        self.estimate_set = self.__get_estimate_set(options)
+
         self.granular_dampening = {}
         self.hard_limit = options.hard_limit
         self.hass = hass
@@ -333,11 +330,17 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         )
         self.hard_limit = self.options.hard_limit
         self._use_forecast_confidence = f"pv_{self.options.key_estimate}"
-        self.estimate_set = {
-            "pv_estimate": options[BRK_ESTIMATE],
-            "pv_estimate10": options[BRK_ESTIMATE10],
-            "pv_estimate90": options[BRK_ESTIMATE90],
-        }
+        self.estimate_set = self.__get_estimate_set(self.options)
+
+    def __get_estimate_set(self, options: ConnectionOptions) -> list[str]:
+        estimate_set = []
+        if options.attr_brk_estimate:
+            estimate_set.append("pv_estimate")
+        if options.attr_brk_estimate10:
+            estimate_set.append("pv_estimate10")
+        if options.attr_brk_estimate90:
+            estimate_set.append("pv_estimate90")
+        return estimate_set
 
     def get_data(self) -> list[dict]:
         """Return the data dictionary.
@@ -1764,6 +1767,21 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     result[f"detailedHourly-{site['resource_id']}"] = hourly_tuples[site["resource_id"]]
         return result
 
+    def __get_forecast_attributes(self, get_forecast_value, n: int = 0) -> dict[str, Any]:
+        result = {}
+        if self.options.attr_brk_site:
+            for site in self.sites:
+                result[site["resource_id"]] = get_forecast_value(n, site=site["resource_id"])
+                for forecast_confidence in self.estimate_set:
+                    result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = get_forecast_value(
+                        n,
+                        site=site["resource_id"],
+                        forecast_confidence=forecast_confidence,
+                    )
+        for forecast_confidence in self.estimate_set:
+            result[forecast_confidence.replace("pv_", "")] = get_forecast_value(n, forecast_confidence=forecast_confidence)
+        return result
+
     def get_forecast_n_hour(
         self,
         n_hour: int,
@@ -1795,25 +1813,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             dict: Sensor attributes for an hour period, depending on the configured options.
 
         """
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = self.get_forecast_n_hour(n_hour, site=site["resource_id"])
-                for forecast_confidence in (
-                    "pv_estimate",
-                    "pv_estimate10",
-                    "pv_estimate90",
-                ):
-                    if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = self.get_forecast_n_hour(
-                            n_hour,
-                            site=site["resource_id"],
-                            forecast_confidence=forecast_confidence,
-                        )
-        for forecast_confidence in ("pv_estimate", "pv_estimate10", "pv_estimate90"):
-            if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace("pv_", "")] = self.get_forecast_n_hour(n_hour, forecast_confidence=forecast_confidence)
-        return result
+        return self.__get_forecast_attributes(self.get_forecast_n_hour, n_hour)
 
     def get_forecast_custom_hours(
         self,
@@ -1854,27 +1854,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             dict: Sensor attributes for a multiple hour period, depending on the configured options.
 
         """
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = self.get_forecast_custom_hours(n_hours, site=site["resource_id"])
-                for forecast_confidence in (
-                    "pv_estimate",
-                    "pv_estimate10",
-                    "pv_estimate90",
-                ):
-                    if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = self.get_forecast_custom_hours(
-                            n_hours,
-                            site=site["resource_id"],
-                            forecast_confidence=forecast_confidence,
-                        )
-        for forecast_confidence in ("pv_estimate", "pv_estimate10", "pv_estimate90"):
-            if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace("pv_", "")] = self.get_forecast_custom_hours(
-                    n_hours, forecast_confidence=forecast_confidence
-                )
-        return result
+        return self.__get_forecast_attributes(self.get_forecast_custom_hours, n_hours)
 
     def get_power_n_minutes(
         self,
@@ -1906,27 +1886,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             dict: Sensor attributes containing a forecast in N minutes, depending on the configured options.
 
         """
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = self.get_power_n_minutes(n_mins, site=site["resource_id"])
-                for forecast_confidence in (
-                    "pv_estimate",
-                    "pv_estimate10",
-                    "pv_estimate90",
-                ):
-                    if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = self.get_power_n_minutes(
-                            n_mins,
-                            site=site["resource_id"],
-                            forecast_confidence=forecast_confidence,
-                        )
-        for forecast_confidence in ("pv_estimate", "pv_estimate10", "pv_estimate90"):
-            if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace("pv_", "")] = self.get_power_n_minutes(
-                    n_mins, site=None, forecast_confidence=forecast_confidence
-                )
-        return result
+        return self.__get_forecast_attributes(self.get_power_n_minutes, n_mins)
 
     def get_peak_power_day(
         self,
@@ -1961,27 +1921,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             dict: Sensor attributes of expected peak generation values for a given day, depending on the configured options.
 
         """
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = self.get_peak_power_day(n_day, site=site["resource_id"])
-                for forecast_confidence in (
-                    "pv_estimate",
-                    "pv_estimate10",
-                    "pv_estimate90",
-                ):
-                    if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = self.get_peak_power_day(
-                            n_day,
-                            site=site["resource_id"],
-                            forecast_confidence=forecast_confidence,
-                        )
-        for forecast_confidence in ("pv_estimate", "pv_estimate10", "pv_estimate90"):
-            if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace("pv_", "")] = self.get_peak_power_day(
-                    n_day, site=None, forecast_confidence=forecast_confidence
-                )
-        return result
+        return self.__get_forecast_attributes(self.get_peak_power_day, n_day)
 
     def get_peak_time_day(
         self,
@@ -2015,32 +1955,13 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             dict: Sensor attributes of the date and time of expected peak generation for a given day, depending on the configured options.
 
         """
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = self.get_peak_time_day(n_day, site=site["resource_id"])
-                for forecast_confidence in (
-                    "pv_estimate",
-                    "pv_estimate10",
-                    "pv_estimate90",
-                ):
-                    if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = self.get_peak_time_day(
-                            n_day,
-                            site=site["resource_id"],
-                            forecast_confidence=forecast_confidence,
-                        )
-        for forecast_confidence in ("pv_estimate", "pv_estimate10", "pv_estimate90"):
-            if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace("pv_", "")] = self.get_peak_time_day(
-                    n_day, site=None, forecast_confidence=forecast_confidence
-                )
-        return result
+        return self.__get_forecast_attributes(self.get_peak_time_day, n_day)
 
-    def get_forecast_remaining_today(self, site: str | None = None, forecast_confidence: str | None = None) -> float:
+    def get_forecast_remaining_today(self, n: int = 0, site: str | None = None, forecast_confidence: str | None = None) -> float:
         """Return remaining forecasted production for today.
 
         Arguments:
+            n (int): Not used.
             site (str): An optional Solcast site ID, used to build site breakdown attributes.
             forecast_confidence (str): A optional forecast type, used to select the pv_forecast, pv_forecast10 or pv_forecast90 returned.
 
@@ -2067,24 +1988,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             dict: Sensor attributes containing the expected remaining solar generation for the current day, depending on the configured options.
 
         """
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = self.get_forecast_remaining_today(site=site["resource_id"])
-                for forecast_confidence in (
-                    "pv_estimate",
-                    "pv_estimate10",
-                    "pv_estimate90",
-                ):
-                    if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = self.get_forecast_remaining_today(
-                            site=site["resource_id"],
-                            forecast_confidence=forecast_confidence,
-                        )
-        for forecast_confidence in ("pv_estimate", "pv_estimate10", "pv_estimate90"):
-            if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace("pv_", "")] = self.get_forecast_remaining_today(forecast_confidence=forecast_confidence)
-        return result
+        return self.__get_forecast_attributes(self.get_forecast_remaining_today)
 
     def get_total_energy_forecast_day(
         self,
@@ -2120,27 +2024,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             dict: Sensor attributes containing the forecast total solar generation for a given day, depending on the configured options.
 
         """
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = self.get_total_energy_forecast_day(n_day, site=site["resource_id"])
-                for forecast_confidence in (
-                    "pv_estimate",
-                    "pv_estimate10",
-                    "pv_estimate90",
-                ):
-                    if self.estimate_set.get(forecast_confidence):
-                        result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = self.get_total_energy_forecast_day(
-                            n_day,
-                            site=site["resource_id"],
-                            forecast_confidence=forecast_confidence,
-                        )
-        for forecast_confidence in ("pv_estimate", "pv_estimate10", "pv_estimate90"):
-            if self.estimate_set.get(forecast_confidence):
-                result[forecast_confidence.replace("pv_", "")] = self.get_total_energy_forecast_day(
-                    n_day, site=None, forecast_confidence=forecast_confidence
-                )
-        return result
+        return self.__get_forecast_attributes(self.get_total_energy_forecast_day, n_day)
 
     def __get_forecast_list_slice(
         self,
