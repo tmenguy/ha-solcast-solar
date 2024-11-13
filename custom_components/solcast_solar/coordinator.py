@@ -19,6 +19,17 @@ from .solcastapi import SolcastApi
 
 _LOGGER = logging.getLogger(__name__)
 
+DAYS = [
+    "total_kwh_forecast_today",
+    "total_kwh_forecast_tomorrow",
+    "total_kwh_forecast_d3",
+    "total_kwh_forecast_d4",
+    "total_kwh_forecast_d5",
+    "total_kwh_forecast_d6",
+    "total_kwh_forecast_d7",
+]
+NO_ATTRIBUTES = ["api_counter", "api_limit", "lastupdated"]
+
 
 class SolcastUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data."""
@@ -50,6 +61,31 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         self._sunset: dt = None
         self._sunset_tomorrow: dt = None
         self._sunset_yesterday: dt = None
+
+        # First list item is the sensor value method, additional items are only used for sensor attributes.
+        self.__get_value = {
+            "forecast_this_hour": [{"method": self.solcast.get_forecast_n_hour, "value": 0}],
+            "forecast_next_hour": [{"method": self.solcast.get_forecast_n_hour, "value": 1}],
+            "forecast_custom_hours": [{"method": self.solcast.get_forecast_custom_hours, "value": self.solcast.custom_hour_sensor}],
+            "get_remaining_today": [{"method": self.solcast.get_forecast_remaining_today}],
+            "power_now": [{"method": self.solcast.get_power_n_minutes, "value": 0}],
+            "power_now_30m": [{"method": self.solcast.get_power_n_minutes, "value": 30}],
+            "power_now_1hr": [{"method": self.solcast.get_power_n_minutes, "value": 60}],
+            "peak_w_time_today": [{"method": self.solcast.get_peak_time_day, "value": 0}],
+            "peak_w_time_tomorrow": [{"method": self.solcast.get_peak_time_day, "value": 1}],
+            "peak_w_today": [{"method": self.solcast.get_peak_power_day, "value": 0}],
+            "peak_w_tomorrow": [{"method": self.solcast.get_peak_power_day, "value": 1}],
+            "api_counter": [{"method": self.solcast.get_api_used_count}],
+            "api_limit": [{"method": self.solcast.get_api_limit}],
+            "lastupdated": [{"method": self.solcast.get_last_updated}],
+        }
+        self.__get_value |= {
+            day: [
+                {"method": self.solcast.get_total_energy_forecast_day, "value": ahead},
+                {"method": self.solcast.get_forecast_day, "value": ahead},
+            ]
+            for ahead, day in enumerate(DAYS)
+        }
 
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
@@ -384,108 +420,43 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 return f"{round(hard_limit/1000, 1)} MW"
             return f"{round(hard_limit, 1)} kW"
 
-        match key:
-            case "peak_w_today":
-                return self.solcast.get_peak_power_day(0)
-            case "peak_w_time_today":
-                return self.solcast.get_peak_time_day(0)
-            case "forecast_this_hour":
-                return self.solcast.get_forecast_n_hour(0)
-            case "forecast_next_hour":
-                return self.solcast.get_forecast_n_hour(1)
-            case "forecast_custom_hours":
-                return self.solcast.get_forecast_custom_hours(self.solcast.custom_hour_sensor)
-            case "total_kwh_forecast_today":
-                return self.solcast.get_total_energy_forecast_day(0)
-            case "total_kwh_forecast_tomorrow":
-                return self.solcast.get_total_energy_forecast_day(1)
-            case "total_kwh_forecast_d3":
-                return self.solcast.get_total_energy_forecast_day(2)
-            case "total_kwh_forecast_d4":
-                return self.solcast.get_total_energy_forecast_day(3)
-            case "total_kwh_forecast_d5":
-                return self.solcast.get_total_energy_forecast_day(4)
-            case "total_kwh_forecast_d6":
-                return self.solcast.get_total_energy_forecast_day(5)
-            case "total_kwh_forecast_d7":
-                return self.solcast.get_total_energy_forecast_day(6)
-            case "power_now":
-                return self.solcast.get_power_n_minutes(0)
-            case "power_now_30m":
-                return self.solcast.get_power_n_minutes(30)
-            case "power_now_1hr":
-                return self.solcast.get_power_n_minutes(60)
-            case "peak_w_tomorrow":
-                return self.solcast.get_peak_power_day(1)
-            case "peak_w_time_tomorrow":
-                return self.solcast.get_peak_time_day(1)
-            case "get_remaining_today":
-                return self.solcast.get_forecast_remaining_today()
-            case "api_counter":
-                return self.solcast.get_api_used_count()
-            case "api_limit":
-                return self.solcast.get_api_limit()
-            case "lastupdated":
-                return self.solcast.get_last_updated()
-            case "hard_limit":
-                hard_limit = float(self.solcast.hard_limit.split(",")[0])
+        # Most sensors
+        if self.__get_value.get(key) is not None:
+            if self.__get_value[key][0].get("value") is not None:
+                return self.__get_value[key][0]["method"](self.__get_value[key][0].get("value", 0))
+            return self.__get_value[key][0]["method"]()
+
+        # Hard limit
+        if key == "hard_limit":
+            hard_limit = float(self.solcast.hard_limit.split(",")[0])
+            if hard_limit == 100:
+                return False
+            return unit_adjusted(hard_limit)
+
+        # Hard limits
+        api_keys = self.solcast.options.api_key
+        i = 0
+        for api_key in api_keys.split(","):
+            if key == "hard_limit_" + api_key[-6:]:
+                hard_limit = float(self.solcast.hard_limit.split(",")[i])
                 if hard_limit == 100:
                     return False
                 return unit_adjusted(hard_limit)
-            # case "weather_description":
-            #     return self.solcast.get_weather_description()
-            case _:
-                api_keys = self.solcast.options.api_key
-                i = 0
-                for api_key in api_keys.split(","):
-                    if key == "hard_limit_" + api_key[-6:]:
-                        hard_limit = float(self.solcast.hard_limit.split(",")[i])
-                        if hard_limit == 100:
-                            return False
-                        return unit_adjusted(hard_limit)
-                return None
+        return None
 
     def get_sensor_extra_attributes(self, key: str = "") -> dict[str, Any] | None:
         """Return the attributes for a sensor."""
-        match key:
-            case "forecast_this_hour":
-                return self.solcast.get_forecasts_n_hour(0)
-            case "forecast_next_hour":
-                return self.solcast.get_forecasts_n_hour(1)
-            case "forecast_custom_hours":
-                return self.solcast.get_forecasts_custom_hours(self.solcast.custom_hour_sensor)
-            case "total_kwh_forecast_today":
-                return self.solcast.get_forecast_day(0) | self.solcast.get_sites_total_energy_forecast_day(0)
-            case "total_kwh_forecast_tomorrow":
-                return self.solcast.get_forecast_day(1) | self.solcast.get_sites_total_energy_forecast_day(1)
-            case "total_kwh_forecast_d3":
-                return self.solcast.get_forecast_day(2) | self.solcast.get_sites_total_energy_forecast_day(2)
-            case "total_kwh_forecast_d4":
-                return self.solcast.get_forecast_day(3) | self.solcast.get_sites_total_energy_forecast_day(3)
-            case "total_kwh_forecast_d5":
-                return self.solcast.get_forecast_day(4) | self.solcast.get_sites_total_energy_forecast_day(4)
-            case "total_kwh_forecast_d6":
-                return self.solcast.get_forecast_day(5) | self.solcast.get_sites_total_energy_forecast_day(5)
-            case "total_kwh_forecast_d7":
-                return self.solcast.get_forecast_day(6) | self.solcast.get_sites_total_energy_forecast_day(6)
-            case "power_now":
-                return self.solcast.get_sites_power_n_minutes(0)
-            case "power_now_30m":
-                return self.solcast.get_sites_power_n_minutes(30)
-            case "power_now_1hr":
-                return self.solcast.get_sites_power_n_minutes(60)
-            case "peak_w_today":
-                return self.solcast.get_sites_peak_power_day(0)
-            case "peak_w_time_today":
-                return self.solcast.get_sites_peak_time_day(0)
-            case "peak_w_tomorrow":
-                return self.solcast.get_sites_peak_power_day(1)
-            case "peak_w_time_tomorrow":
-                return self.solcast.get_sites_peak_time_day(1)
-            case "get_remaining_today":
-                return self.solcast.get_forecasts_remaining_today()
-            case _:
-                return None
+
+        if self.__get_value.get(key) is None:
+            return None
+        ret = {}
+        for fetch in self.__get_value[key] if key not in NO_ATTRIBUTES else []:
+            ret |= (
+                self.solcast.get_forecast_attributes(fetch["method"], fetch.get("value", 0))
+                if fetch["method"] != self.solcast.get_forecast_day
+                else fetch["method"](fetch["value"])
+            )
+        return ret
 
     def get_site_sensor_value(self, roof_id: str, key: str) -> float | None:
         """Get the site total for today."""

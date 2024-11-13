@@ -216,19 +216,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         get_rooftop_site_extra_data: Return information about a site.
         get_forecast_day: Return forecast for the Nth day ahead.
         get_forecast_n_hour: Return forecast for the Nth hour. Based from prior hour point.
-        get_forecasts_n_hour: Return forecast for the Nth hour for all sites and individual sites.
         get_forecast_custom_hours: Return forecast for the next N hours. Interpolated, based from prior 5-minute point.
-        get_forecasts_custom_hours: Return forecast for the next N hours for all sites and individual sites.
         get_power_n_minutes: Return expected power generation in the next N minutes. Based from prior half-hour point.
-        get_sites_power_n_minutes: Return expected power generation in the next N minutes for all sites and individual sites.
         get_peak_power_day: Return max kW for site N days ahead.
-        get_sites_peak_power_day: Return max kW for site N days ahead for all sites and individual sites.
         get_peak_time_day: Return hour of max kW for site N days ahead.
-        get_sites_peak_time_day: Return hour of max kW for site N days ahead for all sites and individual sites.
         get_forecast_remaining_today: Return remaining forecasted production for today. Interpolated, based from prior 5-minute point.
-        get_forecasts_remaining_today: Return remaining forecasted production for today for all sites and individual sites.
         get_total_energy_forecast_day: Return forecast kWh total for site N days ahead.
-        get_sites_total_energy_forecast_day: Return forecast kWh total for site N days ahead for all sites and individual sites.
     """
 
     def __init__(
@@ -1767,21 +1760,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     result[f"detailedHourly-{site['resource_id']}"] = hourly_tuples[site["resource_id"]]
         return result
 
-    def __get_forecast_attributes(self, get_forecast_value, n: int = 0) -> dict[str, Any]:
-        result = {}
-        if self.options.attr_brk_site:
-            for site in self.sites:
-                result[site["resource_id"]] = get_forecast_value(n, site=site["resource_id"])
-                for forecast_confidence in self.estimate_set:
-                    result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = get_forecast_value(
-                        n,
-                        site=site["resource_id"],
-                        forecast_confidence=forecast_confidence,
-                    )
-        for forecast_confidence in self.estimate_set:
-            result[forecast_confidence.replace("pv_", "")] = get_forecast_value(n, forecast_confidence=forecast_confidence)
-        return result
-
     def get_forecast_n_hour(
         self,
         n_hour: int,
@@ -1802,18 +1780,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         start_utc = self.__get_hour_start_utc() + timedelta(hours=n_hour)
         end_utc = start_utc + timedelta(hours=1)
         return round(500 * self.__get_forecast_pv_estimates(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence))
-
-    def get_forecasts_n_hour(self, n_hour: int) -> dict[str, Any]:
-        """Return forecast for the Nth hour for all sites and individual sites.
-
-        Arguments:
-            n_hour (int): An hour into the future, or the current hour (0 = current and 1 = next hour are used).
-
-        Returns:
-            dict: Sensor attributes for an hour period, depending on the configured options.
-
-        """
-        return self.__get_forecast_attributes(self.get_forecast_n_hour, n_hour)
 
     def get_forecast_custom_hours(
         self,
@@ -1844,18 +1810,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             )
         )
 
-    def get_forecasts_custom_hours(self, n_hours: int) -> dict[str, Any]:
-        """Return forecast for the next N hours for all sites and individual sites.
-
-        Arguments:
-            n_hours (int): A configured number of hours into the future.
-
-        Returns:
-            dict: Sensor attributes for a multiple hour period, depending on the configured options.
-
-        """
-        return self.__get_forecast_attributes(self.get_forecast_custom_hours, n_hours)
-
     def get_power_n_minutes(
         self,
         n_mins: int,
@@ -1875,18 +1829,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         """
         time_utc = self.get_now_utc() + timedelta(minutes=n_mins)
         return round(1000 * self.__get_forecast_pv_moment(time_utc, site=site, forecast_confidence=forecast_confidence))
-
-    def get_sites_power_n_minutes(self, n_mins: int) -> dict[str, Any]:
-        """Return expected power generation in the next N minutes for all sites and individual sites.
-
-        Arguments:
-            n_mins (int): A number of minutes into the future.
-
-        Returns:
-            dict: Sensor attributes containing a forecast in N minutes, depending on the configured options.
-
-        """
-        return self.__get_forecast_attributes(self.get_power_n_minutes, n_mins)
 
     def get_peak_power_day(
         self,
@@ -1911,18 +1853,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         result = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence)
         return 0 if result is None else round(1000 * result[forecast_confidence])
 
-    def get_sites_peak_power_day(self, n_day: int) -> dict[str, Any]:
-        """Return maximum forecast Watts for N days ahead for all sites and individual sites.
-
-        Arguments:
-            n_day (int): A number representing a day (0 = today, 1 = tomorrow, etc., with a maximum of day 7).
-
-        Returns:
-            dict: Sensor attributes of expected peak generation values for a given day, depending on the configured options.
-
-        """
-        return self.__get_forecast_attributes(self.get_peak_power_day, n_day)
-
     def get_peak_time_day(
         self,
         n_day: int,
@@ -1944,18 +1874,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         end_utc = self.get_day_start_utc(future=n_day + 1)
         result = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence)
         return result if result is None else result["period_start"]
-
-    def get_sites_peak_time_day(self, n_day: int) -> dict[str, Any]:
-        """Return hour of max generation for site N days ahead for all sites and individual sites.
-
-        Arguments:
-            n_day (int): A day (0 = today, 1 = tomorrow, etc., with a maximum of day 7).
-
-        Returns:
-            dict: Sensor attributes of the date and time of expected peak generation for a given day, depending on the configured options.
-
-        """
-        return self.__get_forecast_attributes(self.get_peak_time_day, n_day)
 
     def get_forecast_remaining_today(self, n: int = 0, site: str | None = None, forecast_confidence: str | None = None) -> float:
         """Return remaining forecasted production for today.
@@ -1981,15 +1899,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             4,
         )
 
-    def get_forecasts_remaining_today(self) -> dict[str, Any]:
-        """Return remaining forecasted production for today for all sites and individual sites.
-
-        Returns:
-            dict: Sensor attributes containing the expected remaining solar generation for the current day, depending on the configured options.
-
-        """
-        return self.__get_forecast_attributes(self.get_forecast_remaining_today)
-
     def get_total_energy_forecast_day(
         self,
         n_day: int,
@@ -2014,17 +1923,30 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             4,
         )
 
-    def get_sites_total_energy_forecast_day(self, n_day: int) -> dict[str, Any]:
-        """Return forecast production total for N days ahead for all sites and individual sites.
+    def get_forecast_attributes(self, get_forecast_value, n: int = 0) -> dict[str, Any]:
+        """Return forecast attributes for the 'n' forecast value for all sites and individual sites.
 
         Arguments:
-            n_day (int): A day (0 = today, 1 = tomorrow, etc., with a maximum of day 7).
+            get_forecast_value (function): A function to get the forecast value.
+            n (int): A minute, hour or day into the future.
 
         Returns:
-            dict: Sensor attributes containing the forecast total solar generation for a given day, depending on the configured options.
+            dict: Sensor attributes for the period, depending on the configured options.
 
         """
-        return self.__get_forecast_attributes(self.get_total_energy_forecast_day, n_day)
+        result = {}
+        if self.options.attr_brk_site:
+            for site in self.sites:
+                result[site["resource_id"]] = get_forecast_value(n, site=site["resource_id"])
+                for forecast_confidence in self.estimate_set:
+                    result[forecast_confidence.replace("pv_", "") + "-" + site["resource_id"]] = get_forecast_value(
+                        n,
+                        site=site["resource_id"],
+                        forecast_confidence=forecast_confidence,
+                    )
+        for forecast_confidence in self.estimate_set:
+            result[forecast_confidence.replace("pv_", "")] = get_forecast_value(n, forecast_confidence=forecast_confidence)
+        return result
 
     def __get_forecast_list_slice(
         self,

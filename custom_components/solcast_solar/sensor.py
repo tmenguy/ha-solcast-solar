@@ -260,7 +260,6 @@ def get_sensor_update_policy(key: str) -> SensorUpdatePolicy:
             | "power_now"
             | "power_now_30m"
             | "power_now_1hr"
-            | "api_counter"
         ):
             return SensorUpdatePolicy.EVERY_TIME_INTERVAL
         case _:
