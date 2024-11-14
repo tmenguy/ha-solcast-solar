@@ -149,7 +149,7 @@ dictConfig(
         "handlers": {
             "wsgi": {"class": "logging.StreamHandler", "stream": "ext://flask.logging.wsgi_errors_stream", "formatter": "default"}
         },
-        "root": {"level": "INFO", "handlers": ["wsgi"]},
+        "root": {"level": "DEBUG", "handlers": ["wsgi"]},
     }
 )
 
@@ -171,7 +171,7 @@ def get_period(delta):
 
 def validate_call(api_key, counter=True):
     """Return the state of the API call."""
-    global counter_last_reset  # noqa: PLW0603
+    global counter_last_reset  # noqa: PLW0603 pylint: disable=global-statement
     if counter_last_reset.day != dt.now(datetime.UTC).day:
         _LOGGER.info("Resetting API usage counter")
         for v in API_KEY_SITES.values():
@@ -319,4 +319,4 @@ if __name__ == "__main__":
     _LOGGER.info("API limit is set to %s, usage has been reset", API_LIMIT)
     _LOGGER.info("Simulator originally written by @autoSteve")
     _LOGGER.info("Integration issues raised regarding this script will be closed without response because it is a development tool")
-    app.run(host="127.0.0.1", port=443, ssl_context=("cert.pem", "key.pem"))
+    app.run(debug=True, host="127.0.0.1", port=443, ssl_context=("cert.pem", "key.pem"))

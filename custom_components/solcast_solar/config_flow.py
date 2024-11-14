@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 import re
-import string
 from typing import Any
 
 import voluptuous as vol
