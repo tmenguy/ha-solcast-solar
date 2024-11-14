@@ -259,6 +259,7 @@ def get_site_forecasts(site_id):
     if not state:
         return jsonify(issue), response_code
     API_KEY_SITES[api_key]["counter"] += 1
+    _LOGGER.info("API key %s has been used %s times", api_key, API_KEY_SITES[api_key]["counter"])
 
     # Find the site by site_id
     site = find_site(site_id, api_key)
