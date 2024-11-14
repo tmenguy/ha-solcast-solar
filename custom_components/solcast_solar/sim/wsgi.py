@@ -183,9 +183,9 @@ def validate_call(api_key, counter=True):
     if api_key not in API_KEY_SITES:
         return False, {"response_status": {"error_code": "InvalidKey", "message": "Invalid API key"}}, 401
     if dt.now(datetime.UTC).minute == 0:
-        return False, {"response_status": {"error_code": "RateLimitExceeded", "message": "The API is busy, try again later"}}, 429
+        return False, {"response_status": {}}, 429
     if counter and API_KEY_SITES[api_key]["counter"] >= API_LIMIT:
-        return False, {"response_status": {"error_code": "TooManyRequests", "message": "API call limit has been exceeded"}}, 429
+        return False, {"response_status": {"error_code": "TooManyRequests", "message": "You have exceeded your free daily limit."}}, 429
     return True, None, 200
 
 
