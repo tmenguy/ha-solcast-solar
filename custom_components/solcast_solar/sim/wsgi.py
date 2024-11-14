@@ -2,9 +2,9 @@
 
 Install:
 
-* Run this script in a Home Assistant DevContainer
+* This script runs in a Home Assistant DevContainer
 * Modify /etc/hosts (need sudo): 127.0.0.1 localhost api.solcast.com.au
-* Adjust TIMEZONE constant to match the Home Assistant configuration (the DevContainer will be set to UTC).
+* Adjust TIMEZONE constant to match the Home Assistant configuration (the DevContainer will be set to UTC, so the time zone cannot be read from the environment).
 * pip install Flask
 * Script start: python3 -m wsgi
 
@@ -19,11 +19,12 @@ Theory of operation:
 * Configure integration to use either API key "1", "2", or both. Any other key will return an error.
 * API key 1 has two sites, API key 2 has one site
 * Forecast for every day is the same bell curve
-* 429 responses are always given when minute=0
+* 429 responses are given when minute=0, unless --no429 is set, or other minutes are specified with --bomb429
 
 SSL certificate:
 
 * To generate a new self-signed certificate if needed: openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 3650
+* openssl will already be installed in the DevContainer
 
 Integration issues raised regarding the simulator will be closed without response.
 
