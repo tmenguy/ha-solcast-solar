@@ -2710,8 +2710,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 oldest = (dt.now(self._tz).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=6)).astimezone(datetime.UTC)
 
                 for estimate_actual in estimate_actuals:
-                    period_start = parse_datetime(estimate_actual["period_end"]).astimezone(datetime.UTC)
-                    period_start = period_start.replace(second=0, microsecond=0) - timedelta(minutes=30)
+                    period_start = parse_datetime(estimate_actual["period_end"]).astimezone(datetime.UTC).replace(
+                        second=0, microsecond=0
+                    ) - timedelta(minutes=30)
                     if period_start.minute not in (0, 30):
                         _LOGGER.error(
                             "Got a period_start minute that is not 0 or 30, period_start: %d",
@@ -2759,8 +2760,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
             start_time = time.time()
             for forecast in latest_forecasts:
-                period_start = parse_datetime(forecast["period_end"]).astimezone(datetime.UTC)
-                period_start = period_start.replace(second=0, microsecond=0) - timedelta(minutes=30)
+                period_start = parse_datetime(forecast["period_end"]).astimezone(datetime.UTC).replace(second=0, microsecond=0) - timedelta(
+                    minutes=30
+                )
                 if period_start.minute not in {0, 30}:
                     _LOGGER.error(
                         "Got a period_start minute that is not 0 or 30, period_start: %d",

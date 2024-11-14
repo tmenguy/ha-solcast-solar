@@ -8,6 +8,12 @@ Install:
 * pip install Flask
 * Script start: python3 -m wsgi
 
+Optional run arguments:
+
+* --limit LIMIT      Set the API call limit available, example --limit 100
+* --no429            Do not generate 429 responses, example --no429
+* --bomb429 w,x,y,z  The minute(s) of the hour to return API too busy, comma separated, example --bomb429 0,15,30,45
+
 Theory of operation:
 
 * Configure integration to use either API key "1", "2", or both. Any other key will return an error.
@@ -23,6 +29,7 @@ Integration issues raised regarding the simulator will be closed without respons
 
 """  # noqa: INP001
 
+import argparse
 import datetime
 from datetime import datetime as dt, timedelta
 from logging.config import dictConfig
@@ -84,9 +91,11 @@ API_KEY_SITES = {
         "counter": 0,
     },
 }
+BOMB_429 = [0]
 FORECAST = 0.9
 FORECAST_10 = 0.75
 FORECAST_90 = 1.0
+GENERATE_429 = True
 GENERATION_FACTOR = [
     0.0,
     0.0,
@@ -182,7 +191,7 @@ def validate_call(api_key, counter=True):
         return False, {"response_status": {"error_code": "KeyRequired", "message": "An API key must be specified"}}, 400
     if api_key not in API_KEY_SITES:
         return False, {"response_status": {"error_code": "InvalidKey", "message": "Invalid API key"}}, 401
-    if dt.now(datetime.UTC).minute == 0:
+    if BOMB_429 and dt.now(datetime.UTC).minute in BOMB_429:
         return False, {"response_status": {}}, 429
     if counter and API_KEY_SITES[api_key]["counter"] >= API_LIMIT:
         return False, {"response_status": {"error_code": "TooManyRequests", "message": "You have exceeded your free daily limit."}}, 429
@@ -315,6 +324,26 @@ def get_site_forecasts(site_id):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--limit", help="Set the API call limit available, example --limit 100", type=int, required=False)
+    parser.add_argument("--no429", help="Do not generate 429 responses", action="store_true", required=False)
+    parser.add_argument(
+        "--bomb429",
+        help="The minute(s) of the hour to return API too busy, comma separated, example --bomb429 0,15,30,45",
+        type=str,
+        required=False,
+    )
+    args = parser.parse_args()
+    if args.limit:
+        API_LIMIT = args.limit
+        _LOGGER.debug("API limit has been set to %s", API_LIMIT)
+    if args.no429:
+        GENERATE_429 = False
+        _LOGGER.debug("429 responses will not be generated")
+    if args.bomb429:
+        BOMB_429 = [int(x) for x in args.bomb429.split(",")]
+        _LOGGER.debug("API too busy responses will be returned at minute(s) %s", BOMB_429)
+
     _LOGGER.info("Starting Solcast hobbyist API simulator, will listen on localhost:443")
     _LOGGER.info("API limit is set to %s, usage has been reset", API_LIMIT)
     _LOGGER.info("Simulator originally written by @autoSteve")
