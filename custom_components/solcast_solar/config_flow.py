@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+import re
+import string
 from typing import Any
 
 import voluptuous as vol
@@ -88,9 +90,23 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="single_instance_allowed")
 
         if user_input is not None:
+            api_key = user_input[CONF_API_KEY].replace(" ", "")
+            if not re.match("^[a-zA-Z0-9,]+$", api_key):
+                return self.async_abort(reason="API key contains invalid character")
+            api_count = len(api_key.split(","))
+            api_quota = user_input[API_QUOTA].replace(" ", "")
+            api_quota = [s for s in api_quota.split(",") if s]
+            for q in api_quota:
+                if not q.isnumeric():
+                    return self.async_abort(reason="API limit is not a number")
+                if int(q) < 1:
+                    return self.async_abort(reason="API limit must be one  or greater!")
+            if len(api_quota) > api_count:
+                return self.async_abort(reason="There are more API limit counts entered than keys!")
+            api_quota = ",".join(api_quota)
             options = {
-                CONF_API_KEY: user_input[CONF_API_KEY],
-                API_QUOTA: user_input[API_QUOTA],
+                CONF_API_KEY: api_key,
+                API_QUOTA: api_quota,
                 AUTO_UPDATE: int(user_input[AUTO_UPDATE]),
                 # Remaining options set to default
                 CUSTOM_HOUR_SENSOR: 1,
@@ -177,11 +193,13 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             try:
                 all_config_data = {**self._options}
 
-                api_key = user_input["api_key"].replace(" ", "")
+                api_key = user_input[CONF_API_KEY].replace(" ", "")
+                if not re.match("^[a-zA-Z0-9,]+$", api_key):
+                    return self.async_abort(reason="API key contains invalid character")
                 api_key = [s for s in api_key.split(",") if s]
                 api_count = len(api_key)
                 api_key = ",".join(api_key)
-                all_config_data["api_key"] = api_key
+                all_config_data[CONF_API_KEY] = api_key
 
                 api_quota = user_input[API_QUOTA].replace(" ", "")
                 api_quota = [s for s in api_quota.split(",") if s]
