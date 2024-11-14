@@ -399,7 +399,11 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             str: The message, with API key obfuscated.
 
         """
-        return msg.replace(api_key, self.__redact_api_key(api_key))
+        return (
+            msg.replace("key': '" + api_key, "key': '" + self.__redact_api_key(api_key))
+            .replace("sites-" + api_key, "sites-" + self.__redact_api_key(api_key))
+            .replace("usage-" + api_key, "usage-" + self.__redact_api_key(api_key))
+        )
 
     def __is_multi_key(self) -> bool:
         """Test whether multiple API keys are in use.
