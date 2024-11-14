@@ -2396,8 +2396,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         try:
             last_attempt = dt.now(datetime.UTC)
             status = ""
-            if self.get_last_updated() + timedelta(minutes=1) > dt.now(datetime.UTC):
-                status = f"Not requesting a solar forecast because time is within one minute of last update ({self.get_last_updated().astimezone(self._tz)})"
+            if self.get_last_updated() + timedelta(seconds=10) > dt.now(datetime.UTC):
+                status = f"Not requesting a solar forecast because time is within ten seconds of last update ({self.get_last_updated().astimezone(self._tz)})"
                 _LOGGER.warning(status)
                 return status
 
@@ -2685,6 +2685,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 )
                 await self.tasks["fetch"]
                 response = self.tasks["fetch"].result()
+
                 if self.tasks.get("fetch") is not None:
                     self.tasks.pop("fetch")
                 if not isinstance(response, dict):
