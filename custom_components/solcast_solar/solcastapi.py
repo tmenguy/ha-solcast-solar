@@ -2683,7 +2683,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         path="estimated_actuals",
                         site=site,
                         api_key=api_key,
-                        cached_name="actuals",
                         force=force,
                     )
                 )
@@ -2737,7 +2736,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     path="forecasts",
                     site=site,
                     api_key=api_key,
-                    cached_name="forecasts",
                     force=force,
                 )
             )
@@ -2850,7 +2848,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         path: str = "error",
         site: str = "",
         api_key: str = "",
-        cached_name: str = "forecasts",
         force: bool = False,
     ) -> dict[str, Any] | None:
         """Fetch forecast data.
@@ -2860,7 +2857,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             path (str): The path to follow. "forecast" or "estimated actuals". Omitting this parameter will result in an error.
             site (str): A Solcast site ID.
             api_key (str): A Solcast API key appropriate to use for the site.
-            cached_name (str): "forecasts" or "actuals".
             force (bool): A forced update, which does not update the internal API use counter.
 
         Returns:
