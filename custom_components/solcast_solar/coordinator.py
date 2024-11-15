@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from datetime import datetime as dt, timedelta
 import logging
 import traceback
@@ -114,8 +115,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             self.tasks["midnight_update"] = async_track_utc_time_change(
                 self.hass, self.__update_utc_midnight_usage_sensor_data, hour=0, minute=0, second=0
             )
-            for timer in self.tasks:
-                _LOGGER.debug("Started task %s", timer)
+            for timer in sorted(self.tasks):
+                _LOGGER.debug("Running task %s", timer)
         except:  # noqa: E722
             _LOGGER.error("Exception in setup: %s", traceback.format_exc())
             return False
@@ -160,31 +161,55 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Check for an auto forecast update event."""
         try:
             if self.solcast.options.auto_update:
+
+                def set_next_update():
+                    if len(self._intervals) > 0:
+                        next_update = self._intervals[0].astimezone(self.solcast.options.tz)
+                        self.solcast.set_next_update(
+                            next_update.strftime(TIME_FORMAT)
+                            if next_update.date() == dt.now().date()
+                            else next_update.strftime(DATE_FORMAT)
+                        )
+                    else:
+                        self.solcast.set_next_update(None)
+
+                async def wait_for_fetch(update_in: int):
+                    try:
+                        await asyncio.sleep(update_in)
+                        _LOGGER.info("Auto update forecast")
+                        self._intervals = self._intervals[1:]
+                        set_next_update()
+                        await self.__forecast_update()
+                    except asyncio.CancelledError:
+                        _LOGGER.info("Auto update scheduled update cancelled")
+                    finally:
+                        with contextlib.suppress(Exception):
+                            self.tasks.pop(f"pending_update_{int(update_in)}")
+                            _LOGGER.debug("Completed task pending_update_%d", int(update_in))
+
                 if len(self._intervals) > 0:
                     _now = self.solcast.get_real_now_utc().replace(microsecond=0)
                     _from = _now.replace(minute=int(_now.minute / 5) * 5, second=0)
-                    if _from <= self._intervals[0] <= _from + timedelta(seconds=299):
-                        update_in = (self._intervals[0] - _now).total_seconds()
-                        if self.tasks.get("pending_update") is not None:
-                            # An update is already tasked
-                            _LOGGER.debug("Update already tasked and updating in %d seconds", update_in)
-                            return
-                        _LOGGER.debug("Forecast will update in %d seconds", update_in)
 
-                        async def wait_for_fetch():
-                            try:
-                                await asyncio.sleep(update_in)
-                                # Proceed with forecast update if not cancelled
-                                _LOGGER.info("Auto update forecast")
-                                self._intervals = self._intervals[1:]
-                                await self.__forecast_update()
-                            except asyncio.CancelledError:
-                                _LOGGER.info("Auto update cancelled next scheduled update")
-                            finally:
-                                if self.tasks.get("pending_update") is not None:
-                                    self.tasks.pop("pending_update")
+                    pop_expired = []
+                    for index, interval in enumerate(self._intervals):
+                        if _from <= interval <= _from + timedelta(seconds=299):
+                            update_in = (interval - _now).total_seconds()
+                            task_name = f"pending_update_{int(update_in)}"
+                            if self.tasks.get(task_name) is not None:
+                                # The interval update is already tasked
+                                _LOGGER.debug("Task %s already exists, ignoring", task_name)
+                                continue
+                            _LOGGER.debug("Create task %s", task_name)
+                            self.tasks[task_name] = asyncio.create_task(wait_for_fetch(update_in))
+                        if interval < _from:
+                            pop_expired.append(index)
+                    # Remove expired intervals if any have been missed
+                    if len(pop_expired) > 0:
+                        _LOGGER.debug("Removing expired auto update intervals")
+                        self._intervals = [interval for i, interval in enumerate(self._intervals) if i not in pop_expired]
+                        set_next_update()
 
-                        self.tasks["pending_update"] = asyncio.create_task(wait_for_fetch())
         except:  # noqa: E722
             _LOGGER.error("Exception in __check_forecast_fetch(): %s", traceback.format_exc())
 
@@ -319,14 +344,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             await self.solcast.reset_usage_cache()
             await self.__restart_time_track_midnight_update()
 
-        if len(self._intervals) > 0:
-            next_update = self._intervals[0].astimezone(self.solcast.options.tz)
-            next_update = next_update.strftime(TIME_FORMAT) if next_update.date() == dt.now().date() else next_update.strftime(DATE_FORMAT)
-        else:
-            next_update = None
-
         # await self.solcast.get_weather()
-        await self.solcast.get_forecast_update(do_past=False, force=force, next_update=next_update)
+        await self.solcast.get_forecast_update(do_past=False, force=force)
         self._data_updated = True
         await self.update_integration_listeners()
         self._data_updated = False

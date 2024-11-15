@@ -37,8 +37,10 @@ from logging.config import dictConfig
 from zoneinfo import ZoneInfo
 
 from flask import Flask, jsonify, request
+from flask.json.provider import DefaultJSONProvider
 
 TIMEZONE = ZoneInfo("Australia/Melbourne")
+DEBUG = False  # Run Flask in debug mode (auto-restart on code changes)
 
 API_LIMIT = 50
 API_KEY_SITES = {
@@ -55,7 +57,7 @@ API_KEY_SITES = {
                 "capacity_dc": 6.2,
                 "azimuth": 90,
                 "tilt": 30,
-                "location": "Oz",
+                "location": "Downunder",
             },
             {
                 "resource_id": "2222-2222-2222-2222",
@@ -68,7 +70,7 @@ API_KEY_SITES = {
                 "capacity_dc": 4.2,
                 "azimuth": 90,
                 "tilt": 30,
-                "location": "Oz",
+                "location": "Downunder",
             },
         ],
         "counter": 0,
@@ -86,7 +88,7 @@ API_KEY_SITES = {
                 "capacity_dc": 4.2,
                 "azimuth": 90,
                 "tilt": 30,
-                "location": "Oz",
+                "location": "Downunder",
             },
         ],
         "counter": 0,
@@ -98,54 +100,54 @@ FORECAST_10 = 0.75
 FORECAST_90 = 1.0
 GENERATE_429 = True
 GENERATION_FACTOR = [
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
     0.01,
     0.025,
-    0.05,
+    0.04,
     0.075,
-    0.1,
-    0.2,
-    0.3,
-    0.4,
-    0.5,
-    0.6,
-    0.7,
-    0.85,
+    0.11,
+    0.17,
+    0.26,
+    0.38,
+    0.52,
+    0.65,
+    0.8,
     0.9,
-    1.0,
-    1.0,
+    0.97,
+    1,
+    1,
+    0.97,
     0.9,
-    0.85,
-    0.7,
-    0.6,
-    0.5,
-    0.4,
-    0.3,
-    0.2,
-    0.1,
+    0.8,
+    0.65,
+    0.52,
+    0.38,
+    0.26,
+    0.17,
+    0.11,
     0.075,
-    0.05,
+    0.04,
     0.025,
     0.01,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    0.0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
 ]
 
 dictConfig(
@@ -163,7 +165,20 @@ dictConfig(
     }
 )
 
+
+class DtJSONProvider(DefaultJSONProvider):
+    """Custom JSON provider."""
+
+    def default(self, o):
+        """Convert datetime to ISO format."""
+        if isinstance(o, dt):
+            return o.isoformat()
+
+        return super().default(o)
+
+
 app = Flask(__name__)
+app.json = DtJSONProvider(app)
 _LOGGER = app.logger
 counter_last_reset = dt.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -193,7 +208,7 @@ def validate_call(api_key, counter=True):
     if api_key not in API_KEY_SITES:
         return False, {"response_status": {"error_code": "InvalidKey", "message": "Invalid API key"}}, 401
     if GENERATE_429 and dt.now(datetime.UTC).minute in BOMB_429:
-        return False, {"response_status": {}}, 429
+        return False, {}, 429
     if counter and API_KEY_SITES[api_key]["counter"] >= API_LIMIT:
         return False, {"response_status": {"error_code": "TooManyRequests", "message": "You have exceeded your free daily limit."}}, 429
     return True, None, 200
@@ -241,7 +256,7 @@ def get_site_estimated_actuals(site_id):
         {
             "estimated_actuals": [
                 {
-                    "period_end": (period_end + timedelta(minutes=minute * 30)).isoformat(),
+                    "period_end": period_end + timedelta(minutes=minute * 30),
                     "pv_estimate": round(
                         site["capacity"]
                         * FORECAST
@@ -282,7 +297,7 @@ def get_site_forecasts(site_id):
     response = {
         "forecasts": [
             {
-                "period_end": (period_end + timedelta(minutes=minute * 30)).isoformat(),
+                "period_end": period_end + timedelta(minutes=minute * 30),
                 "pv_estimate": round(
                     site["capacity"]
                     * FORECAST
@@ -349,4 +364,4 @@ if __name__ == "__main__":
     _LOGGER.info("API limit is set to %s, usage has been reset", API_LIMIT)
     _LOGGER.info("Simulator originally written by @autoSteve")
     _LOGGER.info("Integration issues raised regarding this script will be closed without response because it is a development tool")
-    app.run(debug=True, host="127.0.0.1", port=443, ssl_context=("cert.pem", "key.pem"))
+    app.run(debug=DEBUG, host="127.0.0.1", port=443, ssl_context=("cert.pem", "key.pem"))

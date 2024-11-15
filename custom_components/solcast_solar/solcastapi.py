@@ -192,6 +192,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
     Public functions:
         get_forecast_update: Request forecast data for all sites.
+        set_next_update: Set the next forecast update time displayed.
         get_data: Return the data dictionary.
         build_forecast_data: Build the forecast, adjusting if dampening or setting a hard limit.
         check_data_records: Verify that forecasts for day 0..7 contain all forecast periods
@@ -275,6 +276,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self._granular_allow_reset = True
         self._granular_dampening_mtime = 0
         self._loaded_data = False
+        self._next_update = None
         self._site_data_forecasts = {}
         self._site_data_forecasts_undampened = {}
         self._sites_hard_limit = defaultdict(dict)
@@ -636,13 +638,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         self.__translate(status),
                     )
                     raise Exception("HTTP __sites_data() error: gathering sites")  # noqa: TRY002, TRY301
-        except ConnectionRefusedError as e:
-            _LOGGER.error("Connection refused in __sites_data(): %s", e)
-        except ClientConnectionError as e:
-            _LOGGER.error("Connection error in __sites_data(): %s", e)
-        except TimeoutError:
+        except (ClientConnectionError, ConnectionRefusedError, TimeoutError) as e:
             try:
-                _LOGGER.warning("Retrieving sites timed out, attempting to continue")
+                _LOGGER.warning("Error retrieving sites, attempting to continue: %s", e)
                 error = False
                 for api_key in api_keys:
                     api_key = api_key.strip()
@@ -1510,15 +1508,15 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
     def get_api_used_count(self) -> int:
         """Return API polling count for this UTC 24hr period (minimum of all API keys).
 
-        A minimum is used because forecasts are polled at the same time for each configured API key. Should
-        one API key fail but the other succeed then usage will be misaligned, so the lowest usage of all
+        A maximum is used because forecasts are polled at the same time for each configured API key. Should
+        one API key fail but the other succeed then usage will be misaligned, so the highest usage of all
         API keys will apply.
 
         Returns:
             int: The tracked API usage count.
 
         """
-        return min(list(self._api_used.values()))
+        return max(list(self._api_used.values()))
 
     def get_api_limit(self) -> int:
         """Return API polling limit for this UTC 24hr period (minimum of all API keys).
@@ -2385,13 +2383,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             _LOGGER.error("Exception in get_energy_data(): %s: %s", e, traceback.format_exc())
             return None
 
-    async def get_forecast_update(self, do_past: bool = False, force: bool = False, next_update: str | None = None) -> str:
+    async def get_forecast_update(self, do_past: bool = False, force: bool = False) -> str:
         """Request forecast data for all sites.
 
         Arguments:
             do_past (bool): A optional flag to indicate that past actual forecasts should be retrieved.
             force (bool): A forced update, which does not update the internal API use counter.
-            next_update (str): A string containing the time that the next auto update will occur (or date/time if the next update is tomorrow).
 
         Returns:
             str: An error message, or an empty string for no error.
@@ -2400,19 +2397,24 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         try:
             last_attempt = dt.now(datetime.UTC)
             status = ""
+
+            def next_update():
+                if self._next_update is not None:
+                    return f", next auto update at {self._next_update}"
+                return ""
+
             if self.get_last_updated() + timedelta(seconds=10) > dt.now(datetime.UTC):
                 status = f"Not requesting a solar forecast because time is within ten seconds of last update ({self.get_last_updated().astimezone(self._tz)})"
                 _LOGGER.warning(status)
+                if self._next_update is not None:
+                    _LOGGER.info("Forecast update suppressed%s", next_update())
                 return status
 
-            if next_update is not None:
-                next_update = f", next auto update at {next_update}"
-            else:
-                next_update = ""
             await self.refresh_granular_dampening_data()
 
             failure = False
             sites_attempted = 0
+            sites_succeeded = 0
             for site in self.sites:
                 sites_attempted += 1
                 _LOGGER.info("Getting forecast update for site %s%s", site["resource_id"], ", including past data" if do_past else "")
@@ -2429,21 +2431,23 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             _LOGGER.warning(
                                 "Forecast update for site %s failed so not getting remaining sites%s%s",
                                 site["resource_id"],
-                                " - API use count may be odd" if len(self.sites) > 2 and not force else "",
-                                next_update,
+                                " - API use count may be odd" if len(self.sites) > 2 and sites_succeeded and not force else "",
+                                next_update(),
                             )
                         else:
                             _LOGGER.warning(
                                 "Forecast update for the last site queued failed (%s)%s%s",
                                 site["resource_id"],
-                                " - API use count may be odd" if not force else "",
-                                next_update,
+                                " - API use count may be odd" if sites_succeeded and not force else "",
+                                next_update(),
                             )
                         status = "At least one site forecast get failed"
                     else:
-                        _LOGGER.warning("Forecast update failed%s", next_update)
+                        _LOGGER.warning("Forecast update failed%s", next_update())
                         status = "Forecast get failed"
                     break
+                if result:
+                    sites_succeeded += 1
 
             if sites_attempted > 0 and not failure:
                 # self._data["weather"] = self._weather
@@ -2461,22 +2465,31 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 self._loaded_data = True
 
                 if b_status and s_status:
-                    _LOGGER.info("Forecast update completed successfully%s", next_update)
+                    _LOGGER.info("Forecast update completed successfully%s", next_update())
             else:
                 if sites_attempted > 0:
                     _LOGGER.error(
                         "%site failed to fetch, so forecast has not been built%s",
                         "At least one s" if len(self.sites) > 1 else "S",
-                        next_update,
+                        next_update(),
                     )
                 else:
                     _LOGGER.error("Internal error, there is no sites data so forecast has not been built")
                 status = "At least one site forecast get failed"
         except Exception as e:  # noqa: BLE001
-            status = f"Exception in get_forecast_update(): {e} - Forecast has not been built{next_update}"
+            status = f"Exception in get_forecast_update(): {e} - Forecast has not been built{next_update()}"
             _LOGGER.error(status)
             _LOGGER.error(traceback.format_exc())
         return status
+
+    def set_next_update(self, next_update: str) -> None:
+        """Set the next update time.
+
+        Arguments:
+            next_update (str): A string containing the time that the next auto update will occur.
+
+        """
+        self._next_update = next_update
 
     async def __migrate_undampened_history(self):
         """Migrate un-dampened forecasts if un-dampened data for a site does not exist."""
@@ -2677,6 +2690,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             # Fetch past data. (Run once, for a new install or if the solcast.json file is deleted. This will use up api call quota.)
 
             if do_past:
+                if self.tasks.get("fetch") is not None:
+                    _LOGGER.error("Internal error: A fetch task is already running, so aborting get past actuals")
+                    return False
                 self.tasks["fetch"] = asyncio.create_task(
                     self.__fetch_data(
                         168,
@@ -2731,6 +2747,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
             # Fetch latest data.
 
+            if self.tasks.get("fetch") is not None:
+                _LOGGER.warning("A fetch task is already running, so aborting forecast update")
+                return False
             self.tasks["fetch"] = asyncio.create_task(
                 self.__fetch_data(
                     hours,
