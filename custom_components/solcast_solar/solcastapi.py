@@ -2429,17 +2429,15 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     if len(self.sites) > 1:
                         if sites_attempted < len(self.sites):
                             _LOGGER.warning(
-                                "Forecast update for site %s failed so not getting remaining sites%s%s",
+                                "Forecast update for site %s failed so not getting remaining sites%s",
                                 site["resource_id"],
                                 " - API use count may be odd" if len(self.sites) > 2 and sites_succeeded and not force else "",
-                                next_update(),
                             )
                         else:
                             _LOGGER.warning(
-                                "Forecast update for the last site queued failed (%s)%s%s",
+                                "Forecast update for the last site queued failed (%s)%s",
                                 site["resource_id"],
                                 " - API use count may be odd" if sites_succeeded and not force else "",
-                                next_update(),
                             )
                         status = "At least one site forecast get failed"
                     else:
