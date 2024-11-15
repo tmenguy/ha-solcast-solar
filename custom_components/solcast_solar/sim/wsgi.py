@@ -34,6 +34,7 @@ import argparse
 import datetime
 from datetime import datetime as dt, timedelta
 from logging.config import dictConfig
+import random
 from zoneinfo import ZoneInfo
 
 from flask import Flask, jsonify, request
@@ -255,6 +256,8 @@ def validate_call(api_key, counter=True):
         return False, {}, 429
     if counter and API_KEY_SITES[api_key]["counter"] >= API_LIMIT:
         return False, {"response_status": {"error_code": "TooManyRequests", "message": "You have exceeded your free daily limit."}}, 429
+    if random.random() < 0.05:
+        return False, {}, 418  # An unusual status returned for fun, infrequently
     return True, None, 200
 
 
@@ -384,6 +387,7 @@ def get_site_forecasts(site_id):
 
 
 if __name__ == "__main__":
+    random.seed()
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", help="Set the API call limit available, example --limit 100", type=int, required=False)
     parser.add_argument("--no429", help="Do not generate 429 responses", action="store_true", required=False)
