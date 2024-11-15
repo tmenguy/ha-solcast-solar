@@ -256,7 +256,7 @@ def validate_call(api_key, counter=True):
         return False, {}, 429
     if counter and API_KEY_SITES[api_key]["counter"] >= API_LIMIT:
         return False, {"response_status": {"error_code": "TooManyRequests", "message": "You have exceeded your free daily limit."}}, 429
-    if random.random() < 0.05:
+    if random.random() < 0.01:
         return False, {}, 418  # An unusual status returned for fun, infrequently
     return True, None, 200
 
