@@ -16,8 +16,8 @@ Optional run arguments:
 
 Theory of operation:
 
-* Configure integration to use either API key "1", "2", or both. Any other key will return an error.
-* API key 1 has two sites, API key 2 has one site
+* Configure integration to use either API key "1", "2", "3", or any combination of multiple. Any other key will return an error.
+* API key 1 has two sites, API key 2 has one site, API key 3 has an impossible (for hobbyists) three sites.
 * Forecast for every day is the same bell curve
 * 429 responses are given when minute=0, unless --no429 is set, or other minutes are specified with --bomb429
 
@@ -85,7 +85,51 @@ API_KEY_SITES = {
                 "install_date": "2024-01-01T00:00:00+00:00",
                 "loss_factor": 0.99,
                 "capacity": 3.0,
-                "capacity_dc": 4.2,
+                "capacity_dc": 3.5,
+                "azimuth": 90,
+                "tilt": 30,
+                "location": "Downunder",
+            },
+        ],
+        "counter": 0,
+    },
+    "3": {
+        "sites": [
+            {
+                "resource_id": "4444-4444-4444-4444",
+                "name": "Fourth Site",
+                "latitude": -11.11111,
+                "longitude": 111.1111,
+                "install_date": "2024-01-01T00:00:00+00:00",
+                "loss_factor": 0.99,
+                "capacity": 4.5,
+                "capacity_dc": 5.0,
+                "azimuth": 90,
+                "tilt": 30,
+                "location": "Downunder",
+            },
+            {
+                "resource_id": "5555-5555-5555-5555",
+                "name": "Fifth Site",
+                "latitude": -11.11111,
+                "longitude": 111.1111,
+                "install_date": "2024-01-01T00:00:00+00:00",
+                "loss_factor": 0.99,
+                "capacity": 3.2,
+                "capacity_dc": 3.7,
+                "azimuth": 90,
+                "tilt": 30,
+                "location": "Downunder",
+            },
+            {
+                "resource_id": "6666-6666-6666-6666",
+                "name": "Sixth Site",
+                "latitude": -11.11111,
+                "longitude": 111.1111,
+                "install_date": "2024-01-01T00:00:00+00:00",
+                "loss_factor": 0.99,
+                "capacity": 4.2,
+                "capacity_dc": 4.8,
                 "azimuth": 90,
                 "tilt": 30,
                 "location": "Downunder",
