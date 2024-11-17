@@ -61,8 +61,10 @@ GRANULAR_DAMPENING_ON: Final = True
 JSON_VERSION: Final = 5
 SET_ALLOW_RESET: Final = True
 
-# HTTP status code translation.
-# A 418 error is included here for fun. This was introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
+# Status code translation, HTTP and more.
+# A HTTP 418 error is included here for fun. This was introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
+# 400 >= HTTP error <=599
+# 900 >= Exceptions < 1000, to be potentially handled with retries.
 STATUS_TRANSLATE: Final = {
     200: "Success",
     401: "Unauthorized",
@@ -75,6 +77,8 @@ STATUS_TRANSLATE: Final = {
     502: "Bad gateway",
     503: "Service unavailable",
     504: "Gateway timeout",
+    996: "Connection refused",
+    997: "Connect call failed",
 }
 
 FRESH_DATA: Final = {
@@ -2905,8 +2909,17 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     while True:
                         _LOGGER.debug("Fetching forecast")
                         counter += 1
-                        response: ClientResponse = await self._aiohttp_session.get(url=url, params=params, headers=self.headers, ssl=False)
-                        status = response.status
+                        try:
+                            response: ClientResponse = await self._aiohttp_session.get(
+                                url=url, params=params, headers=self.headers, ssl=False
+                            )
+                            status = response.status
+                        except ConnectionRefusedError:
+                            status = 996
+                        except ClientConnectionError:
+                            status = 997
+                        except Exception as e:
+                            raise e from e
                         if status == 200:
                             break
                         if status == 429:
@@ -2932,15 +2945,14 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             if counter >= tries:
                                 status = 999  # All retries have been exhausted.
                                 break
-                            # Solcast is busy, so delay (15 seconds * counter), plus a random number of seconds between zero and 15.
-                            delay = (counter * backoff) + random.randrange(0, 15)
-                            _LOGGER.warning(
-                                "API returned 'try later' (status 429), pausing %d seconds before retry",
-                                delay,
-                            )
-                            await asyncio.sleep(delay)
-                        else:
-                            break
+                        # Solcast is in a possibly recoverable state, so delay (15 seconds * counter), plus a random number of seconds between zero and 15.
+                        delay = (counter * backoff) + random.randrange(0, 15)
+                        _LOGGER.warning(
+                            "API returned %s, pausing %d seconds before retry",
+                            self.__translate(status),
+                            delay,
+                        )
+                        await asyncio.sleep(delay)
 
                     if status == 200:
                         _LOGGER.debug("Fetch successful")
