@@ -33,11 +33,17 @@ SSL certificate:
 Integration issues raised regarding the simulator will be closed without response.
 Raise a pull request instead, suggesting a fix for whatever is wrong, or to add additional functionality.
 
+Experimental support for advanced_pv_power:
+
+* Should Solcast deprecate the legacy hobbyist API, then the advanced_pv_power API calls will probably be preferred, just with capabilities limited by Solcast.
+* This simulator, and the integration are prepared should this occur.
+
 """  # noqa: INP001
 
 import argparse
 import datetime
 from datetime import datetime as dt, timedelta
+import isodate
 from logging.config import dictConfig
 import random
 import sys
@@ -47,7 +53,7 @@ from flask import Flask, jsonify, request
 from flask.json.provider import DefaultJSONProvider
 
 TIMEZONE = ZoneInfo("Australia/Melbourne")
-DEBUG = False  # Run Flask in debug mode (auto-restart on code changes)
+DEBUG = True  # Run Flask in debug mode (auto-restart on code changes)
 
 API_LIMIT = 50
 API_KEY_SITES = {
@@ -245,10 +251,9 @@ _LOGGER = app.logger
 counter_last_reset = dt.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)  # Previous UTC midnight
 
 
-def get_period(delta):
+def get_period(period, delta):
     """Return the start period and factors for the current time."""
-    period_end = dt.now(datetime.UTC)
-    return period_end.replace(minute=(int(period_end.minute / 30) * 30), second=0, microsecond=0) + delta
+    return period.replace(minute=(int(period.minute / 30) * 30), second=0, microsecond=0) + delta
 
 
 def validate_call(api_key, site_id=None, counter=True):
@@ -260,11 +265,10 @@ def validate_call(api_key, site_id=None, counter=True):
             v["counter"] = 0
         counter_last_reset = dt.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def error(code, status):
+    def error(code):
         return (
-            False,
-            {"response_status": {"error_code": code, "message": ERROR_MESSAGE[code]["message"]}},
             ERROR_MESSAGE[code]["status"],
+            {"response_status": {"error_code": code, "message": ERROR_MESSAGE[code]["message"]}},
             None,
         )
 
@@ -273,22 +277,22 @@ def validate_call(api_key, site_id=None, counter=True):
     if api_key not in API_KEY_SITES:
         return error(ERROR_INVALID_KEY)
     if GENERATE_429 and dt.now(datetime.UTC).minute in BOMB_429:
-        return False, {}, 429, None
+        return 429, {}, None
     if counter and API_KEY_SITES[api_key]["counter"] >= API_LIMIT:
         return error(ERROR_TOO_MANY_REQUESTS)
     if GENERATE_418 and random.random() < 0.01:
-        return False, {}, 418, None  # An unusual status returned for fun, infrequently
+        return 418, {}, None  # An unusual status returned for fun, infrequently
     if site_id is not None:
-        # Find the site by site_i
+        # Find the site by site_id
         site = next((site for site in API_KEY_SITES[api_key]["sites"] if site["resource_id"] == site_id), None)
         if not site:
-            return error(ERROR_SITE_NOT_FOUND)  # Technically the Solcast API does not return 404 (as documented)
+            return error(ERROR_SITE_NOT_FOUND)  # Technically the Solcast API should not return 404 (as documented), but it might
     else:
         site = None
     if counter:
         API_KEY_SITES[api_key]["counter"] += 1
         _LOGGER.info("API key %s has been used %s times", api_key, API_KEY_SITES[api_key]["counter"])
-    return True, None, 200, site
+    return 200, None, site
 
 
 @app.route("/rooftop_sites", methods=["GET"])
@@ -297,8 +301,8 @@ def get_sites():
 
     api_key = request.args.get("api_key")
 
-    state, issue, response_code, _ = validate_call(api_key, counter=False)
-    if not state:
+    response_code, issue, _ = validate_call(api_key, counter=False)
+    if response_code != 200:
         return jsonify(issue), response_code
 
     # Simulate different responses based on the API key
@@ -317,9 +321,9 @@ def get_site_estimated_actuals(site_id):
 
     api_key = request.args.get("api_key")
     _hours = int(request.args.get("hours"))
-    period_end = get_period(timedelta(hours=_hours) * -1)
-    state, issue, response_code, site = validate_call(api_key, site_id)
-    if not state:
+    period_end = get_period(dt.now(datetime.UTC), timedelta(hours=_hours) * -1)
+    response_code, issue, site = validate_call(api_key, site_id)
+    if response_code != 200:
         return jsonify(issue), response_code
 
     return jsonify(
@@ -338,6 +342,7 @@ def get_site_estimated_actuals(site_id):
                         ],
                         4,
                     ),
+                    "period": "PT30M",
                 }
                 for minute in range((_hours + 1) * 2)
             ],
@@ -351,9 +356,9 @@ def get_site_forecasts(site_id):
 
     api_key = request.args.get("api_key")
     _hours = int(request.args.get("hours"))
-    period_end = get_period(timedelta(minutes=30))
-    state, issue, response_code, site = validate_call(api_key, site_id)
-    if not state:
+    period_end = get_period(dt.now(datetime.UTC), timedelta(minutes=30))
+    response_code, issue, site = validate_call(api_key, site_id)
+    if response_code != 200:
         return jsonify(issue), response_code
 
     response = {
@@ -393,6 +398,145 @@ def get_site_forecasts(site_id):
                     ],
                     4,
                 ),
+                "period": "PT30M",
+            }
+            for minute in range(_hours * 2)
+        ],
+    }
+    # _LOGGER.info(response)
+    return jsonify(response), 200
+
+
+@app.route("/data/historic/advanced_pv_power", methods=["GET"])
+def get_site_estimated_actuals_advanced():
+    """Return simulated advanced pv power forecasts for a site."""
+
+    def missing_parameter():
+        _LOGGER.info("Missing parameter")
+        return jsonify({"response_status": {"error_code": "MissingParameter", "message": "Missing parameter."}}), 400
+
+    api_key = request.args.get("api_key")
+    site_id = request.args.get("resource_id")
+    try:
+        start = dt.fromisoformat(request.args.get("start"))
+    except:  # noqa: E722
+        _LOGGER.info("Missing start parameter %s", request.args.get("start"))
+        return missing_parameter()
+    try:
+        end = dt.fromisoformat(request.args.get("end"))
+    except:  # noqa: E722
+        end = None
+    try:
+        duration = isodate.parse_duration(request.args.get("duration"))
+        end = start + duration
+    except:  # noqa: E722
+        duration = None
+    if not end and not duration:
+        _LOGGER.info("Missing end or duration parameter")
+        return missing_parameter()
+    if not duration:
+        _hours = int((end - start).total_seconds() / 3600)
+    period_end = get_period(start, timedelta(minutes=30))
+    response_code, issue, site = validate_call(api_key, site_id)
+    if response_code != 200:
+        return jsonify(issue), response_code
+
+    response = {
+        "estimated_actuals": [
+            {
+                "period_end": period_end + timedelta(minutes=minute * 30),
+                "pv_power_advanced": round(
+                    site["capacity"]
+                    * FORECAST
+                    * GENERATION_FACTOR[
+                        int(
+                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
+                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
+                        )
+                    ],
+                    4,
+                ),
+                "pv_power_advanced10": round(
+                    site["capacity"]
+                    * FORECAST_10
+                    * GENERATION_FACTOR[
+                        int(
+                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
+                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
+                        )
+                    ],
+                    4,
+                ),
+                "pv_power_advanced90": round(
+                    site["capacity"]
+                    * FORECAST_90
+                    * GENERATION_FACTOR[
+                        int(
+                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
+                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
+                        )
+                    ],
+                    4,
+                ),
+                "period": "PT30M",
+            }
+            for minute in range(_hours * 2)
+        ],
+    }
+    _LOGGER.info(response)
+    return jsonify(response), 200
+
+
+@app.route("/data/forecast/advanced_pv_power", methods=["GET"])
+def get_site_forecasts_advanced():
+    """Return simulated advanced pv power forecasts for a site."""
+
+    api_key = request.args.get("api_key")
+    site_id = request.args.get("resource_id")
+    _hours = int(request.args.get("hours"))
+    period_end = get_period(dt.now(datetime.UTC), timedelta(minutes=30))
+    response_code, issue, site = validate_call(api_key, site_id)
+    if response_code != 200:
+        return jsonify(issue), response_code
+
+    response = {
+        "forecasts": [
+            {
+                "period_end": period_end + timedelta(minutes=minute * 30),
+                "pv_power_advanced": round(
+                    site["capacity"]
+                    * FORECAST
+                    * GENERATION_FACTOR[
+                        int(
+                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
+                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
+                        )
+                    ],
+                    4,
+                ),
+                "pv_power_advanced10": round(
+                    site["capacity"]
+                    * FORECAST_10
+                    * GENERATION_FACTOR[
+                        int(
+                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
+                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
+                        )
+                    ],
+                    4,
+                ),
+                "pv_power_advanced90": round(
+                    site["capacity"]
+                    * FORECAST_90
+                    * GENERATION_FACTOR[
+                        int(
+                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
+                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
+                        )
+                    ],
+                    4,
+                ),
+                "period": "PT30M",
             }
             for minute in range(_hours * 2)
         ],

@@ -184,8 +184,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                         _LOGGER.info("Auto update scheduled update cancelled")
                     finally:
                         with contextlib.suppress(Exception):
-                            self.tasks.pop(f"pending_update_{int(update_in)}")
-                            _LOGGER.debug("Completed task pending_update_%d", int(update_in))
+                            task_name = f"pending_update_{update_in:03}"
+                            self.tasks.pop(task_name)
+                            _LOGGER.debug("Completed task %s", task_name)
 
                 if len(self._intervals) > 0:
                     _now = self.solcast.get_real_now_utc().replace(microsecond=0)
@@ -194,8 +195,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                     pop_expired = []
                     for index, interval in enumerate(self._intervals):
                         if _from <= interval <= _from + timedelta(seconds=299):
-                            update_in = (interval - _now).total_seconds()
-                            task_name = f"pending_update_{int(update_in)}"
+                            update_in = int((interval - _now).total_seconds())
+                            task_name = f"pending_update_{update_in:03}"
                             if self.tasks.get(task_name) is not None:
                                 # The interval update is already tasked
                                 _LOGGER.debug("Task %s already exists, ignoring", task_name)
@@ -274,18 +275,21 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         This is an even spread between sunrise and sunset.
         """
         try:
-            divisions = int(self.solcast.get_api_limit() / round(len(self.solcast.sites) / len(self.solcast.options.api_key.split(",")), 0))
+            divisions = int(self.solcast.get_api_limit() / min(len(self.solcast.sites), 2))
 
             def get_intervals(sunrise: dt, sunset: dt, log=True):
                 intervals_yesterday = []
                 if sunrise == self._sunrise:
                     seconds = int((self._sunset_yesterday - self._sunrise_yesterday).total_seconds())
                     intervals_yesterday = [
-                        (self._sunrise_yesterday + timedelta(seconds=int(seconds / divisions)) * i) for i in range(divisions)
+                        (self._sunrise_yesterday + timedelta(seconds=int(seconds / divisions * i))).replace(microsecond=0)
+                        for i in range(divisions)
                     ]
-                seconds = int((sunset - sunrise).total_seconds())
-                interval = int(seconds / divisions)
-                intervals = intervals_yesterday + [(sunrise + timedelta(seconds=interval) * i) for i in range(divisions)]
+                seconds = (sunset - sunrise).total_seconds()
+                interval = seconds / divisions
+                intervals = intervals_yesterday + [
+                    (sunrise + timedelta(seconds=interval * i)).replace(microsecond=0) for i in range(divisions)
+                ]
                 _now = self.solcast.get_real_now_utc()
                 for i in intervals:
                     if i < _now:
@@ -377,6 +381,10 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
     async def service_event_delete_old_solcast_json_file(self):
         """Delete the solcast.json file when requested by a service call."""
+        for task, cancel in self.solcast.tasks.items():
+            _LOGGER.debug("Cancelling solcastapi task %s", task)
+            cancel.cancel()
+        self.solcast.tasks = {}
         if not await self.solcast.delete_solcast_file():
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key="remove_cache_failed")
         self._data_updated = True

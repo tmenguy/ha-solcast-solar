@@ -5,12 +5,14 @@
 from __future__ import annotations
 
 import asyncio
+from asyncio import InvalidStateError
 from collections import OrderedDict, defaultdict
 import contextlib
 import copy
 from dataclasses import dataclass
 import datetime
 from datetime import datetime as dt, timedelta, timezone
+from enum import Enum
 import json
 import logging
 import math
@@ -26,8 +28,6 @@ from typing import Any, Final, cast
 import aiofiles  # type: ignore  # noqa: PGH003
 from aiohttp import ClientConnectionError, ClientSession
 from aiohttp.client_reqrep import ClientResponse
-
-# import async_timeout
 from isodate import parse_datetime  # type: ignore  # noqa: PGH003
 
 from homeassistant.config_entries import ConfigEntry
@@ -56,6 +56,26 @@ from .const import (
 )
 from .spline import cubic_interp
 
+
+class Api(Enum):
+    """The APIs at Solcast."""
+
+    HOBBYIST = 0
+    ADVANCED = 1
+
+
+API: Final = Api.HOBBYIST  # The API to use. Presently only the hobbyist API is allowed for hobbyist accounts.
+
+if API == Api.HOBBYIST:
+    FORECAST: Final = "pv_estimate"
+    FORECAST10: Final = "pv_estimate10"
+    FORECAST90: Final = "pv_estimate90"
+
+if API == Api.ADVANCED:
+    FORECAST: Final = "pv_power_advanced"
+    FORECAST10: Final = "pv_power_advanced10"
+    FORECAST90: Final = "pv_power_advanced90"
+
 GRANULAR_DAMPENING_OFF: Final = False
 GRANULAR_DAMPENING_ON: Final = True
 JSON_VERSION: Final = 5
@@ -63,7 +83,7 @@ SET_ALLOW_RESET: Final = True
 
 # Status code translation, HTTP and more.
 # A HTTP 418 error is included here for fun. This was introduced in RFC2324#section-2.3.2 as an April Fools joke in 1998.
-# 400 >= HTTP error <=599
+# 400 >= HTTP error <= 599
 # 900 >= Exceptions < 1000, to be potentially handled with retries.
 STATUS_TRANSLATE: Final = {
     200: "Success",
@@ -406,7 +426,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         """
         return (
-            msg.replace("key': '" + api_key, "key': '" + self.__redact_api_key(api_key))
+            msg.replace("key=" + api_key, "key=" + self.__redact_api_key(api_key))
+            .replace("key': '" + api_key, "key': '" + self.__redact_api_key(api_key))
             .replace("sites-" + api_key, "sites-" + self.__redact_api_key(api_key))
             .replace("usage-" + api_key, "usage-" + self.__redact_api_key(api_key))
         )
@@ -575,7 +596,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         if cache_exists:
                             use_cache_immediate = True
                             break
-                        if status == 404:
+                        if status == 401:
                             _LOGGER.error(
                                 "Error getting sites for the API key %s, is the key correct?",
                                 self.__redact_api_key(api_key),
@@ -588,7 +609,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             )
                             await asyncio.sleep(5)
                         retry -= 1
-                    if status == 404 and not use_cache_immediate:
+                    if status == 401 and not use_cache_immediate:
                         continue
                     if not success:
                         if not use_cache_immediate:
@@ -596,7 +617,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                 "Retries exhausted gathering sites, last call result: %s, using cached data if it exists",
                                 self.__translate(status),
                             )
-                        status = 404
+                        status = 401
                         if cache_exists:
                             async with aiofiles.open(cache_filename) as file:
                                 response_json = json.loads(await file.read())
@@ -2741,7 +2762,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         new_data.append(
                             {
                                 "period_start": period_start,
-                                "pv_estimate": estimate_actual["pv_estimate"],
+                                "pv_estimate": estimate_actual[FORECAST],
                                 "pv_estimate10": 0,
                                 "pv_estimate90": 0,
                             }
@@ -2794,9 +2815,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     new_data.append(
                         {
                             "period_start": period_start,
-                            "pv_estimate": forecast["pv_estimate"],
-                            "pv_estimate10": forecast["pv_estimate10"],
-                            "pv_estimate90": forecast["pv_estimate90"],
+                            "pv_estimate": forecast[FORECAST],
+                            "pv_estimate10": forecast[FORECAST10],
+                            "pv_estimate90": forecast[FORECAST90],
                         }
                     )
 
@@ -2860,6 +2881,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 "HTTP data call processing took %.3f seconds",
                 round(time.time() - start_time, 4),
             )
+        except InvalidStateError:
+            return False
         except Exception as e:  # noqa: BLE001
             _LOGGER.error("Exception in __http_data_call(): %s: %s", e, traceback.format_exc())
             return False
@@ -2877,7 +2900,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         Arguments:
             hours (int): Number of hours to fetch, normally 168, or seven days.
-            path (str): The path to follow. "forecast" or "estimated actuals". Omitting this parameter will result in an error.
+            path (str): The path to follow. "forecasts" or "estimated_actuals". Omitting this parameter will result in an error.
             site (str): A Solcast site ID.
             api_key (str): A Solcast API key appropriate to use for the site.
             force (bool): A forced update, which does not update the internal API use counter.
@@ -2900,9 +2923,23 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
             async with asyncio.timeout(900):
                 if self._api_used[api_key] < self._api_limit[api_key] or force:
-                    url = f"{self.options.host}/rooftop_sites/{site}/{path}"
-                    params = {"format": "json", "api_key": api_key, "hours": hours}
-                    _LOGGER.debug("Fetch data url: %s", url)
+                    if API == Api.HOBBYIST:
+                        url = f"{self.options.host}/rooftop_sites/{site}/{path}"
+                        params = {"format": "json", "api_key": api_key, "hours": hours}
+                    elif API == Api.ADVANCED and path == "forecasts":
+                        url = f"{self.options.host}/data/forecast/advanced_pv_power"
+                        params = {"format": "json", "api_key": api_key, "resource_id": site, "hours": hours}
+                    elif API == Api.ADVANCED and path == "estimated_actuals":
+                        url = f"{self.options.host}/data/historic/advanced_pv_power"
+                        params = {
+                            "format": "json",
+                            "api_key": api_key,
+                            "resource_id": site,
+                            "start": self.get_day_start_utc(future=-14).isoformat(),
+                            "end": (
+                                self.get_now_utc().replace(minute=int(self.get_now_utc().minute / 30) * 30) + timedelta(minutes=30)
+                            ).isoformat(),
+                        }
                     tries = 10
                     counter = 0
                     backoff = 15  # On every retry the back-off increases by (at least) fifteen seconds more than the previous back-off.
@@ -2913,6 +2950,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             response: ClientResponse = await self._aiohttp_session.get(
                                 url=url, params=params, headers=self.headers, ssl=False
                             )
+                            _LOGGER.debug("Fetch data url %s", self.__redact_msg_api_key(str(response.url), api_key))
                             status = response.status
                         except ConnectionRefusedError:
                             status = 996
@@ -2921,6 +2959,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         except Exception as e:
                             raise e from e
                         if status == 200:
+                            break
+                        if status == 403:
                             break
                         if status == 429:
                             try:
@@ -3004,7 +3044,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 _LOGGER.warning("API is too busy, try again later")
             elif status == 400:
                 _LOGGER.warning(
-                    "Status %s: The site is likely missing capacity, please specify capacity or provide historic data for tuning",
+                    "Status %s: Internal error",
                     self.__translate(status),
                 )
             elif status == 404:

@@ -634,6 +634,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
             for task, cancel in coordinator.solcast.tasks.items():
                 _LOGGER.debug("Cancelling solcastapi task %s", task)
                 cancel.cancel()
+            coordinator.solcast.tasks = {}
             # Terminate coordinator tasks in progress
             for task, cancel in coordinator.tasks.items():
                 _LOGGER.debug("Cancelling coordinator task %s", task)
