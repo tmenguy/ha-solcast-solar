@@ -883,29 +883,39 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         usage, so these must be cached separately.
         """
 
-        def cleanup(api_keys, file1, file2):
-            """Rename files and remove orphans as required when transitioning.
-
-            Arguments:
-                api_keys (list): The configured API keys
-                file1 (str): File to be renamed should file2 exist, otherwise will be removed
-                file2 (str): File to check for existance of
-                with file1 either being renamed, should file2 not exist), or otherwise be removed.
-
-            """
-            if Path(file1).is_file() and not Path(file2).is_file():
-                _LOGGER.info(
-                    "Renaming %s to %s",
-                    self.__redact_msg_api_key(file1, api_keys[0]),
-                    self.__redact_msg_api_key(file2, api_keys[0]),
-                )
+        def rename(file1, file2, api_key):
+            if Path(file1).is_file():
+                _LOGGER.info("Renaming %s to %s", self.__redact_msg_api_key(file1, api_key), self.__redact_msg_api_key(file2, api_key))
                 Path(file1).rename(Path(file2))
-            if Path(file1).is_file() and Path(file2).is_file():
-                _LOGGER.warning(
-                    "Removing orphaned %s",
-                    self.__redact_msg_api_key(file1, api_keys[0]),
-                )
-                Path(file1).unlink()
+
+        async def from_single_site_to_multi(api_keys):
+            """Transition from a single API key to multiple API keys."""
+            single_sites = f"{self._config_dir}/solcast-sites.json"
+            single_usage = f"{self._config_dir}/solcast-usage.json"
+            if Path(single_sites).is_file():
+                async with aiofiles.open(single_sites) as file:
+                    try:
+                        single_api_key = json.loads(await file.read(), cls=JSONDecoder)["sites"][0]["api_key"]
+                    except json.decoder.JSONDecodeError:
+                        _LOGGER.error(
+                            "The usage cache for %s is corrupt",
+                            single_sites,
+                        )
+                        return
+                    except Exception:  # noqa: BLE001
+                        _LOGGER.warning("Could not find API key in sites cache, so assuming first API key, which may be wrong")
+                        single_api_key = api_keys[0]
+                multi_sites = f"{self._config_dir}/solcast-sites-{single_api_key}.json"
+                if not Path(multi_sites).is_file() and Path(single_sites).is_file():
+                    multi_usage = f"{self._config_dir}/solcast-usage-{single_api_key}.json"
+                    rename(single_sites, multi_sites, single_api_key)
+                    rename(single_usage, multi_usage, single_api_key)
+
+        async def from_multi_site_to_single(api_keys):
+            single_sites = f"{self._config_dir}/solcast-sites.json"
+            if not Path(single_sites).is_file():
+                rename(f"{self._config_dir}/solcast-sites-{api_keys[0]}.json", single_sites, api_keys[0])
+                rename(f"{self._config_dir}/solcast-usage-{api_keys[0]}.json", f"{self._config_dir}/solcast-usage.json", api_keys[0])
 
         def remove_orphans(all_cached, multi_cached):
             """Remove entirely orphaned cache files for API keys.
@@ -920,30 +930,26 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             """
             for file in all_cached:
                 if file not in multi_cached:
-                    redacted = re.match("(.+-)(.+)([0-9a-zA-Z]{6}.json)", file)
+                    component_parts = re.search(r"(.+solcast-.+-)([0-9a-zA-Z]+)(\.json)", file)
                     _LOGGER.warning(
                         "Removing orphaned %s",
-                        redacted.group(1) + "******" + redacted.group(3),
+                        component_parts.group(1) + "******" + component_parts.group(2)[:6] + component_parts.group(3),
                     )
                     Path(file).unlink()
 
         try:
             api_keys = [api_key.strip() for api_key in self.options.api_key.split(",")]
-            simple_sites = f"{self._config_dir}/solcast-sites.json"
-            simple_usage = f"{self._config_dir}/solcast-usage.json"
+            if self.__is_multi_key():
+                await from_single_site_to_multi(api_keys)
+            else:
+                await from_multi_site_to_single(api_keys)
             multi_sites = [f"{self._config_dir}/solcast-sites-{api_key}.json" for api_key in api_keys]
             multi_usage = [f"{self._config_dir}/solcast-usage-{api_key}.json" for api_key in api_keys]
-            if self.__is_multi_key():
-                cleanup(api_keys, simple_sites, multi_sites[0])
-                cleanup(api_keys, simple_usage, multi_usage[0])
-            else:
-                cleanup(api_keys, multi_sites[0], simple_sites)
-                cleanup(api_keys, multi_usage[0], simple_usage)
 
             def list_files() -> tuple[list[str], list[str]]:
                 all_sites = [str(sites) for sites in Path(self._config_dir).glob("solcast-sites-*.json")]
                 all_usage = [str(usage) for usage in Path(self._config_dir).glob("solcast-usage-*.json")]
-                return all_sites, all_usage
+                return sorted(all_sites), sorted(all_usage)
 
             all_sites, all_usage = await self.hass.async_add_executor_job(list_files)
             remove_orphans(all_sites, multi_sites)

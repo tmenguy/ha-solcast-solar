@@ -408,7 +408,7 @@ def get_site_forecasts(site_id):
 
 @app.route("/data/historic/advanced_pv_power", methods=["GET"])
 def get_site_estimated_actuals_advanced():
-    """Return simulated advanced pv power forecasts for a site."""
+    """Return simulated advanced pv power history for a site."""
 
     def missing_parameter():
         _LOGGER.info("Missing parameter")
@@ -552,7 +552,7 @@ if __name__ == "__main__":
     parser.add_argument("--teapot", help="Infrequently generate 418 response", action="store_true", required=False)
     parser.add_argument(
         "--bomb429",
-        help="The minute(s) of the hour to return API too busy, comma separated, example --bomb429 0,15,30,45",
+        help="The minute(s) of the hour to return API too busy, comma separated, example --bomb429 0-5,15,30,45",
         type=str,
         required=False,
     )
