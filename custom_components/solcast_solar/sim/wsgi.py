@@ -53,7 +53,6 @@ from flask import Flask, jsonify, request
 from flask.json.provider import DefaultJSONProvider
 
 TIMEZONE = ZoneInfo("Australia/Melbourne")
-DEBUG = True  # Run Flask in debug mode (auto-restart on code changes)
 
 API_LIMIT = 50
 API_KEY_SITES = {
@@ -557,13 +556,14 @@ if __name__ == "__main__":
         type=str,
         required=False,
     )
+    parser.add_argument("--debug", help="Set Flask debug mode on", action="store_true", required=False, default=False)
     args = parser.parse_args()
     if args.limit:
         API_LIMIT = args.limit
-        _LOGGER.debug("API limit has been set to %s", API_LIMIT)
+        _LOGGER.info("API limit has been set to %s", API_LIMIT)
     if args.no429:
         GENERATE_429 = False
-        _LOGGER.debug("429 responses will not be generated")
+        _LOGGER.info("429 responses will not be generated")
     if args.bomb429:
         if not GENERATE_429:
             _LOGGER.error("Cannot specify --bomb429 with --no429")
@@ -576,13 +576,13 @@ if __name__ == "__main__":
                     _LOGGER.error("Not two hyphen separated values for --bomb429")
                 BOMB_429 += list(range(int(split[0]), int(split[1]) + 1))
         list.sort(BOMB_429)
-        _LOGGER.debug("API too busy responses will be returned at minute(s) %s", BOMB_429)
+        _LOGGER.info("API too busy responses will be returned at minute(s) %s", BOMB_429)
     if args.teapot:
         GENERATE_418 = True
-        _LOGGER.debug("I'm a teapot response will be sometimes generated")
+        _LOGGER.info("I'm a teapot response will be sometimes generated")
 
     _LOGGER.info("Starting Solcast hobbyist API simulator, will listen on localhost:443")
     _LOGGER.info("API limit is set to %s, usage has been reset", API_LIMIT)
     _LOGGER.info("Simulator originally written by @autoSteve")
     _LOGGER.info("Integration issues raised regarding this script will be closed without response because it is a development tool")
-    app.run(debug=DEBUG, host="127.0.0.1", port=443, ssl_context=("cert.pem", "key.pem"))
+    app.run(debug=args.debug, host="127.0.0.1", port=443, ssl_context=("cert.pem", "key.pem"))
