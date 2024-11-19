@@ -912,22 +912,14 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     rename(single_usage, multi_usage, single_api_key)
 
         async def from_multi_site_to_single(api_keys):
+            """Transition from multiple API keys to a single API key."""
             single_sites = f"{self._config_dir}/solcast-sites.json"
             if not Path(single_sites).is_file():
                 rename(f"{self._config_dir}/solcast-sites-{api_keys[0]}.json", single_sites, api_keys[0])
                 rename(f"{self._config_dir}/solcast-usage-{api_keys[0]}.json", f"{self._config_dir}/solcast-usage.json", api_keys[0])
 
         def remove_orphans(all_cached, multi_cached):
-            """Remove entirely orphaned cache files for API keys.
-
-            If a cache filename present in all_cached does not exist in multi_cached then it is considered
-            orphaned, and will be cleaned up.
-
-            Arguments:
-                all_cached (list): All cache files that exist.
-                multi_cached (list): The currently configured caches.
-
-            """
+            """Remove orphaned cache files."""
             for file in all_cached:
                 if file not in multi_cached:
                     component_parts = re.search(r"(.+solcast-.+-)([0-9a-zA-Z]+)(\.json)", file)
