@@ -297,12 +297,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     others = await hass.async_add_executor_job(find_others)
     for sol in others:
         parent = str(Path(sol).parent)
-        folder = parent.rsplit("/", maxsplit=1)
+        folder = parent.rsplit("/", maxsplit=1)[-1]
         if folder != "solcast_solar":
             async with aiofiles.open(Path(parent, "manifest.json")) as file:
                 manifest = json.loads(await file.read())
                 if manifest.get("domain") == folder:
-                    _LOGGER.debug("Competitor found: %s", sol)
+                    _LOGGER.error("Conflicting integration found in %s, which must be resolved", folder)
                     raise ConfigEntryNotReady(f"Load failed: Conflicting integration found: {folder}")
 
     version = await __get_version(hass)
