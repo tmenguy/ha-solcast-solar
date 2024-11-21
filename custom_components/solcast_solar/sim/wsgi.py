@@ -43,7 +43,6 @@ Experimental support for advanced_pv_power:
 import argparse
 import datetime
 from datetime import datetime as dt, timedelta
-import isodate
 from logging.config import dictConfig
 import random
 import sys
@@ -51,6 +50,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Flask, jsonify, request
 from flask.json.provider import DefaultJSONProvider
+import isodate
 
 TIMEZONE = ZoneInfo("Australia/Melbourne")
 
@@ -314,6 +314,21 @@ def get_sites():
     return jsonify(sites | meta), 200
 
 
+def pv_interval(site_capacity, estimate, period_end, minute):
+    """Calculate value for a single interval."""
+    return round(
+        site_capacity
+        * estimate
+        * GENERATION_FACTOR[
+            int(
+                (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
+                + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
+            )
+        ],
+        4,
+    )
+
+
 @app.route("/rooftop_sites/<site_id>/estimated_actuals", methods=["GET"])
 def get_site_estimated_actuals(site_id):
     """Return simulated estimated actials for a site."""
@@ -330,17 +345,9 @@ def get_site_estimated_actuals(site_id):
             "estimated_actuals": [
                 {
                     "period_end": period_end + timedelta(minutes=minute * 30),
-                    "pv_estimate": round(
-                        site["capacity"]
-                        * FORECAST
-                        * GENERATION_FACTOR[
-                            int(
-                                (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                                + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                            )
-                        ],
-                        4,
-                    ),
+                    "pv_estimate": pv_interval(site["capacity"], FORECAST, period_end, minute),
+                    "pv_estimate10": pv_interval(site["capacity"], FORECAST_10, period_end, minute),
+                    "pv_estimate90": pv_interval(site["capacity"], FORECAST_90, period_end, minute),
                     "period": "PT30M",
                 }
                 for minute in range((_hours + 1) * 2)
@@ -364,39 +371,9 @@ def get_site_forecasts(site_id):
         "forecasts": [
             {
                 "period_end": period_end + timedelta(minutes=minute * 30),
-                "pv_estimate": round(
-                    site["capacity"]
-                    * FORECAST
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
-                "pv_estimate10": round(
-                    site["capacity"]
-                    * FORECAST_10
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
-                "pv_estimate90": round(
-                    site["capacity"]
-                    * FORECAST_90
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
+                "pv_estimate": pv_interval(site["capacity"], FORECAST, period_end, minute),
+                "pv_estimate10": pv_interval(site["capacity"], FORECAST_10, period_end, minute),
+                "pv_estimate90": pv_interval(site["capacity"], FORECAST_90, period_end, minute),
                 "period": "PT30M",
             }
             for minute in range(_hours * 2)
@@ -444,39 +421,9 @@ def get_site_estimated_actuals_advanced():
         "estimated_actuals": [
             {
                 "period_end": period_end + timedelta(minutes=minute * 30),
-                "pv_power_advanced": round(
-                    site["capacity"]
-                    * FORECAST
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
-                "pv_power_advanced10": round(
-                    site["capacity"]
-                    * FORECAST_10
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
-                "pv_power_advanced90": round(
-                    site["capacity"]
-                    * FORECAST_90
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
+                "pv_power_advanced": pv_interval(site["capacity"], FORECAST, period_end, minute),
+                "pv_power_advanced10": pv_interval(site["capacity"], FORECAST_10, period_end, minute),
+                "pv_power_advanced90": pv_interval(site["capacity"], FORECAST_90, period_end, minute),
                 "period": "PT30M",
             }
             for minute in range(_hours * 2)
@@ -502,39 +449,9 @@ def get_site_forecasts_advanced():
         "forecasts": [
             {
                 "period_end": period_end + timedelta(minutes=minute * 30),
-                "pv_power_advanced": round(
-                    site["capacity"]
-                    * FORECAST
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
-                "pv_power_advanced10": round(
-                    site["capacity"]
-                    * FORECAST_10
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
-                "pv_power_advanced90": round(
-                    site["capacity"]
-                    * FORECAST_90
-                    * GENERATION_FACTOR[
-                        int(
-                            (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).hour * 2
-                            + (period_end + timedelta(minutes=minute * 30)).astimezone(TIMEZONE).minute / 30
-                        )
-                    ],
-                    4,
-                ),
+                "pv_power_advanced": pv_interval(site["capacity"], FORECAST, period_end, minute),
+                "pv_power_advanced10": pv_interval(site["capacity"], FORECAST_10, period_end, minute),
+                "pv_power_advanced90": pv_interval(site["capacity"], FORECAST_90, period_end, minute),
                 "period": "PT30M",
             }
             for minute in range(_hours * 2)
@@ -568,9 +485,9 @@ if __name__ == "__main__":
         if not GENERATE_429:
             _LOGGER.error("Cannot specify --bomb429 with --no429")
             sys.exit()
-        BOMB_429 = [int(x) for x in args.bomb429.split(",") if "-" not in x]  # Spline minutes of the hour.
+        BOMB_429 = [int(x) for x in args.bomb429.split(",") if "-" not in x]  # Simple minutes of the hour.
         if "-" in args.bomb429:
-            for x_to_y in [x for x in args.bomb429.split(",") if "-" in x]:  # Minutes of the hour ranges.
+            for x_to_y in [x for x in args.bomb429.split(",") if "-" in x]:  # Minute of the hour ranges.
                 split = x_to_y.split("-")
                 if len(split) != 2:
                     _LOGGER.error("Not two hyphen separated values for --bomb429")
