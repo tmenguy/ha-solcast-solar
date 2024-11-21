@@ -4,7 +4,6 @@ Install:
 
 * This script runs in a Home Assistant DevContainer
 * Modify /etc/hosts (need sudo): 127.0.0.1 localhost api.solcast.com.au
-* Adjust TIMEZONE script constant to match the Home Assistant configuration (the DevContainer will be set to UTC, so the time zone cannot be read from the environment).
 * pip install Flask
 * Script start: python3 -m wsgi
 
@@ -23,6 +22,7 @@ Theory of operation:
 * As time goes on new forecast hour values are calculated based on the current get forecasts call time of day.
 * 429 responses are given when minute=0, unless --no429 is set, or other minutes are specified with --bomb429.
 * An occasionally generated "I'm a teapot" status can verify that the integration handles unknown status returns.
+* The time zone used should be read from the Home Assistant configuration. If this fails then the zone will be Australia/Melbourne.
 
 SSL certificate:
 
@@ -43,7 +43,9 @@ Experimental support for advanced_pv_power:
 import argparse
 import datetime
 from datetime import datetime as dt, timedelta
+import json
 from logging.config import dictConfig
+from pathlib import Path
 import random
 import sys
 from zoneinfo import ZoneInfo
@@ -461,8 +463,25 @@ def get_site_forecasts_advanced():
     return jsonify(response), 200
 
 
+def get_time_zone():
+    """Attempt to read time zone from Home Assistant config."""
+    global TIMEZONE
+    try:
+        with Path.open(Path(Path.cwd(), "../../../.storage/core.config")) as file:
+            config = json.loads(file.read())
+            TIMEZONE = ZoneInfo(config["data"]["time_zone"])
+    except:  # noqa: E722
+        pass
+
+
 if __name__ == "__main__":
+    get_time_zone()
     random.seed()
+    _LOGGER.info("Starting Solcast hobbyist API simulator, will listen on localhost:443")
+    _LOGGER.info("Time zone: %s", TIMEZONE)
+    _LOGGER.info("Simulator originally written by @autoSteve")
+    _LOGGER.info("Integration issues raised regarding this script will be closed without response because it is a development tool")
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", help="Set the API call limit available, example --limit 100", type=int, required=False)
     parser.add_argument("--no429", help="Do not generate 429 response", action="store_true", required=False)
@@ -498,8 +517,7 @@ if __name__ == "__main__":
         GENERATE_418 = True
         _LOGGER.info("I'm a teapot response will be sometimes generated")
 
-    _LOGGER.info("Starting Solcast hobbyist API simulator, will listen on localhost:443")
-    _LOGGER.info("API limit is set to %s, usage has been reset", API_LIMIT)
-    _LOGGER.info("Simulator originally written by @autoSteve")
-    _LOGGER.info("Integration issues raised regarding this script will be closed without response because it is a development tool")
+    if API_LIMIT == 50:
+        _LOGGER.info("API limit is default %s, usage has been reset", API_LIMIT)
+
     app.run(debug=args.debug, host="127.0.0.1", port=443, ssl_context=("cert.pem", "key.pem"))
