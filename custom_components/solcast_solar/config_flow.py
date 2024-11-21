@@ -162,7 +162,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         self._options = config_entry.options
 
     async def async_step_init(self, user_input: dict | None = None) -> Any:
-        """Initialise main dialogue step.
+        """Initialise main options flow step.
 
         Arguments:
             user_input (dict, optional): The input provided by the user. Defaults to None.
@@ -171,27 +171,13 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             Any: Either an error, or the configuration dialogue results.
 
         """
-
         errors = {}
-        api_key = self._options.get(CONF_API_KEY)
-        api_quota = self._options[API_QUOTA]
-        auto_update = self._options[AUTO_UPDATE]
-        custom_hour_sensor = self._options[CUSTOM_HOUR_SENSOR]
-        hard_limit = self._options.get(HARD_LIMIT_API)
-        key_estimate = self._options.get(KEY_ESTIMATE, "estimate")
-        estimate_breakdown = self._options[BRK_ESTIMATE]
-        estimate_breakdown10 = self._options[BRK_ESTIMATE10]
-        estimate_breakdown90 = self._options[BRK_ESTIMATE90]
-        site_breakdown = self._options[BRK_SITE]
-        half_hourly = self._options[BRK_HALFHOURLY]
-        hourly = self._options[BRK_HOURLY]
-        site_detailed = self._options[BRK_SITE_DETAILED]
-        granular_dampening = self._options[SITE_DAMP]
 
         if user_input is not None:
             try:
                 all_config_data = {**self._options}
 
+                # Validate API key
                 api_key = user_input[CONF_API_KEY].replace(" ", "")
                 if not re.match("^[a-zA-Z0-9,]+$", api_key):
                     return self.async_abort(reason="API key contains invalid character")
@@ -200,25 +186,26 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 api_key = ",".join(api_key)
                 all_config_data[CONF_API_KEY] = api_key
 
+                # Validate API limit
                 api_quota = user_input[API_QUOTA].replace(" ", "")
                 api_quota = [s for s in api_quota.split(",") if s]
                 for q in api_quota:
                     if not q.isnumeric():
                         return self.async_abort(reason="API limit is not a number")
                     if int(q) < 1:
-                        return self.async_abort(reason="API limit must be one  or greater!")
+                        return self.async_abort(reason="API limit must be one or greater")
                 if len(api_quota) > api_count:
-                    return self.async_abort(reason="There are more API limit counts entered than keys!")
+                    return self.async_abort(reason="There are more API limit counts entered than keys")
                 api_quota = ",".join(api_quota)
                 all_config_data[API_QUOTA] = api_quota
 
-                all_config_data[AUTO_UPDATE] = int(user_input[AUTO_UPDATE])
-
+                # Validate the custom hours sensor
                 custom_hour_sensor = user_input[CUSTOM_HOUR_SENSOR]
                 if custom_hour_sensor < 1 or custom_hour_sensor > 144:
                     return self.async_abort(reason="Custom sensor not between 1 and 144")
                 all_config_data[CUSTOM_HOUR_SENSOR] = custom_hour_sensor
 
+                # Validate the hard limit
                 hard_limit = user_input[HARD_LIMIT_API]
                 to_set = []
                 for h in hard_limit.split(","):
@@ -232,8 +219,12 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 hard_limit = ",".join(to_set)
                 all_config_data[HARD_LIMIT_API] = hard_limit
 
-                all_config_data[KEY_ESTIMATE] = user_input[KEY_ESTIMATE]
+                # Disable granular dampening
+                if user_input.get(SITE_DAMP) is not None:
+                    all_config_data[SITE_DAMP] = user_input[SITE_DAMP]
 
+                all_config_data[AUTO_UPDATE] = int(user_input[AUTO_UPDATE])
+                all_config_data[KEY_ESTIMATE] = user_input[KEY_ESTIMATE]
                 all_config_data[BRK_ESTIMATE] = user_input[BRK_ESTIMATE]
                 all_config_data[BRK_ESTIMATE10] = user_input[BRK_ESTIMATE10]
                 all_config_data[BRK_ESTIMATE90] = user_input[BRK_ESTIMATE90]
@@ -243,9 +234,6 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 all_config_data[BRK_SITE] = site_breakdown
                 site_detailed = user_input[BRK_SITE_DETAILED]
                 all_config_data[BRK_SITE_DETAILED] = site_detailed
-
-                if user_input.get(SITE_DAMP) is not None:
-                    all_config_data[SITE_DAMP] = user_input[SITE_DAMP]
 
                 self.hass.config_entries.async_update_entry(self._entry, title=TITLE, options=all_config_data)
 
@@ -272,27 +260,27 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_API_KEY, default=api_key): str,
-                    vol.Required(API_QUOTA, default=api_quota): str,
-                    vol.Required(AUTO_UPDATE, default=str(int(auto_update))): SelectSelector(
+                    vol.Required(CONF_API_KEY, default=self._options.get(CONF_API_KEY)): str,
+                    vol.Required(API_QUOTA, default=self._options[API_QUOTA]): str,
+                    vol.Required(AUTO_UPDATE, default=str(int(self._options[AUTO_UPDATE]))): SelectSelector(
                         SelectSelectorConfig(options=update, mode=SelectSelectorMode.DROPDOWN, translation_key="auto_update")
                     ),
-                    vol.Required(KEY_ESTIMATE, default=key_estimate): SelectSelector(
+                    vol.Required(KEY_ESTIMATE, default=self._options.get(KEY_ESTIMATE, "estimate")): SelectSelector(
                         SelectSelectorConfig(options=forecasts, mode=SelectSelectorMode.DROPDOWN, translation_key="key_estimate")
                     ),
-                    vol.Required(CUSTOM_HOUR_SENSOR, default=custom_hour_sensor): int,
-                    vol.Required(HARD_LIMIT_API, default=hard_limit): str,
-                    vol.Optional(BRK_ESTIMATE10, default=estimate_breakdown10): bool,
-                    vol.Optional(BRK_ESTIMATE, default=estimate_breakdown): bool,
-                    vol.Optional(BRK_ESTIMATE90, default=estimate_breakdown90): bool,
-                    vol.Optional(BRK_SITE, default=site_breakdown): bool,
-                    vol.Optional(BRK_HALFHOURLY, default=half_hourly): bool,
-                    vol.Optional(BRK_HOURLY, default=hourly): bool,
-                    vol.Optional(BRK_SITE_DETAILED, default=site_detailed): bool,
+                    vol.Required(CUSTOM_HOUR_SENSOR, default=self._options[CUSTOM_HOUR_SENSOR]): int,
+                    vol.Required(HARD_LIMIT_API, default=self._options.get(HARD_LIMIT_API)): str,
+                    vol.Optional(BRK_ESTIMATE10, default=self._options[BRK_ESTIMATE10]): bool,
+                    vol.Optional(BRK_ESTIMATE, default=self._options[BRK_ESTIMATE]): bool,
+                    vol.Optional(BRK_ESTIMATE90, default=self._options[BRK_ESTIMATE90]): bool,
+                    vol.Optional(BRK_SITE, default=self._options[BRK_SITE]): bool,
+                    vol.Optional(BRK_HALFHOURLY, default=self._options[BRK_HALFHOURLY]): bool,
+                    vol.Optional(BRK_HOURLY, default=self._options[BRK_HOURLY]): bool,
+                    vol.Optional(BRK_SITE_DETAILED, default=self._options[BRK_SITE_DETAILED]): bool,
                     (
                         vol.Optional(CONFIG_DAMP, default=False)
-                        if not granular_dampening
-                        else vol.Optional(SITE_DAMP, default=granular_dampening)
+                        if not self._options[SITE_DAMP]
+                        else vol.Optional(SITE_DAMP, default=self._options[SITE_DAMP])
                     ): bool,
                 }
             ),

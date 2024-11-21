@@ -197,12 +197,15 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                         if _from <= interval <= _from + timedelta(seconds=299):
                             update_in = int((interval - _now).total_seconds())
                             task_name = f"pending_update_{update_in:03}"
-                            if self.tasks.get(task_name) is not None:
-                                # The interval update is already tasked
-                                _LOGGER.debug("Task %s already exists, ignoring", task_name)
-                                continue
-                            _LOGGER.debug("Create task %s", task_name)
-                            self.tasks[task_name] = asyncio.create_task(wait_for_fetch(update_in))
+                            if update_in >= 0:
+                                if self.tasks.get(task_name) is not None:
+                                    # The interval update is already tasked
+                                    _LOGGER.debug("Task %s already exists, ignoring", task_name)
+                                    continue
+                                _LOGGER.debug("Create task %s", task_name)
+                                self.tasks[task_name] = asyncio.create_task(wait_for_fetch(update_in))
+                            else:
+                                _LOGGER.debug("Not tasking %s", task_name)
                         if interval < _from:
                             pop_expired.append(index)
                     # Remove expired intervals if any have been missed
