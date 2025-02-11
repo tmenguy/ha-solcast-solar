@@ -332,6 +332,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: SolcastConfigEntry) -> b
 
     hass.data[DOMAIN]["presumed_dead"] = False
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = True
+    hass.data.setdefault(DOMAIN, {})[f"{entry.entry_id}_COORDINATOR"] = coordinator
 
     if not await __check_auto_update_missed(coordinator):
         await __check_stale_start(coordinator)
