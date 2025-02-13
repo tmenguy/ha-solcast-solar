@@ -1,7 +1,7 @@
 # HA Solcast PV Solar Forecast Integration
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-<!--[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)-->
+<!--[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)-->
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 ![GitHub Release](https://img.shields.io/github/v/release/BJReplay/ha-solcast-solar?style=for-the-badge)
 [![hacs_downloads](https://img.shields.io/github/downloads/BJReplay/ha-solcast-solar/latest/total?style=for-the-badge)](https://github.com/BJReplay/ha-solcast-solar/releases/latest)
 ![GitHub License](https://img.shields.io/github/license/BJReplay/ha-solcast-solar?style=for-the-badge)
@@ -22,7 +22,9 @@ This integration is not created by, maintained, endorsed nor approved by Solcast
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png)
 
-The integration is not currently in the HACS database, but this is planned. [This PR](https://github.com/hacs/default/pull/2535) is awaiting merge. It must be installed using a custom repository, which is a straightforward process, and detailed instructions are provided.
+The integration has just been included in the HACS database.  It can also be installed using a custom repository, which is a straightforward process, and detailed instructions are provided.
+
+The readme will be updated in due course with HACS installation instructions. 
 
 > [!NOTE]
 >
