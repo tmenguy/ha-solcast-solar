@@ -106,8 +106,6 @@ Copy the API key for use with this integration (See [Configuration](#Configurati
 
 *(Recommended installation method)*
 
-https://my.home-assistant.io/badges/hacs_repository.svg
-
 Install as a Default Repository using HACS. More info about HACS can be found [here](https://hacs.xyz/).  If you haven't installed HACS yet, go do it first!
 
 The easiest way to install the integration is to click the button below to open this page in your Home Assistant HACS page (you will be prompted for your Home Assistant URL if you've never used this type of button before).
@@ -868,6 +866,11 @@ If behaviour most odd is encountered, filled with exceptions occurring, then a q
 </details>
 
 ## Changes
+
+v4.3.1
+* Add HACS Default installation instructions by @BJReplay
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.3.0...v4.3.1
 
 v4.3.0
 * Fix an issue when half-hourly breakdown is disabled but hourly is enabled by @autoSteve
