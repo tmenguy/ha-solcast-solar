@@ -1,7 +1,7 @@
 # HA Solcast PV Solar Forecast Integration
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-<!--[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)-->
+<!--[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)-->
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 ![GitHub Release](https://img.shields.io/github/v/release/BJReplay/ha-solcast-solar?style=for-the-badge)
 [![hacs_downloads](https://img.shields.io/github/downloads/BJReplay/ha-solcast-solar/latest/total?style=for-the-badge)](https://github.com/BJReplay/ha-solcast-solar/releases/latest)
 ![GitHub License](https://img.shields.io/github/license/BJReplay/ha-solcast-solar?style=for-the-badge)
@@ -21,8 +21,6 @@ It is a mature integration with an active community, and responsive developers.
 This integration is not created by, maintained, endorsed nor approved by Solcast.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png)
-
-The integration is not currently in the HACS database, but this is planned. [This PR](https://github.com/hacs/default/pull/2535) is awaiting merge. It must be installed using a custom repository, which is a straightforward process, and detailed instructions are provided.
 
 > [!NOTE]
 >
@@ -108,7 +106,7 @@ Copy the API key for use with this integration (See [Configuration](#Configurati
 
 *(Recommended installation method)*
 
-Install as a Custom Repository using HACS. More info about HACS can be found [here](https://hacs.xyz/).  If you haven't installed HACS yet, go do it first!
+Install as a Default Repository using HACS. More info about HACS can be found [here](https://hacs.xyz/).  If you haven't installed HACS yet, go do it first!
 
 The easiest way to install the integration is to click the button below to open this page in your Home Assistant HACS page (you will be prompted for your Home Assistant URL if you've never used this type of button before).
 
@@ -868,6 +866,11 @@ If behaviour most odd is encountered, filled with exceptions occurring, then a q
 </details>
 
 ## Changes
+
+v4.3.1
+* Add HACS Default installation instructions by @BJReplay
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.3.0...v4.3.1
 
 v4.3.0
 * Fix an issue when half-hourly breakdown is disabled but hourly is enabled by @autoSteve
