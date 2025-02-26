@@ -6,6 +6,17 @@ labels: ''
 assignees: ''
 
 ---
+## Help us help you.
+
+#### This bug report requests debug logs.  If you don't provide them don't expect any help, unless you are an expert developer and know why they're not required.  And, if you're an expert developer, know that they're not required, and you're wrong, don't expect any help.
+
+Note the instructions for getting debug logs, and follow them.
+
+#### Fill in **all** of the data requested.
+
+By failing to provide debug logs, you're providing us with permission to ignore you, or, at best, say debug logs required, and then ignore you.  By being lazy and not bothering to fill in data, you're encouraging us to be lazy and not bother responding.
+
+
 
 ## Describe the bug
 

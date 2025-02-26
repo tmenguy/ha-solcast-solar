@@ -8,17 +8,22 @@ body:
         
         Do not just write 'it does not work, vX.X.X, HA, X.X.X'
 
-        If you do, and don't provide additional background, such as whether or not this is a new install,
-        or an upgrade, and if so, from what version, you may find that your issue is deleted without comment.
+        Help us help you.
         
-        Particularly if your issue is triaged first by the repo owner who is in a grumpy mood
-        because he is suffering from chronic migraines.
+        This bug report requests debug logs. If you don't provide them don't expect any help, unless you are an expert developer and know why they're not required. And, if you're an expert developer, know that they're not required, and you're wrong, don't expect any help.
+
+        Note the instructions for getting debug logs, and follow them.
+
+        Fill in all of the data requested.
+        
+        By failing to provide debug logs, you're providing us with permission to ignore you, or, at best, say debug logs required, and then ignore you. By being lazy and not bothering to fill in data, you're encouraging us to be lazy and not bother responding.
 
         Help us help you be providing more information, not less.
         
         If not enough information is supplied the you may not get the support you hope for. 
 
         If you have a feature or enhancement request, please use the feature request Issue Type.
+        
   - type: textarea
     validations:
       required: true
