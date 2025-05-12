@@ -318,7 +318,7 @@ mode: single
 >
 > An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should ten consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` action (or if auto-update is enabled use `solcast_solar.force_update_forecasts`), or wait for the next scheduled update.
 >
-> Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration cannot start correctly, and it will retry continuously.
+> Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration will start if sites have been previously cached and it will blindly use this cached information. If changes to sites have been made then these changes will not be read in this circumstance, and unexpected results may occur. If things are unexpected then check the log. Always check the log if things are unexpected, and a restart will likely read the updated sites correctly.
 
 ```
 INFO (MainThread) [custom_components.solcast_solar.solcastapi] Getting forecast update for site 1234-5678-9012-3456
