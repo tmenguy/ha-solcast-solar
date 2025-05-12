@@ -190,11 +190,7 @@ Make sure you use your `API Key` and not your rooftop ID created in Solcast. You
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/install.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/install.png)
 
 > [!IMPORTANT]
-> After the integration is started, review the Home Assistant log.
-> 
-> Should an error that gathering rooftop sites data has failed occur then this is almost certainly not an integration issue, rather an issue reaching the Solcast API on the Internet. The integration will repeatedly restart in this situation until the sites data can be loaded, as until configured sites data is acquired the integration cannot function.
->
-> Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
+> The API key and associated sites will be checked when the initial configuration is saved. It is possible for this initial check to fail because the Solcast API is temporarily unavailable, and if it is then simply retry configuration after some minutes. The configure error message will indicate if this is the case.
 
 ### Updating forecasts
 
