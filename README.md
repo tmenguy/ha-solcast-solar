@@ -429,6 +429,8 @@ Some attribute names are deployment specific (examples are given here), and some
 
 Attribute names must not contain a hyphen. Solcast site resource IDs _are_ named using a hyphen, so where an attribute is named for the site resource ID that it represents the hyphens are replaced with underscores.
 
+All detailed forecast sensors that provide hourly or half-hourly breakdowns provide (as does the underlying Solcast data) data in kW - these are power sensors, not energy sensors, and represent the average power forecast for the period.
+
 For all sensors:
 
 * `estimate10`: 10th percentile forecast value (number)
