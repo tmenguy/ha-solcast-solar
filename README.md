@@ -10,9 +10,7 @@
 
 ## Preamble
 
-Home Assistant (https://www.home-assistant.io) Integration component.
-
-This custom component integrates the Solcast PV Forecast for hobbyists into Home Assistant.
+This custom component integrates the Solcast PV Forecast for hobbyists into Home Assistant (https://www.home-assistant.io).
 
 It allows visualisation of the solar forecast in the Energy dashboard, and supports flexible forecast dampening, the application of a hard limit for over-sized PV systems, a comprehensive set of sensor and configuration entities, along with sensor attributes containing full forecast detail to support automation and visualisation.
 
@@ -21,11 +19,6 @@ It is a mature integration with an active community, and responsive developers.
 This integration is not created by, maintained, endorsed nor approved by Solcast.
 
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/solar_production.png)
-
-> [!NOTE]
->
-> 
-> Beta versions may be available that fix issues. Check https://github.com/BJReplay/ha-solcast-solar/releases to see if an issue has already been resolved. If so, enable the `Solcast PV Pre-release` entity to enable beta upgrade (or for HACS v1 turn on `Show beta versions` when re-downloading). Your feedback from testing betas is most welcome in the repository discussions at https://github.com/BJReplay/ha-solcast-solar/discussions.
 
 > [!NOTE]
 >
@@ -39,6 +32,7 @@ This integration is not created by, maintained, endorsed nor approved by Solcast
     1. [HACS recommended](#hacs-recommended)
     1. [Installing manually in HACS](#installing-manually-in-hacs)
     1. [Installing manually (not using HACS)](#installing-manually-(not-using-hacs))
+    1. [Beta versions](#beta-versions)
 1. [Configuration](#configuration)
     1. [Updating forecasts](#updating-forecasts)
         1. [Auto-update of forecasts](#auto-update-of-forecasts)
@@ -168,6 +162,14 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 1. *Restart HA to load the new integration*
 1. See [Configuration](#configuration) below
 
+### Beta versions
+
+Beta versions may be available that fix issues.
+
+Check https://github.com/BJReplay/ha-solcast-solar/releases to see if an issue has already been resolved. If so, enable the `Solcast PV Pre-release` entity to enable beta upgrade (or for HACS v1 turn on `Show beta versions` when re-downloading).
+
+Your feedback from testing betas is most welcome in the repository discussions at https://github.com/BJReplay/ha-solcast-solar/discussions, where a discussion will exist for any active beta.
+
 ## Configuration
 
 1. [Click Here](https://my.home-assistant.io/redirect/config_flow_start/?domain=solcast_solar) to directly add a `Solcast Solar` integration **or**<br/>
@@ -180,7 +182,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
  
  [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png)
 
-1. Enter your `Solcast API Key`, `API limit`, desired auto-update choice and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter all Solcast account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_Note: this goes against Solcast T&C's by having more than one account_). Your API limit will be 10 for new Solcast users or 50 for historical users. If the API limit is the same for multiple accounts then enter a single value for that, or both values separated by a comma.
+1. Enter your `Solcast API Key`, `API limit`, desired auto-update choice and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter all Solcast account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy`. (_Note: This may breach Solcast terms and conditions by having more than one account if the locations of these account sites are within one kilometre of each other, or 0.62 miles._) Your API limit will be 10 for new Solcast users or 50 for early adopters. If the API limit is the same for multiple accounts then enter a single value for that, or both values separated by a comma, or the least API limit of all accounts as a single value. See [Excluded sites configuration](#excluded-sites-configuration) for a multiple API key use case.
 1. If an auto-update option was not chosen then create your own automation to call the action `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
 1. Set up the Home Assistant Energy dashboard settings.
 1. To change other configuration options after installation, select the integration in `Devices & Services` then `CONFIGURE`.
