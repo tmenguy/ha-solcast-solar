@@ -32,11 +32,6 @@ This integration is not created by, maintained, endorsed nor approved by Solcast
 > 
 > This integration can be used as a replacement for the aging oziee/ha-solcast-solar integration, which is no longer being developed and has been removed. Uninstalling the Oziee version then installing this one, or simply downloading this one over that one will preserve all history and configuration. If you **uninstalled** the Oziee integration, and then installed this one, then you will need to re-select to use Solcast Solar as the source of forecast production for your Energy dashboard.
 
-> [!NOTE]
->
-> 
-> Solcast have altered their API limits. New hobbyist account creators are allowed a maximum of 10 API calls per day. Original hobbyist users will retain up to 50 calls per day.
-
 # Table of contents
 1. [Key Solcast concepts](#key-solcast-concepts)
 1. [Solcast requirements](#solcast-requirements)
@@ -91,7 +86,12 @@ The Energy dashboard in Home Assistant is populated with historical forecast dat
 
 Manipulation of forecasted values to account for shading is possible by setting dampening factors for hourly or half-hourly periods, and a "hard limit" may be set for over-sized solar arrays where expected generation cannot exceed an inverter maximum rating. These two mechanisms are the only ways to manipulate the Solcast forecast data.
 
-Forecast history is not stored as Home Assistant statistics.
+Forecast history is not stored as Home Assistant statistics, rather is stored in a `json` cache file maintained by the integration.
+
+> [!NOTE]
+>
+> 
+> Solcast have altered their API limits. New hobbyist account creators are allowed a maximum of 10 API calls per day. Original hobbyist users will retain up to 50 calls per day.
 
 ## Solcast requirements
 
