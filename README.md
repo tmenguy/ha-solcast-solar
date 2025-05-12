@@ -445,8 +445,8 @@ For daily forecast sensors only:
 
 * `detailedForecast`: A half-hourly breakdown of expected power generation (list of dicts)
 * `detailedHourly`: An hourly breakdown of expected power generation (list of dicts)
-* `detailedForecast_1234_5678_9012_3456`: A half-hourly breakdown of expected site power generation (list of dicts)
-* `detailedHourly_1234_5678_9012_3456`: An hourly breakdown of expected site power generation (list of dicts)
+* `detailedForecast_1234_5678_9012_3456`: A half-hourly breakdown of expected average power generation for each interval (list of dicts, units in kW, not kWh)
+* `detailedHourly_1234_5678_9012_3456`: An hourly breakdown of expected average power generation for each interval (list of dicts, units in kW)
 
 The "list of dicts" has the following format, with example values used: (Note the inconsistency in `pv_estimateXX` vs. `estimateXX` used elsewhere. History is to blame.)
 
