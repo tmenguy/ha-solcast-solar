@@ -10,9 +10,7 @@
 
 ## Preamble
 
-Home Assistant (https://www.home-assistant.io) Integration component.
-
-This custom component integrates the Solcast PV Forecast for hobbyists into Home Assistant.
+This custom component integrates the Solcast PV Forecast for hobbyists into Home Assistant (https://www.home-assistant.io).
 
 It allows visualisation of the solar forecast in the Energy dashboard, and supports flexible forecast dampening, the application of a hard limit for over-sized PV systems, a comprehensive set of sensor and configuration entities, along with sensor attributes containing full forecast detail to support automation and visualisation.
 
@@ -25,17 +23,7 @@ This integration is not created by, maintained, endorsed nor approved by Solcast
 > [!NOTE]
 >
 > 
-> Beta versions may be available that fix issues. Check https://github.com/BJReplay/ha-solcast-solar/releases to see if an issue has already been resolved. If so, enable the `Solcast PV Pre-release` entity to enable beta upgrade (or for HACS v1 turn on `Show beta versions` when re-downloading). Your feedback from testing betas is most welcome in the repository discussions at https://github.com/BJReplay/ha-solcast-solar/discussions.
-
-> [!NOTE]
->
-> 
 > This integration can be used as a replacement for the aging oziee/ha-solcast-solar integration, which is no longer being developed and has been removed. Uninstalling the Oziee version then installing this one, or simply downloading this one over that one will preserve all history and configuration. If you **uninstalled** the Oziee integration, and then installed this one, then you will need to re-select to use Solcast Solar as the source of forecast production for your Energy dashboard.
-
-> [!NOTE]
->
-> 
-> Solcast have altered their API limits. New hobbyist account creators are allowed a maximum of 10 API calls per day. Original hobbyist users will retain up to 50 calls per day.
 
 # Table of contents
 1. [Key Solcast concepts](#key-solcast-concepts)
@@ -44,6 +32,7 @@ This integration is not created by, maintained, endorsed nor approved by Solcast
     1. [HACS recommended](#hacs-recommended)
     1. [Installing manually in HACS](#installing-manually-in-hacs)
     1. [Installing manually (not using HACS)](#installing-manually-(not-using-hacs))
+    1. [Beta versions](#beta-versions)
 1. [Configuration](#configuration)
     1. [Updating forecasts](#updating-forecasts)
         1. [Auto-update of forecasts](#auto-update-of-forecasts)
@@ -91,7 +80,12 @@ The Energy dashboard in Home Assistant is populated with historical forecast dat
 
 Manipulation of forecasted values to account for shading is possible by setting dampening factors for hourly or half-hourly periods, and a "hard limit" may be set for over-sized solar arrays where expected generation cannot exceed an inverter maximum rating. These two mechanisms are the only ways to manipulate the Solcast forecast data.
 
-Forecast history is not stored as Home Assistant statistics.
+Forecast history is not stored as Home Assistant statistics, rather is stored in a `json` cache file maintained by the integration.
+
+> [!NOTE]
+>
+> 
+> Solcast have altered their API limits. New hobbyist account creators are allowed a maximum of 10 API calls per day. Original hobbyist users will retain up to 50 calls per day.
 
 ## Solcast requirements
 
@@ -168,6 +162,14 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 1. *Restart HA to load the new integration*
 1. See [Configuration](#configuration) below
 
+### Beta versions
+
+Beta versions may be available that fix issues.
+
+Check https://github.com/BJReplay/ha-solcast-solar/releases to see if an issue has already been resolved. If so, enable the `Solcast PV Pre-release` entity to enable beta upgrade (or for HACS v1 turn on `Show beta versions` when re-downloading).
+
+Your feedback from testing betas is most welcome in the repository discussions at https://github.com/BJReplay/ha-solcast-solar/discussions, where a discussion will exist for any active beta.
+
 ## Configuration
 
 1. [Click Here](https://my.home-assistant.io/redirect/config_flow_start/?domain=solcast_solar) to directly add a `Solcast Solar` integration **or**<br/>
@@ -180,7 +182,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
  
  [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/Setupanewintegration.png)
 
-1. Enter your `Solcast API Key`, `API limit`, desired auto-update choice and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter all Solcast account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy` (_Note: this goes against Solcast T&C's by having more than one account_). Your API limit will be 10 for new Solcast users or 50 for historical users. If the API limit is the same for multiple accounts then enter a single value for that, or both values separated by a comma.
+1. Enter your `Solcast API Key`, `API limit`, desired auto-update choice and click `Submit`. If you have more than one Solcast account because you have more than two rooftop setups, enter all Solcast account API keys separated by a comma `xxxxxxxx-xxxxx-xxxx,yyyyyyyy-yyyyy-yyyy`. (_Note: This may breach Solcast terms and conditions by having more than one account if the locations of these account sites are within one kilometre of each other, or 0.62 miles._) Your API limit will be 10 for new Solcast users or 50 for early adopters. If the API limit is the same for multiple accounts then enter a single value for that, or both values separated by a comma, or the least API limit of all accounts as a single value. See [Excluded sites configuration](#excluded-sites-configuration) for a multiple API key use case.
 1. If an auto-update option was not chosen then create your own automation to call the action `solcast_solar.update_forecasts` at the times you would like to update the solar forecast.
 1. Set up the Home Assistant Energy dashboard settings.
 1. To change other configuration options after installation, select the integration in `Devices & Services` then `CONFIGURE`.
@@ -190,11 +192,7 @@ Make sure you use your `API Key` and not your rooftop ID created in Solcast. You
 [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/install.png" width="500">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/install.png)
 
 > [!IMPORTANT]
-> After the integration is started, review the Home Assistant log.
-> 
-> Should an error that gathering rooftop sites data has failed occur then this is almost certainly not an integration issue, rather an issue reaching the Solcast API on the Internet. The integration will repeatedly restart in this situation until the sites data can be loaded, as until configured sites data is acquired the integration cannot function.
->
-> Once the sites data has been acquired at least once it is written to a cache file, and that cache will be used on subsequent startups should the Solcast API be temporarily unavailable.
+> The API key and associated sites will be checked when the initial configuration is saved. It is possible for this initial check to fail because the Solcast API is temporarily unavailable, and if it is then simply retry configuration after some minutes. The configure error message will indicate if this is the case.
 
 ### Updating forecasts
 
@@ -320,7 +318,7 @@ mode: single
 >
 > An example of busy messages and a successful retry are shown below (with debug logging enabled). In this case there is no issue, as the retry succeeds. Should ten consecutive attempts fail, then the forecast retrieval will end with an `ERROR`. If that happens, manually trigger another `solcast_solar.update_forecasts` action (or if auto-update is enabled use `solcast_solar.force_update_forecasts`), or wait for the next scheduled update.
 >
-> Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration cannot start correctly, and it will retry continuously.
+> Should the load of sites data on integration startup be the call that has failed with 429/Too busy, then the integration will start if sites have been previously cached and it will blindly use this cached information. If changes to sites have been made then these changes will not be read in this circumstance, and unexpected results may occur. If things are unexpected then check the log. Always check the log if things are unexpected, and a restart will likely read the updated sites correctly.
 
 ```
 INFO (MainThread) [custom_components.solcast_solar.solcastapi] Getting forecast update for site 1234-5678-9012-3456
@@ -377,8 +375,8 @@ All sensor names are preceded by the integration name `Solcast PV Forecast`.
 | `Forecast Day 5` | number | Y | `kWh` | Total forecast solar production for day + 4 (day 5). |
 | `Forecast Day 6` | number | Y | `kWh`| Total forecast solar production for day + 5 (day 6). |
 | `Forecast Day 7` | number | Y | `kWh` | Total forecast solar production for day + 6 (day 7). |
-| `ForecastThis Hour` | number | Y | `Wh` | Forecasted solar production current hour (attributes contain site breakdown). |
-| `ForecastNext Hour` | number | Y | `Wh` | Forecasted solar production next hour (attributes contain site breakdown). |
+| `Forecast This Hour` | number | Y | `Wh` | Forecasted solar production current hour (attributes contain site breakdown). |
+| `Forecast Next Hour` | number | Y | `Wh` | Forecasted solar production next hour (attributes contain site breakdown). |
 | `Forecast Next X Hours` | number | Y | `Wh` | Custom user defined forecasted solar production for next X hours<br>Note: This forecast starts at current time, it is not aligned on the hour like "This hour", "Next Hour". |
 | `Forecast Remaining Today` | number | Y | `kWh` | Predicted remaining solar production today. |
 | `Peak Forecast Today` | number | Y | `W` | Highest predicted production within an hour period today (attributes contain site breakdown). |
@@ -429,6 +427,8 @@ Some attribute names are deployment specific (examples are given here), and some
 
 Attribute names must not contain a hyphen. Solcast site resource IDs _are_ named using a hyphen, so where an attribute is named for the site resource ID that it represents the hyphens are replaced with underscores.
 
+All detailed forecast sensors that provide hourly or half-hourly breakdowns provide (as does the underlying Solcast data) data in kW - these are power sensors, not energy sensors, and represent the average power forecast for the period.
+
 For all sensors:
 
 * `estimate10`: 10th percentile forecast value (number)
@@ -441,10 +441,10 @@ For all sensors:
 
 For daily forecast sensors only:
 
-* `detailedForecast`: A half-hourly breakdown of expected power generation (list of dicts)
-* `detailedHourly`: An hourly breakdown of expected power generation (list of dicts)
-* `detailedForecast_1234_5678_9012_3456`: A half-hourly breakdown of expected site power generation (list of dicts)
-* `detailedHourly_1234_5678_9012_3456`: An hourly breakdown of expected site power generation (list of dicts)
+* `detailedForecast`: A half-hourly breakdown of expected average power generation for each interval (list of dicts, units in kW, not kWh)
+* `detailedHourly`: An hourly breakdown of expected average power generation for each interval (list of dicts, units in kW)
+* `detailedForecast_1234_5678_9012_3456`: A half-hourly breakdown of expected average power generation for each interval (list of dicts, units in kW)
+* `detailedHourly_1234_5678_9012_3456`: An hourly breakdown of expected average power generation for each interval (list of dicts, units in kW)
 
 The "list of dicts" has the following format, with example values used: (Note the inconsistency in `pv_estimateXX` vs. `estimateXX` used elsewhere. History is to blame.)
 
