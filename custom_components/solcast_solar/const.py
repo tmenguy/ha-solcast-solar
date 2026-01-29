@@ -118,6 +118,7 @@ DEFAULT_GENERATION_FETCH_DELAY: Final[int] = 0  # Minutes to wait after midnight
 DEFAULT_GENERATION_HISTORY_LOAD_DAYS: Final[int] = 7  # Number of days of generation history to load when no data present
 DEFAULT_GRANULAR_DAMPENING_DELTA_ADJUSTMENT: Final[bool] = False  # Whether to use delta adjustment for granular dampening
 DEFAULT_HISTORY_MAX: Final[int] = 730  # Maximum number of history days to keep
+DEFAULT_KEYS: Final[str] = "default_keys"
 DEFAULT_SOLCAST_HTTPS_URL: Final[str] = "https://api.solcast.com.au"
 DELAYED_RESTART_ON_CRASH: Final[int] = 15  # Minutes to delay restart after crash
 DELTA: Final[str] = "delta"
@@ -366,7 +367,8 @@ ADVANCED_OPTIONS: Final[dict[str, dict[str, Any]]] = {
         ADVANCED_TYPE: ADVANCED_OPTION.LIST_DICT,
         DEFAULT: [],
         OPTION_REQUIRES: [ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_CONFIGURATION],
-        REQUIRED_KEYS: {MODEL, DELTA},
+        REQUIRED_KEYS: [MODEL],
+        DEFAULT_KEYS: {DELTA: [-1, 0, 1]},
     },
     ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS: {
         ADVANCED_TYPE: ADVANCED_OPTION.INT,

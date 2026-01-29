@@ -102,6 +102,7 @@ from .const import (
     DAY_NAME,
     DEFAULT,
     DEFAULT_DAMPENING_DELTA_ADJUSTMENT_MODEL,
+    DEFAULT_KEYS,
     DELTA_STATUS,
     DEPRECATED,
     DETAILED_FORECAST,
@@ -622,6 +623,19 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                                 continue
                                             seen_members.append(member)
                                     case ADVANCED_OPTION.LIST_DICT:
+                                        required_keys = set(advanced_options_with_aliases[option].get(REQUIRED_KEYS, set()))
+                                        default_keys = advanced_options_with_aliases[option].get(DEFAULT_KEYS, {})
+                                        # Keys that are required but have defaults (can be auto-populated)
+                                        required_with_defaults = required_keys & set(default_keys.keys())
+                                        # Keys that must be provided by user (no defaults available)
+                                        strictly_required_keys = required_keys - required_with_defaults
+                                        # All valid keys (required + any with defaults)
+                                        valid_keys = required_keys | set(default_keys.keys())
+
+                                        # Track items that need default population
+                                        entries_to_add = []
+                                        indices_to_remove = []
+
                                         # Each entry must be a dict
                                         for idx, item in enumerate(new_value):  # pyright: ignore[reportArgumentType]
                                             if not isinstance(item, dict):
@@ -633,23 +647,24 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                                 )
                                                 valid = False
                                                 continue
-                                            required_keys = advanced_options_with_aliases[option].get(REQUIRED_KEYS, set())
-                                            if not required_keys.issubset(item):
-                                                add_problem("Missing keys in %s entry at index %s: expected %s", option, idx, required_keys)
+
+                                            # Check strictly required keys (no defaults) are present
+                                            if not strictly_required_keys.issubset(item):
+                                                missing_keys = strictly_required_keys - set(item.keys())
+                                                add_problem("Missing required keys in %s entry at index %s: %s", option, idx, missing_keys)
                                                 valid = False
                                                 continue
-                                            if len(item) != len(required_keys):
-                                                add_problem(
-                                                    "Incorrect number of keys in %s entry at index %s: found %d, expected %d",
-                                                    option,
-                                                    idx,
-                                                    len(item),
-                                                    len(required_keys),
-                                                )
+
+                                            # Check no unknown keys are present
+                                            unknown_keys = set(item.keys()) - valid_keys
+                                            if unknown_keys:
+                                                add_problem("Unknown keys in %s entry at index %s: %s", option, idx, unknown_keys)
                                                 valid = False
                                                 continue
+
                                             if option == ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_EXCLUDE:
                                                 # Validate that only int values are passed.
+                                                item_valid = True
                                                 for key, value in item.items():
                                                     if not isinstance(value, int):
                                                         add_problem(
@@ -660,7 +675,31 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                                             type(value).__name__,
                                                         )
                                                         valid = False
+                                                        item_valid = False
                                                         break
+
+                                                # Populate defaults for a valid item
+                                                if item_valid and default_keys:
+                                                    # Check if any keys with defaults are missing (whether required or not)
+                                                    # If missing, then add the missing defaults as new entries, removing the original incomplete item
+                                                    missing_defaults = set(default_keys.keys()) - set(item.keys())
+                                                    if missing_defaults:
+                                                        for key in missing_defaults:
+                                                            default_values = default_keys[key]
+                                                            for default_value in default_values:
+                                                                new_entry = {**item, key: default_value}
+                                                                combo_exists = any(
+                                                                    all(existing_item.get(k) == v for k, v in new_entry.items())
+                                                                    for existing_item in new_value  # pyright: ignore[reportGeneralTypeIssues, reportOptionalIterable]
+                                                                    if isinstance(existing_item, dict)
+                                                                )
+                                                                if not combo_exists:
+                                                                    entries_to_add.append(new_entry)
+                                                        indices_to_remove.append(idx)
+                                        for idx in reversed(indices_to_remove):
+                                            new_value.pop(idx)  # pyright: ignore[reportAttributeAccessIssue]
+                                        if entries_to_add:
+                                            new_value.extend(entries_to_add)  # pyright: ignore[reportAttributeAccessIssue]
                                     case _:
                                         pass
                                 if option == ADVANCED_GRANULAR_DAMPENING_DELTA_ADJUSTMENT and new_value and not self.options.get_actuals:

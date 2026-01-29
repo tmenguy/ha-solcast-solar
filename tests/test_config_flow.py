@@ -982,6 +982,7 @@ async def test_advanced_options(
         _LOGGER.debug("Testing advanced options 3")
         data_file_3: dict[str, Any] = {
             "automated_dampening_adaptive_model_exclude": [
+                {"model": 2},
                 {"model": 3, "delta": 1},
                 {"model": 3, "delta": "hairy_one"},
                 {"model": 3, "delta": {"see": "this_one_coming?"}},
@@ -1000,14 +1001,15 @@ async def test_advanced_options(
         data_file.write_text(json.dumps(data_file_3), encoding="utf-8")
         await wait()
         assert "index 0:" not in caplog.text
-        for i in (1, 2):
+        assert "index 1:" not in caplog.text
+        for i in (2, 3):
             assert (
                 f"Invalid value type in automated_dampening_adaptive_model_exclude entry at index {i}: key 'delta' must be an integer"
                 in caplog.text
             )
-        for i in (3, 5):
-            assert f"Missing keys in automated_dampening_adaptive_model_exclude entry at index {i}" in caplog.text
-        assert "Incorrect number of keys in automated_dampening_adaptive_model_exclude entry at index 4: found 3, expected 2" in caplog.text
+        for i in (4, 6):
+            assert f"Missing required keys in automated_dampening_adaptive_model_exclude entry at index {i}" in caplog.text
+        assert "Unknown keys in automated_dampening_adaptive_model_exclude entry at index 5:" in caplog.text
         assert "Advanced option automated_dampening_generation_fetch_delay: 40 must be less than or equal" in caplog.text
         assert "Advanced option estimated_actuals_fetch_delay: 30 must be greater than or equal" in caplog.text
         assert "Advanced option forecast_day_entities: 10 must be less than or equal" in caplog.text
