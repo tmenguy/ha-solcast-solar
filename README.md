@@ -1295,17 +1295,14 @@ The code itself resides at `/config/custom_components/solcast_solar`, and removi
 
 ## Changes
 
-v4.4.11
+v4.5.0
 
-* Fix advanced option validation for `not_set_if` by @autoSteve
+* Add adaptive automated dampening as advanced options by @Nilogax and @autoSteve
+* Add advanced dampening settings as attributes of dampening sensor by @Nilogax
 * Add missing translation, ES, FR, PL, SK, UR by @GitLocalize
-* Consistent strings file spacing by @autoSteve
-* Add advanced option automated_dampening_adaptive_model_configuration by @Nilogax
-* Add advanced option automated_dampening_adaptive_model_minimum_history_days by @Nilogax
-* Add advanced option automated_dampening_adaptive_model_delta_exclude by @Nilogax
-* Expose advanced dampening settings as attributes of dampening sensor by @Nilogax
+* Fix advanced option validation for `not_set_if` (#435) by @autoSteve
 
-Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.4.10...v4.4.11
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.4.10...v4.5.0
 
 v4.4.10
 
