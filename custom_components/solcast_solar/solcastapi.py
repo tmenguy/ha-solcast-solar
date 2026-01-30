@@ -3452,7 +3452,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         return actuals
 
-    async def determine_best_dampening_settings(self) -> None:
+    async def determine_best_dampening_settings(self) -> None:  # noqa: C901
         """Determine which dampening settings result in the lowest error rate.
 
         Finds earliest common history start date for all models with > minimum dampening history.
@@ -3555,10 +3555,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
                     day_start = self._get_day_start(period_start)
 
-                    ##### This validation check appears to be redundant - it can never fail if the earlier continuity validation passed.
-                    ##### The day_start will always be in actuals unless there's a logic error elsewhere.
-                    ##### I think... Double-check me.
-                    """
                     # Validate actuals exist for this day
                     if day_start not in actuals:
                         _LOGGER.debug(
@@ -3569,28 +3565,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         )
                         valid = False
                         break
-                    """
-
-                    ##### Pretty sure this is unreachable code. Double-check me.
-                    ##### day_start is built from period_start which is built from model_entry which is built from
-                    ##### self._data_dampening_history which will not include period_starts in the "future".
-                    """
-                    # Skip today's incomplete data
-                    if day_start == self.get_day_start_utc():
-                        continue
-                    """
 
                     # Apply dampening factors to actuals
                     if day_start not in dampened_intervals:
                         dampened_actuals[day_start] = [actuals[day_start][interval] * factors[interval] for interval in range(48)]
                         dampened_intervals[day_start] = {interval for interval in range(48) if included_intervals[day_start][interval]}
 
-                ##### This validation check appears to be redundant - it can never fail if the earlier continuity validation passed.
-                ##### The counts will always match unless there's a logic error elsewhere.
-                ##### I think... Double-check me.
-                ##### If I am right, then the `if valid:` block can be unindented one level by removing `if valid:`.
-                ##### And also if I am right then the complexity of this method will drop to 25 branches, which will eliminate the need for C901 warning suppression above.
-                """
                 # Validate counts
                 actual_count = sum(len(v) for v in actuals.values())
                 dampened_count = sum(len(v) for v in dampened_actuals.values())
@@ -3604,7 +3584,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         dampened_count,
                         actual_count,
                     )
-                """
 
                 if valid:
                     # Filter to only intervals where dampening was applied
@@ -3660,6 +3639,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     if inf_d:
                         _LOGGER.debug("Ignored %s values for model %d and delta %d", math.inf, model, delta)
 
+                    # Defensive check for cases where all errors are infinity or error calculation failed
                     if error_metric == math.inf or error_dampened == -1:
                         _LOGGER.debug("Skipping APE calculation for model %d and delta %d due to APE calculation issue", model, delta)
                         continue
@@ -3766,8 +3746,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         if (raise_issue and not self._better_mape_issue_raised) or (self._better_mape_issue_raised and not raise_issue):
             # Clear any raised issue if this is a fresh occurrence or previously raised issue has cleared
             issue_registry = ir.async_get(self.hass)
-            if issue_registry.async_get_issue(DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR) is not None:
-                ir.async_delete_issue(self.hass, DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR)
             # Raise new issue if required
             if raise_issue:
                 ir.async_create_issue(
@@ -3780,6 +3758,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     translation_placeholders={DELTA_STATUS: delta_status, OPTION: ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT},
                     learn_more_url=LEARN_MORE_ADVANCED,
                 )
+            elif issue_registry.async_get_issue(DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR) is not None:
+                ir.async_delete_issue(self.hass, DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR)
             self._better_mape_issue_raised = raise_issue
 
         _LOGGER.debug("Task determine_best_dampening_settings took %.3f seconds", time.time() - start_time)
@@ -4091,7 +4071,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 [percentile(sorted(error.values()), p) for p in percentiles],
             )
             if len(non_inf_error) > 0
-            else (False, 0.0, [0.0] * len(percentiles))
+            else (False, math.inf, [math.inf] * len(percentiles))
         )
 
     async def prepare_dampening_data(
