@@ -61,7 +61,7 @@ By default, a 10th percentile is selected, but any percentile or a mean absolute
 
 Possible values: list of dictionaries {`model`, `delta`} (default `[]`, with `delta` optional, `model` being mandatory)
 
-Setting this option allows the user to specify combinations of dampening model (`model`) and delta adjustment model (`delta`) that will be excluded from the adaptive model configuration process. An alternative form of just `model` key specified will exclude all `delta` options, otherwise all specified `delta` options only will be excluded.
+Setting this option allows the user to specify combinations of dampening model (`model`) and delta adjustment model (`delta`) that will be excluded from the adaptive model configuration process. An alternative form of just `model` key specified will exclude all `delta` options, otherwise only the specified `delta` options will be excluded.
 
 Dampening history will still be recorded for these combinations so they can be reinstated at any time.  An example of configuration syntax in `solcast-advanced.json` is:
 
@@ -79,7 +79,7 @@ Can only be defined when `automated_dampening_adaptive_model_configuration` is `
 
 Possible values: float `0.0`,,`10.0` (default `0.0`)
 
-Defines a minimum change in error that is required before adaptive model configuration is changed.  For example if the current settings return a error of 5.35% and this threshold is set to 1.0 a configuration would need to return a error below 4.35% to change settings to the new model and/or delta adjustment.  
+Defines a minimum change in error that is required before adaptive model configuration is changed.  For example if the current settings return an error of 5.35% and this threshold is set to 1.0 a configuration would need to return an error below 4.35% to change settings to the new model and/or delta adjustment.  
 
 Can only be defined when `automated_dampening_adaptive_model_configuration` is `true`.
 
