@@ -108,6 +108,7 @@ ACTIONS = [
     "query_forecast_data",
     "remove_hard_limit",
     "set_dampening",
+    "set_custom_hours",
     "set_hard_limit",
     "update_forecasts",
 ]
@@ -1155,6 +1156,38 @@ async def test_remaining_actions(
             assert len(solcast._sites_hard_limit_undampened["all"][estimate]) == 0  # pyright: ignore[reportPrivateUsage]
         assert re.search("Build hard limit processing took.+seconds for forecast", caplog.text) is None
         assert re.search("Build hard limit processing took.+seconds for undampened forecast", caplog.text) is None
+
+        # Test set custom hours sensor
+        _LOGGER.debug("Test set custom hours sensor with invalid inputs")
+        invalid_hours = [
+            {"set": {"hours": "gah!"}, "expect": ServiceValidationError},
+            {"set": {"hours": "3.5"}, "expect": ServiceValidationError},
+            {"set": {"hours": "0"}, "expect": ServiceValidationError},
+            {"set": {"hours": "-5"}, "expect": ServiceValidationError},
+            {"set": {"hours": "145"}, "expect": ServiceValidationError},
+        ]
+        for hours_test in invalid_hours:
+            _LOGGER.debug("Test set invalid custom hours: %s", hours_test)
+            with pytest.raises(hours_test["expect"]):
+                await hass.services.async_call(DOMAIN, "set_custom_hours", hours_test["set"], blocking=True)
+
+        async def _set_custom_hours(hours: str) -> SolcastApi:
+            await hass.services.async_call(DOMAIN, "set_custom_hours", {"hours": hours}, blocking=True)
+            await hass.async_block_till_done()
+            return patch_solcast_api(entry.runtime_data.coordinator.solcast)  # Because integration reloads
+
+        _LOGGER.debug("Test set custom hours valid inputs")
+        solcast = await _set_custom_hours("1")
+        assert solcast.custom_hour_sensor == 1
+        assert entry.options[CUSTOM_HOUR_SENSOR] == 1
+        solcast = await _set_custom_hours("144")
+        assert solcast.custom_hour_sensor == 144
+        assert entry.options[CUSTOM_HOUR_SENSOR] == 144
+        solcast = await _set_custom_hours("  24  ")
+        assert solcast.custom_hour_sensor == 24
+        assert entry.options[CUSTOM_HOUR_SENSOR] == 24
+
+        caplog.clear()
 
         # Test query forecast data
         queries: list[dict[str, Any]] = [

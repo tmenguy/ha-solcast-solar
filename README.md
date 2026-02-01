@@ -532,6 +532,7 @@ YAML:
 | `solcast_solar.clear_all_solcast_data` | Deletes cached data, and initiates an immediate fetch of new past actual and forecast values. |
 | `solcast_solar.query_forecast_data` | Return a list of forecast data using a datetime range start - end. |
 | `solcast_solar.query_estimate_data` | Return a list of estimated actual data using a datetime range start - end. |
+| `solcast_solar.set_custom_hours` | Set the custom X hours sensor number of hours. |
 | `solcast_solar.set_dampening` | Update the dampening factors. |
 | `solcast_solar.get_dampening` | Get the currently set dampening factors. |
 | `solcast_solar.set_hard_limit` | Set inverter forecast hard limit. |
@@ -562,6 +563,12 @@ action: solcast_solar.set_dampening
 data:
   damp_factor: 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
   site: 1234-5678-9012-3456 (optional)
+```
+
+```yaml
+action: solcast_solar.set_custom_hours
+data:
+  hours: 2
 ```
 
 ```yaml
@@ -1299,6 +1306,7 @@ v4.5.0
 
 * Add adaptive automated dampening as advanced options by @Nilogax and @autoSteve
 * Add advanced dampening settings as attributes of dampening sensor by @Nilogax
+* Add set_custom_hours service action for entity by @autoSteve
 * Add missing translation, ES, FR, PL, SK, UR by @GitLocalize
 * Fix advanced option validation for `not_set_if` (#435) by @autoSteve
 

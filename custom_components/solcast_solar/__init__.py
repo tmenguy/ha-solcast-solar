@@ -82,6 +82,7 @@ from .const import (
     HARD_LIMIT_API,
     HEADERS_ACCEPT,
     HEADERS_USER_AGENT,
+    HOURS,
     KEY_ESTIMATE,
     LAST_ATTEMPT,
     OLD_API_KEY,
@@ -101,6 +102,7 @@ from .const import (
     SERVICE_QUERY_ESTIMATE_DATA,
     SERVICE_QUERY_FORECAST_DATA,
     SERVICE_REMOVE_HARD_LIMIT,
+    SERVICE_SET_CUSTOM_HOURS,
     SERVICE_SET_DAMPENING,
     SERVICE_SET_HARD_LIMIT,
     SERVICE_UPDATE,
@@ -144,6 +146,11 @@ SERVICE_DAMP_GET_SCHEMA: Final = vol.All(
 SERVICE_HARD_LIMIT_SCHEMA: Final = vol.All(
     {
         vol.Required(HARD_LIMIT): cv.string,
+    }
+)
+SERVICE_CUSTOM_HOURS_SCHEMA: Final = vol.All(
+    {
+        vol.Required(HOURS): cv.string,
     }
 )
 SERVICE_QUERY_SCHEMA: Final = vol.All(
@@ -668,6 +675,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         opt[HARD_LIMIT_API] = ",".join(to_set)
         hass.config_entries.async_update_entry(entry, options=opt)
 
+    async def action_call_set_custom_hours(call: ServiceCall) -> None:
+        """Handle action.
+
+        Arguments:
+            call (ServiceCall): The data to act on: a number of hours for the custom hour sensor.
+
+        Raises:
+            ServiceValidationError: Notify that a validation error has occurred.
+
+        """
+        _LOGGER.info("Action: Set custom hours sensor")
+
+        hours_str = call.data.get(HOURS, "")
+        hours_str = hours_str.strip()
+
+        if not hours_str.isdigit():
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_custom_hours_format",
+            )
+
+        hour_val = int(hours_str)
+        if hour_val < 1 or hour_val > 144:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_custom_hours_range",
+            )
+
+        opt = {**entry.options}
+        opt[CUSTOM_HOUR_SENSOR] = hour_val
+        hass.config_entries.async_update_entry(entry, options=opt)
+
     async def action_call_remove_hard_limit(call: ServiceCall) -> None:
         """Handle action.
 
@@ -705,6 +744,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         },
         SERVICE_REMOVE_HARD_LIMIT: {ACTION: action_call_remove_hard_limit},
         SERVICE_SET_DAMPENING: {ACTION: action_call_set_dampening, SCHEMA: SERVICE_DAMP_SCHEMA},
+        SERVICE_SET_CUSTOM_HOURS: {ACTION: action_call_set_custom_hours, SCHEMA: SERVICE_CUSTOM_HOURS_SCHEMA},
         SERVICE_SET_HARD_LIMIT: {ACTION: action_call_set_hard_limit, SCHEMA: SERVICE_HARD_LIMIT_SCHEMA},
         SERVICE_UPDATE: {ACTION: action_call_update_forecast},
     }
@@ -759,6 +799,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         SERVICE_QUERY_FORECAST_DATA,
         SERVICE_REMOVE_HARD_LIMIT,
         SERVICE_SET_DAMPENING,
+        SERVICE_SET_CUSTOM_HOURS,
         SERVICE_SET_HARD_LIMIT,
         SERVICE_UPDATE,
     ]
