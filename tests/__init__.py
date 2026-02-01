@@ -372,8 +372,9 @@ async def async_setup_extra_sensors(  # noqa: C901
 ) -> None:
     """Set up extra sensors for testing."""
 
-    FASTER = False  # True for fast tests, False for reliable ones.
-    BLOCKS = 5  # Number of blocks to wait for async processing when FASTER is True.
+    FASTER = True  # True for fast tests, False for reliable ones.
+    BATCH_SIZE = 50  # Number of state changes before waiting for async processing when FASTER is True.
+    state_change_counter = 0
 
     match extra_sensors:
         case ExtraSensors.YES_WATT_HOUR:
@@ -395,6 +396,7 @@ async def async_setup_extra_sensors(  # noqa: C901
     increasing: float
 
     async def record_history(entity_id: str, new_now: dt, increasing: float, gap: bool) -> None:
+        nonlocal state_change_counter
         if not FASTER:
             frozen_time.move_to(new_now)
         if not gap:
@@ -406,9 +408,10 @@ async def async_setup_extra_sensors(  # noqa: C901
                         None,
                         timestamp=dt.timestamp(new_now),
                     )
-                    await hass.async_block_till_done()
-                    for _ in range(BLOCKS):
+                    state_change_counter += 1
+                    if state_change_counter >= BATCH_SIZE:
                         await hass.async_block_till_done()
+                        state_change_counter = 0
                 else:
                     await hass.async_add_executor_job(
                         hass.states.set,
@@ -425,8 +428,10 @@ async def async_setup_extra_sensors(  # noqa: C901
                         {"unit_of_measurement": _uom},
                         timestamp=dt.timestamp(new_now),
                     )
-                    for _ in range(BLOCKS):
+                    state_change_counter += 1
+                    if state_change_counter >= BATCH_SIZE:
                         await hass.async_block_till_done()
+                        state_change_counter = 0
                 else:
                     await hass.async_add_executor_job(
                         hass.states.set,
@@ -554,7 +559,13 @@ async def async_setup_extra_sensors(  # noqa: C901
                             + timedelta(seconds=(day * 86400) + (i * 30 * 60) + b)
                         )
                         await record_history(entity_id, new_now, increasing, gap)
-
+            # Flush any remaining state changes and ensure recorder has processed them
+            if FASTER:
+                if state_change_counter > 0:
+                    await hass.async_block_till_done()
+                # Give recorder extra time to commit all changes
+                await hass.async_block_till_done()
+                await hass.async_block_till_done()
     if extra_sensors == ExtraSensors.YES_WITH_SUPPRESSION:
         entity = "solcast_suppress_auto_dampening"
         entity_registry.async_get_or_create(
