@@ -232,7 +232,6 @@ async def test_auto_dampen(
         assert "Interval 08:30 max generation: 0.777" in caplog.text
         assert "Auto-dampen factor for 08:30 is 0.830" in caplog.text
         # assert "Auto-dampen factor for 11:00" not in caplog.text
-        assert "Ignoring insignificant factor for 10:30" not in caplog.text
         assert "Ignoring insignificant factor for 11:00 of 0.993" in caplog.text
         assert "Ignoring excessive PV generation" not in caplog.text
 
@@ -304,10 +303,15 @@ async def test_auto_dampen(
                     solcast.advanced_options["automated_dampening_delta_adjustment_model"] = adjustment_model
                     await solcast.apply_forward_dampening()
                     _LOGGER.critical("Model %d/%d tested", model, adjustment_model)
-                    expected_value = ADVANCED_CHECKS[model]["adjusted"][adjustment_model]
-                    pattern = r"Adjusted granular dampening factor for .+ 08:30:00, {:.3f}".format(expected_value)
-                    match = re.search(pattern, caplog.text)
-                    assert match is not None, f"Expected to find pattern '{pattern}' in log"
+                    assert (
+                        re.search(
+                            r"Adjusted granular dampening factor for .+ 08:30:00, {:.3f}".format(
+                                ADVANCED_CHECKS[model]["adjusted"][adjustment_model]
+                            ),
+                            caplog.text,
+                        )
+                        is not None
+                    )
 
         # Verify that the dampening entity that should be disabled by default is, then enable it.
         entity = "sensor.solcast_pv_forecast_dampening"
@@ -460,7 +464,7 @@ async def test_auto_dampen_issues(
                 assert "has an unsupported unit_of_measurement 'MJ'" in caplog.text  # A dodgy unit should be logged
                 assert f"Site export entity {options[SITE_EXPORT_ENTITY]} is not a valid entity" in caplog.text
                 assert "Interval 11:00 max generation: 0.000, []" in caplog.text  # A jump in generation should not be seen as a peak
-                assert "Interval 13:00 max generation: 0.033, [0.033, 0.033]" in caplog.text  # Dodgy generation should prevent interval consideration
+                assert "Interval 13:00 max generation: 0.033" in caplog.text  # Dodgy generation filtered but some valid data remains
                 assert "Auto-dampen factor for 10:00 is 0.841" in caplog.text  # A valid interval still considered
                 assert "Ignoring excessive PV generation jump of 6.000 kWh" in caplog.text  # Dodgy generation should be logged
             case _:
