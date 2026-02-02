@@ -124,7 +124,7 @@ async def test_auto_dampen_dst_transition(
         ]
         options[SITE_EXPORT_ENTITY] = "sensor.site_export_sensor"
         options[SITE_EXPORT_LIMIT] = 5.0
-        expected_value = 0.797
+        expected_value = 0.819
 
         config_dir = f"{hass.config.config_dir}/{CONFIG_DISCRETE_NAME}" if CONFIG_FOLDER_DISCRETE else hass.config.config_dir
         if CONFIG_FOLDER_DISCRETE:

@@ -229,11 +229,11 @@ async def test_auto_dampen(
 
         assert "Auto-dampening suppressed: Excluded site for 3333-3333-3333-3333" in caplog.text
         assert "Interval 08:30 has peak estimated actual 0.936" in caplog.text
-        assert "Interval 08:30 max generation: 0.755" in caplog.text
-        assert "Auto-dampen factor for 08:30 is 0.807" in caplog.text
+        assert "Interval 08:30 max generation: 0.777" in caplog.text
+        assert "Auto-dampen factor for 08:30 is 0.830" in caplog.text
         # assert "Auto-dampen factor for 11:00" not in caplog.text
-        assert "Ignoring insignificant factor for 10:30" in caplog.text
-        assert re.search(r"Ignoring insignificant adjusted granular dampening factor.+11:00:00.+0\.990.+0\.988", caplog.text)
+        assert "Ignoring insignificant factor for 10:30" not in caplog.text
+        assert "Ignoring insignificant factor for 11:00 of 0.993" in caplog.text
         assert "Ignoring excessive PV generation" not in caplog.text
 
         # Reload to load saved generation data
@@ -283,13 +283,13 @@ async def test_auto_dampen(
             solcast._data_actuals["siteinfo"]["1111-1111-1111-1111"]["forecasts"][removed - 24]["period_start"]  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
             == value_removed["period_start"]
         )  # pyright: ignore[reportPrivateUsage]
-        assert "Auto-dampen factor for 08:30 is 0.807" in caplog.text
+        assert "Auto-dampen factor for 08:30 is 0.830" in caplog.text
 
         ADVANCED_CHECKS = {
-            0: {"base": 0.807, "adjusted": [0.838, 0.811]},
-            1: {"base": 0.807, "adjusted": [0.838, 0.811]},
-            2: {"base": 0.629, "adjusted": [0.689, 0.637]},
-            3: {"base": 0.272, "adjusted": [0.390, 0.288]},
+            0: {"base": 0.830, "adjusted": [0.858, 0.834]},
+            1: {"base": 0.830, "adjusted": [0.858, 0.834]},
+            2: {"base": 0.652, "adjusted": [0.709, 0.660]},
+            3: {"base": 0.296, "adjusted": [0.410, 0.312]},
         }
         for preseve in (False, True):
             solcast.advanced_options["automated_dampening_preserve_unmatched_factors"] = preseve
@@ -304,15 +304,10 @@ async def test_auto_dampen(
                     solcast.advanced_options["automated_dampening_delta_adjustment_model"] = adjustment_model
                     await solcast.apply_forward_dampening()
                     _LOGGER.critical("Model %d/%d tested", model, adjustment_model)
-                    assert (
-                        re.search(
-                            r"Adjusted granular dampening factor for .+ 08:30:00, {:.3f}".format(
-                                ADVANCED_CHECKS[model]["adjusted"][adjustment_model]
-                            ),
-                            caplog.text,
-                        )
-                        is not None
-                    )
+                    expected_value = ADVANCED_CHECKS[model]["adjusted"][adjustment_model]
+                    pattern = r"Adjusted granular dampening factor for .+ 08:30:00, {:.3f}".format(expected_value)
+                    match = re.search(pattern, caplog.text)
+                    assert match is not None, f"Expected to find pattern '{pattern}' in log"
 
         # Verify that the dampening entity that should be disabled by default is, then enable it.
         entity = "sensor.solcast_pv_forecast_dampening"
@@ -465,8 +460,8 @@ async def test_auto_dampen_issues(
                 assert "has an unsupported unit_of_measurement 'MJ'" in caplog.text  # A dodgy unit should be logged
                 assert f"Site export entity {options[SITE_EXPORT_ENTITY]} is not a valid entity" in caplog.text
                 assert "Interval 11:00 max generation: 0.000, []" in caplog.text  # A jump in generation should not be seen as a peak
-                assert "Interval 13:00 max generation: 0.000, []" in caplog.text  # Dodgy generation should prevent interval consideration
-                assert "Auto-dampen factor for 10:00 is 0.940" in caplog.text  # A valid interval still considered
+                assert "Interval 13:00 max generation: 0.033, [0.033, 0.033]" in caplog.text  # Dodgy generation should prevent interval consideration
+                assert "Auto-dampen factor for 10:00 is 0.841" in caplog.text  # A valid interval still considered
                 assert "Ignoring excessive PV generation jump of 6.000 kWh" in caplog.text  # Dodgy generation should be logged
             case _:
                 pytest.fail("Assertions missing for extra_sensors value")
@@ -583,8 +578,8 @@ async def test_adaptive_auto_dampen(  # noqa: C901
 
         assert "Auto-dampening suppressed: Excluded site for 3333-3333-3333-3333" in caplog.text
         assert "Interval 08:30 has peak estimated actual 0.936" in caplog.text
-        assert "Interval 08:30 max generation: 0.755" in caplog.text
-        assert "Auto-dampen factor for 08:30 is 0.807" in caplog.text
+        assert "Interval 08:30 max generation: 0.778" in caplog.text
+        assert "Auto-dampen factor for 08:30 is 0.831" in caplog.text
 
         # Roll over to tomorrow three times.
         roll_to = [

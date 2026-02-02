@@ -697,7 +697,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                                                     entries_to_add.append(new_entry)
                                                         indices_to_remove.append(idx)
                                         for idx in reversed(indices_to_remove):
-                                            new_value.pop(idx)  # pyright: ignore[reportAttributeAccessIssue]
+                                            new_value.pop(idx)  # pyright: ignore[reportAttributeAccessIssue]  # pyright: ignore[reportGeneralTypeIssues]
                                         if entries_to_add:
                                             new_value.extend(entries_to_add)  # pyright: ignore[reportAttributeAccessIssue]
                                     case _:
@@ -3086,33 +3086,33 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     )
 
                     # Build generation values for each interval, ignoring any excessive jumps.
+                    # Track previous sample time for proportional distribution
                     ignored: dict[dt, bool] = {}
                     last_interval: dt | None = None
+                    prev_report_time: dt | None = None
+
                     if (
                         len(sample_time) == len(sample_generation)
                         and len(sample_time) == len(sample_generation_time)
                         and len(sample_time) == len(sample_timedelta)
                     ):
-                        for interval, kWh, report_time, time_delta in zip(
-                            sample_time, sample_generation, sample_generation_time, sample_timedelta, strict=True
+                        for idx, (interval, kWh, report_time, time_delta) in enumerate(
+                            zip(sample_time, sample_generation, sample_generation_time, sample_timedelta, strict=True)
                         ):
+                            # Check for excessive jumps
+                            is_excessive = False
                             if interval != last_interval:
-                                # Only check the first sample of each interval for an excessive jump
                                 last_interval = interval
                                 if uniform_increment:
-                                    if round(kWh, 4) > upper:  # Ignore excessive jumps.
+                                    if round(kWh, 4) > upper:
+                                        is_excessive = True
                                         ignored[interval] = True
-                                    else:
-                                        generation_intervals[interval] += kWh
-                                elif time_delta > upper and kWh > 0.0003:  # Ignore excessive jumps.
-                                    if kWh <= 0.14:  # Small increments are probably valid
-                                        generation_intervals[interval] += kWh
-                                    else:
+                                elif time_delta > upper and kWh > 0.0003:
+                                    if kWh > 0.14:
+                                        is_excessive = True
                                         ignored[interval] = True
-                                else:
-                                    generation_intervals[interval] += kWh
-                                if ignored.get(interval):
-                                    # Invalidate both this interval and the previous one because errant sample straddles the half-hour boundary.
+                                if is_excessive:
+                                    # Invalidate both this interval and the previous one
                                     ignored[interval - timedelta(minutes=30)] = True
                                     _LOGGER.debug(
                                         "Ignoring excessive PV generation jump of %.3f kWh, time delta %d seconds, at %s from entity: %s; Invalidating intervals %s and %s",
@@ -3123,8 +3123,46 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                         (interval - timedelta(minutes=30)).astimezone(self._tz).strftime(DT_TIME_FORMAT_SHORT),
                                         interval.astimezone(self._tz).strftime(DT_TIME_FORMAT_SHORT),
                                     )
-                            else:
+
+                            if not is_excessive and idx > 0 and prev_report_time is not None:
+                                # Distribute energy delta proportionally across interval boundaries
+                                delta_start = prev_report_time
+                                delta_end = report_time
+
+                                # Get interval boundaries that might be crossed
+                                current_interval_start = interval
+                                prev_interval_start = delta_start.replace(minute=delta_start.minute // 30 * 30, second=0, microsecond=0)
+
+                                if prev_interval_start == current_interval_start:
+                                    # Delta entirely within one interval
+                                    generation_intervals[interval] += kWh
+                                else:
+                                    # Delta spans multiple intervals - distribute proportionally
+                                    total_seconds = (delta_end - delta_start).total_seconds()
+                                    if total_seconds > 0:
+                                        # Calculate time in each interval
+                                        intervals_crossed = []
+                                        temp_interval = prev_interval_start
+                                        while temp_interval <= current_interval_start:
+                                            interval_end = temp_interval + timedelta(minutes=30)
+                                            overlap_start = max(delta_start, temp_interval)
+                                            overlap_end = min(delta_end, interval_end)
+                                            if overlap_start < overlap_end:
+                                                overlap_seconds = (overlap_end - overlap_start).total_seconds()
+                                                proportion = overlap_seconds / total_seconds
+                                                intervals_crossed.append((temp_interval, proportion))
+                                            temp_interval = interval_end
+
+                                        # Distribute energy proportionally
+                                        for crossed_interval, proportion in intervals_crossed:
+                                            if crossed_interval in generation_intervals:
+                                                generation_intervals[crossed_interval] += kWh * proportion
+                            elif not is_excessive and idx == 0:
+                                # First sample - assign to its interval
                                 generation_intervals[interval] += kWh
+
+                            prev_report_time = report_time
+
                         for interval in ignored:
                             generation_intervals[interval] = 0.0
                 else:
@@ -3917,12 +3955,15 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             adjusted_dampening[interval] = self.apply_dampening_adjustment(
                                 actuals[period_start], dampening[interval], interval, delta_adjustment
                             )  # Adjust based on actual vs peak rather than forecast vs peak
-                            if (
-                                self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_INSIGNIFICANT_FACTOR]
-                                <= adjusted_dampening[interval]
-                                < 1.0
-                            ):
-                                adjusted_dampening[interval] = 1.0
+                            adjusted_dampening[interval] = (
+                                1.0
+                                if (
+                                    self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_INSIGNIFICANT_FACTOR]
+                                    <= adjusted_dampening[interval]
+                                    < 1.0
+                                )
+                                else adjusted_dampening[interval]
+                            )
 
                     await self.add_dampening_history(
                         period_start=self.get_day_start_utc(future=-1),  # Adding history for the previous day
@@ -4587,13 +4628,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         self._peak_intervals[interval],
                         interval_pv50,
                     )
-                if factor >= self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_INSIGNIFICANT_FACTOR_ADJUSTED]:
-                    factor = 1.0
+                factor = 1.0 if factor >= self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_INSIGNIFICANT_FACTOR_ADJUSTED] else factor
 
         return min(1.0, factor)
 
     def apply_dampening_adjustment(self, interval_pv50, factor, interval, delta_adjustment_model) -> float:
-        """Applies selected delta_adjustment_model to passed dampening factor."""
+        """Applies selected delta_adjustment_model to past dampening factor."""
         match delta_adjustment_model:
             case 1:
                 # Adjust the factor based on forecast vs. peak interval using squared ratio
