@@ -224,6 +224,7 @@ from .util import (
     forecast_entry_update,
     http_status_translate,
     interquartile_bounds,
+    ordinal,
     percentile,
     raise_and_record,
     raise_or_clear_advanced_deprecated,
@@ -697,7 +698,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                                                     entries_to_add.append(new_entry)
                                                         indices_to_remove.append(idx)
                                         for idx in reversed(indices_to_remove):
-                                            new_value.pop(idx)  # pyright: ignore[reportAttributeAccessIssue]  # pyright: ignore[reportGeneralTypeIssues]
+                                            new_value.pop(idx)  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue, reportGeneralTypeIssues]
                                         if entries_to_add:
                                             new_value.extend(entries_to_add)  # pyright: ignore[reportAttributeAccessIssue]
                                     case _:
@@ -3803,7 +3804,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         "Model %d and delta %d achieved single-interval %s of %.3f%%",
                         model,
                         delta,
-                        "MAPE" if USE_ERROR == -1 else f"{USE_ERROR}th percentile APE",
+                        "MAPE" if USE_ERROR == -1 else f"{ordinal(USE_ERROR)} percentile APE",
                         error_metric,
                     )
 
@@ -3821,7 +3822,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         raise_issue: bool = False
         delta_status: str = "UNKNOWN"
 
-        metric_desc = "MAPE" if USE_ERROR == -1 else f"{USE_ERROR}th percentile APE"
+        metric_desc = "MAPE" if USE_ERROR == -1 else f"{ordinal(USE_ERROR)} percentile APE"
         min_error_delta = self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA]
 
         # Determine mode-specific values

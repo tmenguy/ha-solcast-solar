@@ -105,7 +105,7 @@ from .const import (
     VALUE,
 )
 from .solcastapi import SolcastApi
-from .util import AutoUpdate
+from .util import AutoUpdate, ordinal
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -542,8 +542,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         )
         for i, p in enumerate(percentiles_to_calculate):
             _LOGGER.debug(
-                "Estimated actual %dth percentile APE: %.2f%%%s",
-                p,
+                "Estimated actual %s percentile APE: %.2f%%%s",
+                ordinal(p),
                 error_undampened_percentiles[i],
                 f", ({error_dampened_percentiles[i]:.2f}% dampened)" if error_dampened_percentiles[i] != -1.0 else "",
             )
