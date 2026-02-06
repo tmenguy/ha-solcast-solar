@@ -3069,6 +3069,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         ),
                     ]
 
+                    period_start = self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
+                    period_end = self.get_day_start_utc(future=(-1 * day))
+                    if sample_generation_time and sample_generation_time[0] == period_start:
+                        sample_generation[0] = 0.0
+                        sample_timedelta[0] = 0
+
                     # Detemine generation-consistent or time-consistent increments, and the inter-quartile upper bound for ignoring excessive jumps.
                     uniform_increment = False
                     non_zero_samples = sorted([round(sample, 5) for sample in sample_generation if sample > 0.0003])
@@ -3078,6 +3084,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         non_zero_samples = sorted([sample for sample in sample_timedelta if sample > 0])
                     _, upper = interquartile_bounds(non_zero_samples, factor=(1.5 if uniform_increment else 2.2))
                     upper += 0.1 if uniform_increment else 1
+                    time_delta_samples = [sample for sample in sample_timedelta if sample > 0]
+                    if time_delta_samples:
+                        _, time_upper = interquartile_bounds(time_delta_samples, factor=2.2)
+                        time_upper += 1
+                    else:
+                        time_upper = 0
                     _LOGGER.debug(
                         f"%s increments detected for entity: %s, outlier upper bound: {'%.3f kWh' if uniform_increment else '%d seconds'}",  # noqa: G004
                         "Generation-consistent" if uniform_increment else "Time-consistent",
@@ -3133,7 +3145,20 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                 current_interval_start = interval
                                 prev_interval_start = delta_start.replace(minute=delta_start.minute // 30 * 30, second=0, microsecond=0)
 
-                                if prev_interval_start == current_interval_start:
+                                if prev_report_time == period_start:
+                                    generation_intervals[current_interval_start] += kWh
+                                    prev_report_time = report_time
+                                    continue
+
+                                if report_time == period_end:
+                                    if prev_interval_start in generation_intervals:
+                                        generation_intervals[prev_interval_start] += kWh
+                                    prev_report_time = report_time
+                                    continue
+
+                                if time_upper and time_delta > time_upper and kWh > 0.0003:
+                                    generation_intervals[current_interval_start] += kWh
+                                elif prev_interval_start == current_interval_start:
                                     # Delta entirely within one interval
                                     generation_intervals[interval] += kWh
                                 else:
@@ -3490,7 +3515,93 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         return actuals
 
-    async def determine_best_dampening_settings(self) -> None:  # noqa: C901
+    def _select_comparison_interval(
+        self,
+        generation_dampening: defaultdict[dt, dict[str, Any]],
+        min_history_days: int,
+    ) -> tuple[int, float, float, float]:
+        """Select the best interval for single-interval adaptive comparison.
+
+        Identifies the interval with highest dampening impact by balancing:
+        - Substantial generation (not dawn/dusk)
+        - Dampening actually being applied (factor < 1.0)
+        - Model disagreement (variance in factors)
+        - Number of models applying dampening
+
+        Args:
+            generation_dampening: Generation data for calculating interval totals.
+            min_history_days: Minimum number of history days required for a model.
+
+        Returns:
+            Tuple of (interval_index, avg_generation, avg_dampen_factor, variance).
+        """
+        interval_totals = [0.0] * 48
+        interval_counts = [0] * 48
+        interval_dampen_sum = [0.0] * 48
+        interval_dampen_count = [0] * 48
+
+        for ts, gen_data in generation_dampening.items():
+            if not gen_data.get(EXPORT_LIMITING, False):
+                interval = self.adjusted_interval_dt(ts)
+                interval_totals[interval] += gen_data[GENERATION]
+                interval_counts[interval] += 1
+
+        # Analyze dampening factors across all models to find where dampening is most applied
+        # AND where models differ significantly in their approach (variance)
+        interval_factors_by_model: list[list[float]] = [[] for _ in range(48)]
+
+        for model_data in self._data_dampening_history.values():
+            for delta_entries in model_data.values():
+                if len(delta_entries) >= min_history_days:
+                    for entry in delta_entries:
+                        for i, factor in enumerate(entry["factors"]):
+                            if factor < 1.0:  # Only count where dampening is applied
+                                interval_dampen_sum[i] += factor
+                                interval_dampen_count[i] += 1
+                            # Track all factors for variance calculation
+                            interval_factors_by_model[i].append(factor)
+
+        # Calculate averages and variance
+        avg_generation = [interval_totals[i] / interval_counts[i] if interval_counts[i] > 0 else 0.0 for i in range(48)]
+        avg_dampen_factor = [interval_dampen_sum[i] / interval_dampen_count[i] if interval_dampen_count[i] > 0 else 1.0 for i in range(48)]
+
+        # Calculate variance of dampening factors across models for each interval
+        # High variance = models differ significantly (good for comparison)
+        dampen_variance = []
+        for i in range(48):
+            if len(interval_factors_by_model[i]) > 1:
+                factors = interval_factors_by_model[i]
+                mean = sum(factors) / len(factors)
+                variance = sum((f - mean) ** 2 for f in factors) / len(factors)
+                dampen_variance.append(variance)
+            else:
+                dampen_variance.append(0.0)
+
+        # Count how many models apply dampening (factor < 1.0) at each interval
+        dampening_model_count = []
+        for i in range(48):
+            factors_below_one = sum(1 for f in interval_factors_by_model[i] if f < 1.0)
+            dampening_model_count.append(factors_below_one)
+
+        # Score = generation × (1 - avg_factor) × sqrt(variance) × dampening_model_count × scale
+        # Balances: substantial generation, dampening application, model disagreement, AND number of models dampening
+        # Higher dampening_model_count = more models can be meaningfully compared
+        dampening_impact = [
+            avg_generation[i] * (1.0 - avg_dampen_factor[i]) * (dampen_variance[i] ** 0.5) * dampening_model_count[i] * 0.5
+            for i in range(48)
+        ]
+
+        # Select interval with highest weighted score
+        selected_interval = dampening_impact.index(max(dampening_impact)) if dampening_impact else 0
+
+        return (
+            selected_interval,
+            avg_generation[selected_interval],
+            avg_dampen_factor[selected_interval],
+            dampen_variance[selected_interval],
+        )
+
+    async def determine_best_dampening_settings(self) -> None:
         """Determine which dampening settings result in the lowest error rate.
 
         Finds earliest common history start date for all models with > minimum dampening history.
@@ -3533,6 +3644,22 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         dampened_actuals: defaultdict[dt, list[float]] = defaultdict(lambda: [0.0] * 48)
         ignored_days: dict[dt, bool] = {}
         generation_dampening, _ = await self.prepare_generation_data(earliest_common)
+
+        # Select the best interval for single-interval comparison
+        common_peak_interval, avg_gen, avg_factor, variance = self._select_comparison_interval(
+            generation_dampening,
+            self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS],
+        )
+
+        _LOGGER.debug(
+            "Selected interval %d (%02d:%02d) for adaptive comparison: %.3f kWh, factor %.3f, variance %.4f",
+            common_peak_interval,
+            common_peak_interval // 2,
+            (common_peak_interval % 2) * 30,
+            avg_gen,
+            avg_factor,
+            variance,
+        )
 
         best_ape_adjusted = math.inf
         best_ape_no_delta = math.inf
@@ -3604,10 +3731,10 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         valid = False
                         break
 
-                    # Apply dampening factors to actuals
-                    if day_start not in dampened_intervals:
-                        dampened_actuals[day_start] = [actuals[day_start][interval] * factors[interval] for interval in range(48)]
-                        dampened_intervals[day_start] = {interval for interval in range(48) if included_intervals[day_start][interval]}
+                    # Apply dampening factors to actuals for this day
+                    # Each model_entry represents one day's dampening history
+                    dampened_actuals[day_start] = [actuals[day_start][interval] * factors[interval] for interval in range(48)]
+                    dampened_intervals[day_start] = {interval for interval in range(48) if included_intervals[day_start][interval]}
 
                 # Validate counts
                 actual_count = sum(len(v) for v in actuals.values())
@@ -3624,17 +3751,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     )
 
                 if valid:
-                    # Filter to only intervals where dampening was applied
-                    values = [
-                        {
-                            PERIOD_START: (t + timedelta(hours=1) if self.dst(t) else t),
-                            ESTIMATE: value,
-                        }
-                        for day_start, arr in dampened_actuals.items()
-                        for interval, value in enumerate(arr, start=0)
-                        if (t := day_start + timedelta(minutes=30 * interval)) and interval in dampened_intervals.get(day_start, set())
-                    ]
-
                     # Filter generation data to only include timestamps for dampened intervals
                     filtered_generation: defaultdict[dt, dict[str, Any]] = defaultdict(
                         dict,
@@ -3654,17 +3770,18 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         if not gen_data.get(EXPORT_LIMITING, False):
                             filtered_generation_day[self._get_day_start(ts)] += gen_data[GENERATION]
 
-                    inf_d, error_dampened, percentiles = await self.calculate_error(
-                        filtered_generation_day,
-                        filtered_generation,
-                        tuple(values),
+                    # Calculate single-interval error for model comparison
+                    inf_d, error_single_interval, percentiles_single = await self.calculate_single_interval_error(
+                        dampened_actuals,
+                        generation_dampening,
+                        common_peak_interval,
                         percentiles=(USE_ERROR,) if USE_ERROR != -1 else (),
                         log_breakdown=self.advanced_options[ADVANCED_ESTIMATED_ACTUALS_LOG_MAPE_BREAKDOWN],
                         ignored_days=ignored_days,
                     )
 
-                    # Use percentile if configured, otherwise use MAPE (mean APE)
-                    error_metric = percentiles[0] if percentiles else error_dampened
+                    # Use percentile if configured, otherwise use MAPE (mean APE) from single-interval calculation
+                    error_metric = percentiles_single[0] if percentiles_single else error_single_interval
                     extant_ape = (
                         error_metric
                         if (
@@ -3678,20 +3795,19 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         _LOGGER.debug("Ignored %s values for model %d and delta %d", math.inf, model, delta)
 
                     # Defensive check for cases where all errors are infinity or error calculation failed
-                    if error_metric == math.inf or error_dampened == -1:
+                    if error_metric == math.inf or error_single_interval == -1:
                         _LOGGER.debug("Skipping APE calculation for model %d and delta %d due to APE calculation issue", model, delta)
                         continue
 
                     _LOGGER.debug(
-                        "Model %d and delta %d achieved %s of %.3f%%%s",
+                        "Model %d and delta %d achieved single-interval %s of %.3f%%",
                         model,
                         delta,
                         "MAPE" if USE_ERROR == -1 else f"{USE_ERROR}th percentile APE",
                         error_metric,
-                        "" if USE_ERROR == -1 else f" (mean APE: {error_dampened:.3f}%)",
                     )
 
-                    # Track best models
+                    # Track best models based on single-interval error
                     if delta == VALUE_ADAPTIVE_DAMPENING_NO_DELTA and error_metric < best_ape_no_delta:
                         best_ape_no_delta = error_metric
                         best_model_no_delta = model
@@ -3734,11 +3850,14 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         # Process selected configuration
         if current_valid:
             _LOGGER.info(
-                "Selected best automated dampening settings: model %d%s with %s of %.3f%%",
+                "Selected best automated dampening settings: model %d%s with single-interval %s of %.3f%% (interval %d: %02d:%02d)",
                 selected_model,
                 f" and delta {selected_delta}" if use_delta_mode else "",
                 metric_desc,
                 selected_error,
+                common_peak_interval,
+                common_peak_interval // 2,
+                (common_peak_interval % 2) * 30,
             )
 
             improvement = extant_ape - selected_error
@@ -3755,7 +3874,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 await self.serialise_advanced_options()
             elif is_different:
                 _LOGGER.info(
-                    "Insufficient improvement of %.3f%% over current %s %s of %.3f%%",
+                    "Insufficient improvement of %.3f%% over current %s single-interval %s of %.3f%%",
                     improvement,
                     "model/delta" if use_delta_mode else "model",
                     metric_desc,
@@ -3770,7 +3889,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         if alternative_model != CONFIG_UNCHANGED and alternative_error < selected_error:
             delta_status = "enabled" if use_delta_mode else "disabled"
             _LOGGER.warning(
-                "%s is set %s but adaptive dampening found that model %d%s had a lower %s of %.3f%% vs the selected %.3f%%",
+                "%s is set %s but adaptive dampening found that model %d%s had a lower single-interval %s of %.3f%% vs the selected %.3f%%",
                 ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT,
                 "false" if use_delta_mode else "true",
                 alternative_model,
@@ -4067,6 +4186,68 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         return generation_dampening, generation_dampening_day
 
+    async def calculate_single_interval_error(
+        self,
+        dampened_actuals: defaultdict[dt, list[float]],
+        generation_dampening: defaultdict[dt, dict[str, Any]],
+        peak_interval: int,
+        percentiles: tuple[int, ...] = (50,),
+        log_breakdown: bool = False,
+        ignored_days: dict[dt, bool] | None = None,
+    ) -> tuple[bool, float, list[float]]:
+        """Calculate error for a single common peak interval across all days.
+
+        Compares actual generation vs dampened estimated actual for one specific interval
+        (e.g., 12:00-12:30) across all available days. This prevents compensating errors
+        and focuses model selection on performance at the most critical time of day.
+
+        Only compares timestamps that actually exist in generation_dampening (i.e., not
+        filtered out due to export limiting or other exclusions).
+
+        Returns:
+            Tuple of (has_inf, mean_ape, percentile_list)
+        """
+        interval_errors: list[float] = []
+
+        # Iterate through actual generation timestamps that exist (not filtered out)
+        for timestamp, gen_data in generation_dampening.items():
+            # Calculate which interval this timestamp represents
+            interval_idx = self.adjusted_interval_dt(timestamp)
+
+            if interval_idx != peak_interval:
+                continue
+            day_start = self._get_day_start(timestamp)
+            if ignored_days is not None and ignored_days.get(day_start, False):
+                continue
+            if day_start not in dampened_actuals:
+                continue
+
+            actual_gen = gen_data[GENERATION]
+            dampened_estimate = dampened_actuals[day_start][peak_interval] * 0.5  # Convert to 30-min kWh
+
+            if actual_gen > 0:
+                interval_ape = abs(actual_gen - dampened_estimate) / actual_gen * 100.0
+                interval_errors.append(interval_ape)
+
+            if log_breakdown:
+                _LOGGER.debug(
+                    "Single interval APE for day %s, Actual %.2f kWh, Estimate %.2f kWh, Error %.2f%s",
+                    day_start.astimezone(self.options.tz).strftime(DT_DATE_ONLY_FORMAT),
+                    actual_gen,
+                    dampened_estimate,
+                    interval_ape,
+                    "%" if interval_ape != math.inf else "",
+                )
+
+        if len(interval_errors) == 0:
+            return (False, math.inf, [math.inf] * len(percentiles))
+
+        return (
+            False,  # No inf values since we filtered them out
+            sum(interval_errors) / len(interval_errors),
+            [percentile(sorted(interval_errors), p) for p in percentiles],
+        )
+
     async def calculate_error(
         self,
         generation_day: defaultdict[dt, float],
@@ -4090,11 +4271,11 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 value_day[i] += interval[ESTIMATE] / 2  # 30 minute intervals
 
         for day, value in value_day.items():
-            error[day] = (
-                math.inf
-                if (ignored_days is not None and ignored_days.get(day, False)) or generation_day[day] <= 0
-                else abs(generation_day[day] - value) / generation_day[day] * 100.0
-            )
+            if (ignored_days is not None and ignored_days.get(day, False)) or generation_day[day] <= 0:
+                error[day] = math.inf
+            else:
+                error[day] = abs(generation_day[day] - value) / generation_day[day] * 100.0
+
             if log_breakdown:
                 _LOGGER.debug(
                     "APE calculation for day %s, Actual %.2f kWh, Estimate %.2f kWh, Error %.2f%s",
@@ -4104,6 +4285,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     error[day],
                     "%" if error[day] != math.inf else "",
                 )
+
         non_inf_error: dict[dt, float] = {k: v for k, v in error.items() if v != math.inf}
         return (
             (
