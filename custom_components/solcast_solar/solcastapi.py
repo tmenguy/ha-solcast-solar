@@ -4229,6 +4229,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             if actual_gen > 0:
                 interval_ape = abs(actual_gen - dampened_estimate) / actual_gen * 100.0
                 interval_errors.append(interval_ape)
+            else:
+                interval_ape = math.inf
 
             if log_breakdown:
                 _LOGGER.debug(

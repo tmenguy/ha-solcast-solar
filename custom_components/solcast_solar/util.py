@@ -370,11 +370,7 @@ def ordinal(value: int) -> str:
     """Return a number with an ordinal suffix."""
 
     abs_value = abs(value)
-    if 11 <= abs_value % 100 <= 13:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(abs_value % 10, "th")
-    return f"{value}{suffix}"
+    return f"{value}{'th' if 11 <= abs_value % 100 <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(abs_value % 10, 'th')}"
 
 
 def interquartile_bounds(sorted_data: list[Any], factor: float = 1.5) -> tuple[float | int, float | int]:
