@@ -47,7 +47,7 @@ At the end of each day the integration will calculate dampening factors for all 
 
 When `automated_dampening_no_delta_adjustment` is true, the algorithm selects the dampening model with the lowest error from the configurations that do not use delta adjustment.  When it is false, the algorithm selects the combination of dampening model and delta adjustment option that produces the lowest error. The selected option(s) will then be applied to today's forecast and the settings for `automated_dampening_model` and `automated_dampening_delta_adjustment_model` will be updated in `solcast-advanced.json`.  No other values in `solcast-advanced.json` will be affected, and entries for `automated_dampening_model` and `automated_dampening_delta_adjustment_model` will be added if they are not already defined in this file.
 
-A warning will be logged and an ignorable issue raised whenever the `automated_dampening_no_delta_adjustment` setting disagrees with the overall best error results. This happens if `automated_dampening_no_delta_adjustment` is `true` but a delta adjusted model performs better, or if it is `false` but a model without delta adjustment achieves a lower error.
+A warning will be logged whenever the `automated_dampening_no_delta_adjustment` setting disagrees with the overall best error results. This happens if `automated_dampening_no_delta_adjustment` is `true` but a delta adjusted model performs better, or if it is `false` but a model without delta adjustment achieves a lower error.
 
 **Key: "automated_dampening_adaptive_model_ape_selection"**
 
