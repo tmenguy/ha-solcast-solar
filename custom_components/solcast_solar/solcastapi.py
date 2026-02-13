@@ -103,7 +103,6 @@ from .const import (
     DEFAULT,
     DEFAULT_DAMPENING_DELTA_ADJUSTMENT_MODEL,
     DEFAULT_KEYS,
-    DELTA_STATUS,
     DEPRECATED,
     DETAILED_FORECAST,
     DETAILED_HOURLY,
@@ -140,7 +139,6 @@ from .const import (
     GET_ACTUALS,
     HARD_LIMIT_API,
     HOURS,
-    ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR,
     ISSUE_API_UNAVAILABLE,
     ISSUE_CORRUPT_FILE,
     ISSUE_RECORDS_MISSING,
@@ -158,7 +156,6 @@ from .const import (
     LAST_ATTEMPT,
     LAST_UPDATED,
     LEARN_MORE,
-    LEARN_MORE_ADVANCED,
     LEARN_MORE_CORRUPT_FILE,
     LEARN_MORE_MISSING_FORECAST_DATA,
     LEARN_MORE_UNUSUAL_AZIMUTH,
@@ -168,7 +165,6 @@ from .const import (
     MINIMUM_EXTENDED,
     NAME,
     OLD_API_KEY,
-    OPTION,
     OPTION_GREATER_THAN_OR_EQUAL,
     OPTION_LESS_THAN_OR_EQUAL,
     OPTION_NOT_SET_IF,
@@ -3819,9 +3815,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 else:
                     _LOGGER.debug("Skipping APE calculation for model %d and delta %d", model, delta)
 
-        raise_issue: bool = False
-        delta_status: str = "UNKNOWN"
-
         metric_desc = "MAPE" if USE_ERROR == -1 else f"{ordinal(USE_ERROR)} percentile APE"
         min_error_delta = self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA]
 
@@ -3888,7 +3881,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         # Warn if alternative mode would have performed better
         if alternative_model != CONFIG_UNCHANGED and alternative_error < selected_error:
-            delta_status = "enabled" if use_delta_mode else "disabled"
             _LOGGER.warning(
                 "%s is set %s but adaptive dampening found that model %d%s had a lower single-interval %s of %.3f%% vs the selected %.3f%%",
                 ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT,
@@ -3899,26 +3891,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 alternative_error,
                 selected_error,
             )
-            raise_issue = True
-
-        if (raise_issue and not self._better_mape_issue_raised) or (self._better_mape_issue_raised and not raise_issue):
-            # Clear any raised issue if this is a fresh occurrence or previously raised issue has cleared
-            issue_registry = ir.async_get(self.hass)
-            # Raise new issue if required
-            if raise_issue:
-                ir.async_create_issue(
-                    self.hass,
-                    DOMAIN,
-                    ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR,
-                    is_fixable=False,
-                    severity=ir.IssueSeverity.WARNING,
-                    translation_key=ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR,
-                    translation_placeholders={DELTA_STATUS: delta_status, OPTION: ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT},
-                    learn_more_url=LEARN_MORE_ADVANCED,
-                )
-            elif issue_registry.async_get_issue(DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR) is not None:
-                ir.async_delete_issue(self.hass, DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR)
-            self._better_mape_issue_raised = raise_issue
 
         _LOGGER.debug("Task determine_best_dampening_settings took %.3f seconds", time.time() - start_time)
 
