@@ -38,7 +38,6 @@ from homeassistant.components.solcast_solar.const import (
     GENERATION,
     GENERATION_ENTITIES,
     GET_ACTUALS,
-    ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR,
     MAXIMUM,
     MINIMUM,
     MINIMUM_EXTENDED,
@@ -1301,12 +1300,11 @@ async def test_determine_best_dampening_settings_alternative_issue(
 
         caplog.clear()
         await solcast.determine_best_dampening_settings()
-        issue_registry = ir.async_get(hass)
-        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR) is not None
+        assert "but adaptive dampening found that model" in caplog.text
 
         alternate_better = False
         caplog.clear()
         await solcast.determine_best_dampening_settings()
-        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ADVANCED_ADAPTIVE_BETTER_ERROR) is None
+        assert "but adaptive dampening found that model" not in caplog.text
     finally:
         assert await async_cleanup_integration_tests(hass)
