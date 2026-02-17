@@ -1310,6 +1310,7 @@ v4.5.0
 * Add missing translation, ES, FR, PL, SK, UR by @GitLocalize
 * Fix an issue with determining generation for half-hourly intervals by @autoSteve
 * Fix an issue with config location naming on reconfigure by @autoSteve
+* Fix an issue where config file migration was a blocking call by @miguelangel-nubla
 * Fix advanced option validation for `not_set_if` (#435) by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.4.10...v4.5.0

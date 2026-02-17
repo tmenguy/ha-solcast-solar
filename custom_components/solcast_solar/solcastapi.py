@@ -696,7 +696,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                         for idx in reversed(indices_to_remove):
                                             new_value.pop(idx)  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue, reportGeneralTypeIssues]
                                         if entries_to_add:
-                                            new_value.extend(entries_to_add)  # pyright: ignore[reportAttributeAccessIssue]
+                                            new_value.extend(entries_to_add)  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
                                     case _:
                                         pass
                                 if option == ADVANCED_GRANULAR_DAMPENING_DELTA_ADJUSTMENT and new_value and not self.options.get_actuals:
