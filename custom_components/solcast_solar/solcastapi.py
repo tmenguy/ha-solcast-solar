@@ -3797,11 +3797,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         continue
 
                     _LOGGER.debug(
-                        "Model %d and delta %d achieved single-interval %s of %.3f%%",
+                        "Model %d and delta %d achieved single-interval %s of %.3f%%%s",
                         model,
                         delta,
                         "MAPE" if USE_ERROR == -1 else f"{ordinal(USE_ERROR)} percentile APE",
                         error_metric,
+                        f" (MAPE {error_single_interval:.3f}%)" if USE_ERROR != -1 else "",
                     )
 
                     # Track best models based on single-interval error
@@ -3844,7 +3845,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         # Process selected configuration
         if current_valid:
             _LOGGER.info(
-                "Selected best automated dampening settings: model %d%s with single-interval %s of %.3f%% (interval %d: %02d:%02d)",
+                "Best automated dampening settings: model %d%s with single-interval %s of %.3f%% (interval %d: %02d:%02d)",
                 selected_model,
                 f" and delta {selected_delta}" if use_delta_mode else "",
                 metric_desc,
@@ -3857,6 +3858,10 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             improvement = extant_ape - selected_error
 
             if is_different and improvement > min_error_delta:
+                _LOGGER.info(
+                    "Updating automated dampening settings based on %.3f%% improvement over current settings",
+                    improvement,
+                )
                 self.advanced_options.update(
                     {
                         ADVANCED_AUTOMATED_DAMPENING_MODEL: selected_model,
@@ -3868,9 +3873,11 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 await self.serialise_advanced_options()
             elif is_different:
                 _LOGGER.info(
-                    "Insufficient improvement of %.3f%% over current %s single-interval %s of %.3f%%",
+                    "Insufficient improvement of %.3f%%%s over current model %d%s single-interval %s of %.3f%%, not updating settings",
                     improvement,
-                    "model/delta" if use_delta_mode else "model",
+                    f" (minimum {min_error_delta:.3f}%)" if min_error_delta != 0.0 else "",
+                    self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL],
+                    f" delta {self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]}" if use_delta_mode else "",
                     metric_desc,
                     extant_ape,
                 )
@@ -3881,7 +3888,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         # Warn if alternative mode would have performed better
         if alternative_model != CONFIG_UNCHANGED and alternative_error < selected_error:
-            _LOGGER.warning(
+            _LOGGER.info(
                 "%s is set %s but adaptive dampening found that model %d%s had a lower single-interval %s of %.3f%% vs the selected %.3f%%",
                 ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT,
                 "false" if use_delta_mode else "true",
