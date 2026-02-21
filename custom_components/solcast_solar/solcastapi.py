@@ -31,6 +31,7 @@ from aiohttp.client_reqrep import ClientResponse
 
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.history import state_changes_during_period
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_UNIT_OF_MEASUREMENT, CONF_API_KEY
 from homeassistant.core import HomeAssistant, State
@@ -2952,51 +2953,62 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         """
         return self._data_energy_dashboard
 
-    def __get_conversion_factor(self, entity: str, entity_history: list[State] | None = None, is_export: bool = False) -> float:
-        """Get the conversion factor for an electricity energy entity to convert to kWh."""
+    def __get_conversion_factor(self, entity: str, entity_history: list[State] | None = None, is_power: bool = False) -> float:
+        """Get the conversion factor for an entity to convert to kWh (energy) or kW (power)."""
 
-        energy_unit_factors = {
-            "mWh": 1e-6,
-            "Wh": 0.001,
-            "kWh": 1.0,
-            "MWh": 1000.0,
-        }
-        entity_type = "Export entity" if is_export else "Entity"
+        if is_power:
+            unit_factors = {"mW": 1e-6, "W": 0.001, "kW": 1.0, "MW": 1000.0}
+            default_unit = "kW"
+        else:
+            unit_factors = {"mWh": 1e-6, "Wh": 0.001, "kWh": 1.0, "MWh": 1000.0}
+            default_unit = "kWh"
+
         entity_unit = None
 
         if entity_history:
-            # Check the entity history for the unit of measurement.
             latest_state = entity_history[-1]
             if hasattr(latest_state, "attributes") and latest_state.attributes:
                 entity_unit = latest_state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
 
         if not entity_unit:
-            # If not found, get the unit of measurement from the entity registry.
             entity_registry = er.async_get(self.hass)
             entity_entry = entity_registry.async_get(entity)
             if entity_entry and entity_entry.unit_of_measurement:
                 entity_unit = entity_entry.unit_of_measurement
 
         if not entity_unit:
-            _LOGGER.warning("%s %s has no %s, assuming kWh", entity_type, entity, ATTR_UNIT_OF_MEASUREMENT)
+            _LOGGER.warning("Entity %s has no %s, assuming %s", entity, ATTR_UNIT_OF_MEASUREMENT, default_unit)
             return 1.0
 
-        conversion_factor = energy_unit_factors.get(entity_unit)
+        conversion_factor = unit_factors.get(entity_unit)
         if conversion_factor is None:
-            _LOGGER.error("%s %s has an unsupported %s '%s', assuming kWh", entity_type, entity, ATTR_UNIT_OF_MEASUREMENT, entity_unit)
+            _LOGGER.error("Entity %s has an unsupported %s '%s', assuming %s", entity, ATTR_UNIT_OF_MEASUREMENT, entity_unit, default_unit)
             return 1.0
 
         if conversion_factor != 1.0:
-            _LOGGER.debug("%s %s uses %s, applying conversion factor %s", entity_type, entity, entity_unit, conversion_factor)
+            _LOGGER.debug("Entity %s uses %s, applying conversion factor %s", entity, entity_unit, conversion_factor)
 
         return conversion_factor
+
+    def __is_power_entity(self, entity: str) -> bool:
+        """Determine whether a generation entity is a power (W/kW) entity rather than energy (Wh/kWh)."""
+
+        entity_registry = er.async_get(self.hass)
+        r_entity = entity_registry.async_get(entity)
+        if r_entity is not None:
+            dc = r_entity.device_class or r_entity.original_device_class
+            if dc == SensorDeviceClass.POWER:
+                return True
+        return False
 
     async def get_pv_generation(self) -> None:  # noqa: C901
         """Get PV generation from external entity/entities.
 
-        Sensors must be increasing energy values (may reset at midnight), and the entities must have state history.
-        Supports both kWh and other (e.g. Wh) sane electricity energy units with automatic conversion.
-        Very large units of measurement are not supported (e.g. GWh, TWh) because of precision loss.
+        Supports two entity types:
+        - Energy entities (Wh/kWh/MWh, total increasing): Computes energy deltas and distributes across intervals.
+        - Power entities (W/kW/MW, instantaneous): Computes time-weighted average power per interval, then converts to kWh.
+
+        The entities must have state history. Very large units are not supported (e.g. GWh, TWh) because of precision loss.
         """
 
         start_time = time.time()
@@ -3034,159 +3046,206 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 if entity_history.get(entity) and len(entity_history[entity]) > 4:
                     _LOGGER.debug("Retrieved day %d PV generation data from entity: %s", -1 + day * -1, entity)
 
-                    # Get the conversion factor for the entity to convert to kWh.
-                    conversion_factor = self.__get_conversion_factor(entity, entity_history[entity], is_export=False)
-                    # Arrange the generation samples into half-hour intervals.
-                    sample_time: list[dt] = [
-                        e.last_updated.astimezone(datetime.UTC).replace(
-                            minute=e.last_updated.astimezone(datetime.UTC).minute // 30 * 30, second=0, microsecond=0
+                    if self.__is_power_entity(entity):
+                        # Power entity: compute time-weighted average kW per interval, then convert to kWh (* 0.5).
+                        conversion_factor = self.__get_conversion_factor(entity, entity_history[entity], is_power=True)
+
+                        # Build list of (timestamp, power_kW) from state history.
+                        power_readings: list[tuple[dt, float]] = [
+                            (e.last_updated.astimezone(datetime.UTC), float(e.state) * conversion_factor)
+                            for e in entity_history[entity]
+                            if e.state.replace(".", "").isnumeric()
+                        ]
+
+                        if len(power_readings) > 1:
+                            period_start = self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
+
+                            # For each 30-min interval, compute the time-weighted average power.
+                            for interval_start in generation_intervals:
+                                interval_end = interval_start + timedelta(minutes=30)
+                                weighted_sum = 0.0
+                                total_weight = 0.0
+
+                                for i, (reading_time, power_kw) in enumerate(power_readings):
+                                    # Determine the time span this reading represents.
+                                    # It holds until the next reading (or interval end).
+                                    if i + 1 < len(power_readings):
+                                        next_time = power_readings[i + 1][0]
+                                    else:
+                                        next_time = interval_end
+
+                                    # Clip to interval boundaries.
+                                    seg_start = max(reading_time, interval_start)
+                                    seg_end = min(next_time, interval_end)
+
+                                    if seg_start < seg_end:
+                                        duration = (seg_end - seg_start).total_seconds()
+                                        weighted_sum += power_kw * duration
+                                        total_weight += duration
+
+                                if total_weight > 0:
+                                    avg_power_kw = weighted_sum / total_weight
+                                    # Convert average kW over 30 minutes to kWh.
+                                    generation_intervals[interval_start] += avg_power_kw * 0.5
+                        else:
+                            _LOGGER.debug("Insufficient power readings for entity: %s", entity)
+
+                    else:
+                        # Energy entity: compute deltas and distribute across intervals.
+                        conversion_factor = self.__get_conversion_factor(entity, entity_history[entity])
+                        # Arrange the generation samples into half-hour intervals.
+                        sample_time: list[dt] = [
+                            e.last_updated.astimezone(datetime.UTC).replace(
+                                minute=e.last_updated.astimezone(datetime.UTC).minute // 30 * 30, second=0, microsecond=0
+                            )
+                            for e in entity_history[entity]
+                            if e.state.replace(".", "").isnumeric()
+                        ]
+                        # Build a list of generation delta values.
+                        sample_generation: list[float] = [
+                            0.0,
+                            *diff(
+                                [float(e.state) * conversion_factor for e in entity_history[entity] if e.state.replace(".", "").isnumeric()]
+                            ),
+                        ]
+                        sample_generation_time: list[dt] = [
+                            e.last_updated.astimezone(datetime.UTC) for e in entity_history[entity] if e.state.replace(".", "").isnumeric()
+                        ]
+                        sample_timedelta: list[int] = [
+                            0,
+                            *diff(
+                                [
+                                    (
+                                        e.last_updated.astimezone(datetime.UTC)
+                                        - (self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1))
+                                    ).total_seconds()
+                                    for e in entity_history[entity]
+                                    if e.state.replace(".", "").isnumeric()
+                                ]
+                            ),
+                        ]
+
+                        period_start = self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
+                        period_end = self.get_day_start_utc(future=(-1 * day))
+                        if sample_generation_time and sample_generation_time[0] == period_start:
+                            sample_generation[0] = 0.0
+                            sample_timedelta[0] = 0
+
+                        # Detemine generation-consistent or time-consistent increments, and the inter-quartile upper bound for ignoring excessive jumps.
+                        uniform_increment = False
+                        non_zero_samples = sorted([round(sample, 5) for sample in sample_generation if sample > 0.0003])
+                        if percentile(non_zero_samples, 25) == percentile(non_zero_samples, 75):
+                            uniform_increment = True
+                        else:
+                            non_zero_samples = sorted([sample for sample in sample_timedelta if sample > 0])
+                        _, upper = interquartile_bounds(non_zero_samples, factor=(1.5 if uniform_increment else 2.2))
+                        upper += 0.1 if uniform_increment else 1
+                        time_delta_samples = [sample for sample in sample_timedelta if sample > 0]
+                        if time_delta_samples:
+                            _, time_upper = interquartile_bounds(time_delta_samples, factor=2.2)
+                            time_upper += 1
+                        else:
+                            time_upper = 0
+                        _LOGGER.debug(
+                            f"%s increments detected for entity: %s, outlier upper bound: {'%.3f kWh' if uniform_increment else '%d seconds'}",  # noqa: G004
+                            "Generation-consistent" if uniform_increment else "Time-consistent",
+                            entity,
+                            upper,
                         )
-                        for e in entity_history[entity]
-                        if e.state.replace(".", "").isnumeric()
-                    ]
-                    # Build a list of generation delta values.
-                    sample_generation: list[float] = [
-                        0.0,
-                        *diff([float(e.state) * conversion_factor for e in entity_history[entity] if e.state.replace(".", "").isnumeric()]),
-                    ]
-                    sample_generation_time: list[dt] = [
-                        e.last_updated.astimezone(datetime.UTC) for e in entity_history[entity] if e.state.replace(".", "").isnumeric()
-                    ]
-                    sample_timedelta: list[int] = [
-                        0,
-                        *diff(
-                            [
-                                (
-                                    e.last_updated.astimezone(datetime.UTC)
-                                    - (self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1))
-                                ).total_seconds()
-                                for e in entity_history[entity]
-                                if e.state.replace(".", "").isnumeric()
-                            ]
-                        ),
-                    ]
 
-                    period_start = self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
-                    period_end = self.get_day_start_utc(future=(-1 * day))
-                    if sample_generation_time and sample_generation_time[0] == period_start:
-                        sample_generation[0] = 0.0
-                        sample_timedelta[0] = 0
+                        # Build generation values for each interval, ignoring any excessive jumps.
+                        # Track previous sample time for proportional distribution
+                        ignored: dict[dt, bool] = {}
+                        last_interval: dt | None = None
+                        prev_report_time: dt | None = None
 
-                    # Detemine generation-consistent or time-consistent increments, and the inter-quartile upper bound for ignoring excessive jumps.
-                    uniform_increment = False
-                    non_zero_samples = sorted([round(sample, 5) for sample in sample_generation if sample > 0.0003])
-                    if percentile(non_zero_samples, 25) == percentile(non_zero_samples, 75):
-                        uniform_increment = True
-                    else:
-                        non_zero_samples = sorted([sample for sample in sample_timedelta if sample > 0])
-                    _, upper = interquartile_bounds(non_zero_samples, factor=(1.5 if uniform_increment else 2.2))
-                    upper += 0.1 if uniform_increment else 1
-                    time_delta_samples = [sample for sample in sample_timedelta if sample > 0]
-                    if time_delta_samples:
-                        _, time_upper = interquartile_bounds(time_delta_samples, factor=2.2)
-                        time_upper += 1
-                    else:
-                        time_upper = 0
-                    _LOGGER.debug(
-                        f"%s increments detected for entity: %s, outlier upper bound: {'%.3f kWh' if uniform_increment else '%d seconds'}",  # noqa: G004
-                        "Generation-consistent" if uniform_increment else "Time-consistent",
-                        entity,
-                        upper,
-                    )
-
-                    # Build generation values for each interval, ignoring any excessive jumps.
-                    # Track previous sample time for proportional distribution
-                    ignored: dict[dt, bool] = {}
-                    last_interval: dt | None = None
-                    prev_report_time: dt | None = None
-
-                    if (
-                        len(sample_time) == len(sample_generation)
-                        and len(sample_time) == len(sample_generation_time)
-                        and len(sample_time) == len(sample_timedelta)
-                    ):
-                        for idx, (interval, kWh, report_time, time_delta) in enumerate(
-                            zip(sample_time, sample_generation, sample_generation_time, sample_timedelta, strict=True)
+                        if (
+                            len(sample_time) == len(sample_generation)
+                            and len(sample_time) == len(sample_generation_time)
+                            and len(sample_time) == len(sample_timedelta)
                         ):
-                            # Check for excessive jumps
-                            is_excessive = False
-                            if interval != last_interval:
-                                last_interval = interval
-                                if uniform_increment:
-                                    if round(kWh, 4) > upper:
-                                        is_excessive = True
-                                        ignored[interval] = True
-                                elif time_delta > upper and kWh > 0.0003:
-                                    if kWh > 0.14:
-                                        is_excessive = True
-                                        ignored[interval] = True
-                                if is_excessive:
-                                    # Invalidate both this interval and the previous one
-                                    ignored[interval - timedelta(minutes=30)] = True
-                                    _LOGGER.debug(
-                                        "Ignoring excessive PV generation jump of %.3f kWh, time delta %d seconds, at %s from entity: %s; Invalidating intervals %s and %s",
-                                        kWh,
-                                        time_delta,
-                                        report_time.astimezone(self._tz).strftime(DT_DATE_FORMAT),
-                                        entity,
-                                        (interval - timedelta(minutes=30)).astimezone(self._tz).strftime(DT_TIME_FORMAT_SHORT),
-                                        interval.astimezone(self._tz).strftime(DT_TIME_FORMAT_SHORT),
-                                    )
+                            for idx, (interval, kWh, report_time, time_delta) in enumerate(
+                                zip(sample_time, sample_generation, sample_generation_time, sample_timedelta, strict=True)
+                            ):
+                                # Check for excessive jumps
+                                is_excessive = False
+                                if interval != last_interval:
+                                    last_interval = interval
+                                    if uniform_increment:
+                                        if round(kWh, 4) > upper:
+                                            is_excessive = True
+                                            ignored[interval] = True
+                                    elif time_delta > upper and kWh > 0.0003:
+                                        if kWh > 0.14:
+                                            is_excessive = True
+                                            ignored[interval] = True
+                                    if is_excessive:
+                                        # Invalidate both this interval and the previous one
+                                        ignored[interval - timedelta(minutes=30)] = True
+                                        _LOGGER.debug(
+                                            "Ignoring excessive PV generation jump of %.3f kWh, time delta %d seconds, at %s from entity: %s; Invalidating intervals %s and %s",
+                                            kWh,
+                                            time_delta,
+                                            report_time.astimezone(self._tz).strftime(DT_DATE_FORMAT),
+                                            entity,
+                                            (interval - timedelta(minutes=30)).astimezone(self._tz).strftime(DT_TIME_FORMAT_SHORT),
+                                            interval.astimezone(self._tz).strftime(DT_TIME_FORMAT_SHORT),
+                                        )
 
-                            if not is_excessive and idx > 0 and prev_report_time is not None:
-                                # Distribute energy delta proportionally across interval boundaries
-                                delta_start = prev_report_time
-                                delta_end = report_time
+                                if not is_excessive and idx > 0 and prev_report_time is not None:
+                                    # Distribute energy delta proportionally across interval boundaries
+                                    delta_start = prev_report_time
+                                    delta_end = report_time
 
-                                # Get interval boundaries that might be crossed
-                                current_interval_start = interval
-                                prev_interval_start = delta_start.replace(minute=delta_start.minute // 30 * 30, second=0, microsecond=0)
+                                    # Get interval boundaries that might be crossed
+                                    current_interval_start = interval
+                                    prev_interval_start = delta_start.replace(minute=delta_start.minute // 30 * 30, second=0, microsecond=0)
 
-                                if prev_report_time == period_start:
-                                    generation_intervals[current_interval_start] += kWh
-                                    prev_report_time = report_time
-                                    continue
+                                    if prev_report_time == period_start:
+                                        generation_intervals[current_interval_start] += kWh
+                                        prev_report_time = report_time
+                                        continue
 
-                                if report_time == period_end:
-                                    if prev_interval_start in generation_intervals:
-                                        generation_intervals[prev_interval_start] += kWh
-                                    prev_report_time = report_time
-                                    continue
+                                    if report_time == period_end:
+                                        if prev_interval_start in generation_intervals:
+                                            generation_intervals[prev_interval_start] += kWh
+                                        prev_report_time = report_time
+                                        continue
 
-                                if time_upper and time_delta > time_upper and kWh > 0.0003:
-                                    generation_intervals[current_interval_start] += kWh
-                                elif prev_interval_start == current_interval_start:
-                                    # Delta entirely within one interval
+                                    if time_upper and time_delta > time_upper and kWh > 0.0003:
+                                        generation_intervals[current_interval_start] += kWh
+                                    elif prev_interval_start == current_interval_start:
+                                        # Delta entirely within one interval
+                                        generation_intervals[interval] += kWh
+                                    else:
+                                        # Delta spans multiple intervals - distribute proportionally
+                                        total_seconds = (delta_end - delta_start).total_seconds()
+                                        if total_seconds > 0:
+                                            # Calculate time in each interval
+                                            intervals_crossed = []
+                                            temp_interval = prev_interval_start
+                                            while temp_interval <= current_interval_start:
+                                                interval_end = temp_interval + timedelta(minutes=30)
+                                                overlap_start = max(delta_start, temp_interval)
+                                                overlap_end = min(delta_end, interval_end)
+                                                if overlap_start < overlap_end:
+                                                    overlap_seconds = (overlap_end - overlap_start).total_seconds()
+                                                    proportion = overlap_seconds / total_seconds
+                                                    intervals_crossed.append((temp_interval, proportion))
+                                                temp_interval = interval_end
+
+                                            # Distribute energy proportionally
+                                            for crossed_interval, proportion in intervals_crossed:
+                                                if crossed_interval in generation_intervals:
+                                                    generation_intervals[crossed_interval] += kWh * proportion
+                                elif not is_excessive and idx == 0:
+                                    # First sample - assign to its interval
                                     generation_intervals[interval] += kWh
-                                else:
-                                    # Delta spans multiple intervals - distribute proportionally
-                                    total_seconds = (delta_end - delta_start).total_seconds()
-                                    if total_seconds > 0:
-                                        # Calculate time in each interval
-                                        intervals_crossed = []
-                                        temp_interval = prev_interval_start
-                                        while temp_interval <= current_interval_start:
-                                            interval_end = temp_interval + timedelta(minutes=30)
-                                            overlap_start = max(delta_start, temp_interval)
-                                            overlap_end = min(delta_end, interval_end)
-                                            if overlap_start < overlap_end:
-                                                overlap_seconds = (overlap_end - overlap_start).total_seconds()
-                                                proportion = overlap_seconds / total_seconds
-                                                intervals_crossed.append((temp_interval, proportion))
-                                            temp_interval = interval_end
 
-                                        # Distribute energy proportionally
-                                        for crossed_interval, proportion in intervals_crossed:
-                                            if crossed_interval in generation_intervals:
-                                                generation_intervals[crossed_interval] += kWh * proportion
-                            elif not is_excessive and idx == 0:
-                                # First sample - assign to its interval
-                                generation_intervals[interval] += kWh
+                                prev_report_time = report_time
 
-                            prev_report_time = report_time
-
-                        for interval in ignored:
-                            generation_intervals[interval] = 0.0
+                            for interval in ignored:
+                                generation_intervals[interval] = 0.0
                 else:
                     _LOGGER.debug(
                         "No day %d PV generation data (or barely any) from entity: %s (%s)",
@@ -3298,7 +3357,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     )
                     if entity_history.get(entity) and len(entity_history[entity]):
                         # Get the conversion factor for the entity to convert to kWh.
-                        conversion_factor = self.__get_conversion_factor(entity, entity_history[entity], is_export=False)
+                        conversion_factor = self.__get_conversion_factor(entity, entity_history[entity])
                         # Arrange the site export samples into intervals.
                         sample_time: list[dt] = [
                             e.last_updated.astimezone(datetime.UTC).replace(

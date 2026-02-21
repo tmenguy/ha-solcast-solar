@@ -17,6 +17,10 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 
 from homeassistant.components.recorder import Recorder
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.solcast_solar.config_flow import (
+    SolcastSolarOptionFlowHandler,
+)
 from homeassistant.components.solcast_solar.const import (
     ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SHIT,
     ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_EXCLUDE,
@@ -77,6 +81,8 @@ from . import (
     session_clear,
     session_set,
 )
+
+from tests.common import MockConfigEntry
 
 ZONE = ZoneInfo(ZONE_RAW)
 NOW = dt.now(ZONE)
@@ -1308,3 +1314,280 @@ async def test_determine_best_dampening_settings_alternative_issue(
         assert "but adaptive dampening found that model" not in caplog.text
     finally:
         assert await async_cleanup_integration_tests(hass)
+
+
+async def test_get_pv_generation_power_entity(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test power entity (kW) processing with time-weighted averaging in get_pv_generation."""
+
+    assert await async_cleanup_integration_tests(hass)
+
+    try:
+        power_entity_id = "sensor.solar_power_sensor"
+
+        options = copy.deepcopy(DEFAULT_INPUT2)
+        options[GENERATION_ENTITIES] = [power_entity_id]
+        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
+        solcast = entry.runtime_data.coordinator.solcast
+
+        # Register the entity as a power entity in the entity registry.
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            "sensor",
+            "pytest",
+            "solar_power_sensor",
+            config_entry=entry,
+            suggested_object_id="solar_power_sensor",
+            unit_of_measurement="kW",
+            original_device_class=SensorDeviceClass.POWER,
+        )
+
+        period_start_raw = solcast.get_day_start_utc(future=0) - timedelta(days=1)
+        period_end_raw = solcast.get_day_start_utc(future=0)
+        period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
+        period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
+
+        def _state(value: float, when: dt) -> State:
+            return State(
+                power_entity_id,
+                str(value),
+                {ATTR_UNIT_OF_MEASUREMENT: "kW"},
+                last_changed=when,
+                last_updated=when,
+            )
+
+        # Interval 1 (00:00-00:30): 4.0 kW for 15 min, then 0.0 kW for 15 min.
+        #   weighted avg = (4.0*900 + 0.0*900) / 1800 = 2.0 kW → 2.0 * 0.5 = 1.0 kWh
+        # Interval 2 (00:30-01:00): constant 6.0 kW.
+        #   weighted avg = 6.0 kW → 6.0 * 0.5 = 3.0 kWh
+        states = [
+            _state(4.0, period_start),
+            _state(0.0, period_start + timedelta(minutes=15)),
+            _state(6.0, period_start + timedelta(minutes=30)),
+            _state(6.0, period_start + timedelta(minutes=45)),
+            _state(0.0, period_start + timedelta(minutes=60)),
+            _state(0.0, period_end),
+        ]
+
+        solcast._data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
+
+        caplog.clear()
+        with patch(
+            "homeassistant.components.solcast_solar.solcastapi.state_changes_during_period",
+            return_value={power_entity_id: states},
+        ):
+            await solcast.get_pv_generation()
+
+        generation = {record[PERIOD_START]: record[GENERATION] for record in solcast._data_generation[GENERATION]}
+        day_start = min(generation)
+        day_end = day_start + timedelta(days=1)
+        day_generation = {k: v for k, v in generation.items() if day_start <= k < day_end}
+
+        # First interval: time-weighted average 2.0 kW → 1.0 kWh
+        assert abs(day_generation[period_start] - 1.0) < 0.01
+        # Second interval: constant 6.0 kW → 3.0 kWh
+        second_interval = period_start + timedelta(minutes=30)
+        assert abs(day_generation[second_interval] - 3.0) < 0.01
+
+        assert "Retrieved day" in caplog.text
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+async def test_get_pv_generation_power_entity_watt_conversion(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test power entity using watts with unit conversion in get_pv_generation."""
+
+    assert await async_cleanup_integration_tests(hass)
+
+    try:
+        power_entity_id = "sensor.solar_power_watts"
+
+        options = copy.deepcopy(DEFAULT_INPUT2)
+        options[GENERATION_ENTITIES] = [power_entity_id]
+        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
+        solcast = entry.runtime_data.coordinator.solcast
+
+        # Register entity with watts unit and POWER device class.
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            "sensor",
+            "pytest",
+            "solar_power_watts",
+            config_entry=entry,
+            suggested_object_id="solar_power_watts",
+            unit_of_measurement="W",
+            original_device_class=SensorDeviceClass.POWER,
+        )
+
+        period_start_raw = solcast.get_day_start_utc(future=0) - timedelta(days=1)
+        period_end_raw = solcast.get_day_start_utc(future=0)
+        period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
+        period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
+
+        def _state(value: float, when: dt) -> State:
+            return State(
+                power_entity_id,
+                str(value),
+                {ATTR_UNIT_OF_MEASUREMENT: "W"},
+                last_changed=when,
+                last_updated=when,
+            )
+
+        # Constant 2000 W (= 2.0 kW after conversion factor 0.001) for the first 30 minutes.
+        # avg = 2.0 kW → 2.0 * 0.5 = 1.0 kWh
+        states = [
+            _state(2000.0, period_start),
+            _state(2000.0, period_start + timedelta(minutes=10)),
+            _state(2000.0, period_start + timedelta(minutes=20)),
+            _state(0.0, period_start + timedelta(minutes=30)),
+            _state(0.0, period_end),
+        ]
+
+        solcast._data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
+
+        caplog.clear()
+        with patch(
+            "homeassistant.components.solcast_solar.solcastapi.state_changes_during_period",
+            return_value={power_entity_id: states},
+        ):
+            await solcast.get_pv_generation()
+
+        generation = {record[PERIOD_START]: record[GENERATION] for record in solcast._data_generation[GENERATION]}
+
+        # First interval: 2000 W = 2.0 kW → 1.0 kWh
+        assert abs(generation[period_start] - 1.0) < 0.01
+
+        # Verify the W → kW conversion log was emitted.
+        assert "applying conversion factor" in caplog.text
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+async def test_get_pv_generation_power_entity_insufficient_readings(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test power entity with insufficient numeric readings in get_pv_generation."""
+
+    assert await async_cleanup_integration_tests(hass)
+
+    try:
+        power_entity_id = "sensor.solar_power_sensor"
+
+        options = copy.deepcopy(DEFAULT_INPUT2)
+        options[GENERATION_ENTITIES] = [power_entity_id]
+        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
+        solcast = entry.runtime_data.coordinator.solcast
+
+        # Register entity as a power entity.
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            "sensor",
+            "pytest",
+            "solar_power_sensor",
+            config_entry=entry,
+            suggested_object_id="solar_power_sensor",
+            unit_of_measurement="kW",
+            original_device_class=SensorDeviceClass.POWER,
+        )
+
+        period_start_raw = solcast.get_day_start_utc(future=0) - timedelta(days=1)
+        period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
+
+        # 5 states total (passes the >4 check) but only 1 numeric reading.
+        states = [
+            State(power_entity_id, "2.0", {ATTR_UNIT_OF_MEASUREMENT: "kW"}, last_changed=period_start, last_updated=period_start),
+            State(
+                power_entity_id,
+                "unavailable",
+                {},
+                last_changed=period_start + timedelta(minutes=5),
+                last_updated=period_start + timedelta(minutes=5),
+            ),
+            State(
+                power_entity_id,
+                "unknown",
+                {},
+                last_changed=period_start + timedelta(minutes=10),
+                last_updated=period_start + timedelta(minutes=10),
+            ),
+            State(
+                power_entity_id,
+                "unavailable",
+                {},
+                last_changed=period_start + timedelta(minutes=15),
+                last_updated=period_start + timedelta(minutes=15),
+            ),
+            State(
+                power_entity_id,
+                "unknown",
+                {},
+                last_changed=period_start + timedelta(minutes=20),
+                last_updated=period_start + timedelta(minutes=20),
+            ),
+        ]
+
+        solcast._data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
+
+        caplog.clear()
+        with patch(
+            "homeassistant.components.solcast_solar.solcastapi.state_changes_during_period",
+            return_value={power_entity_id: states},
+        ):
+            await solcast.get_pv_generation()
+
+        assert "Insufficient power readings for entity" in caplog.text
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+async def test_config_flow_mixed_generation_entity_types(
+    hass: HomeAssistant,
+) -> None:
+    """Test config flow rejects mixed energy and power generation entities."""
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="solcast_pv_solar",
+        title="Solcast PV Forecast",
+        data=copy.deepcopy(DEFAULT_INPUT2),
+        options=copy.deepcopy(DEFAULT_INPUT2),
+    )
+    entry.add_to_hass(hass)
+
+    # Register one ENERGY and one POWER entity.
+    entity_registry = er.async_get(hass)
+    entity_registry.async_get_or_create(
+        "sensor",
+        "pytest",
+        "energy_sensor",
+        config_entry=entry,
+        suggested_object_id="energy_sensor",
+        unit_of_measurement="kWh",
+        original_device_class=SensorDeviceClass.ENERGY,
+    )
+    entity_registry.async_get_or_create(
+        "sensor",
+        "pytest",
+        "power_sensor",
+        config_entry=entry,
+        suggested_object_id="power_sensor",
+        unit_of_measurement="kW",
+        original_device_class=SensorDeviceClass.POWER,
+    )
+
+    flow = SolcastSolarOptionFlowHandler(entry)
+    flow.hass = hass
+    user_input = copy.deepcopy(DEFAULT_INPUT2)
+    user_input[GENERATION_ENTITIES] = ["sensor.energy_sensor", "sensor.power_sensor"]
+    user_input[SITE_EXPORT_ENTITY] = []
+    result = await flow.async_step_init(user_input)
+    assert result["errors"]["base"] == "generation_mixed_types"  # type: ignore[index]

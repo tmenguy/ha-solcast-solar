@@ -65,6 +65,7 @@ from .const import (
     EXCEPTION_DAMPEN_WITHOUT_GENERATION,
     EXCEPTION_EXPORT_MULTIPLE_ENTITIES,
     EXCEPTION_EXPORT_NO_ENTITY,
+    EXCEPTION_GENERATION_MIXED_TYPES,
     EXCEPTION_HARD_NOT_NUMBER,
     EXCEPTION_HARD_TOO_MANY,
     EXCEPTION_INTERNAL_ERROR,
@@ -506,6 +507,19 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     if user_input.get(AUTO_DAMPEN, False) and not user_input[GENERATION_ENTITIES]:
                         errors[BASE] = EXCEPTION_DAMPEN_WITHOUT_GENERATION
                         _LOGGER.debug("Options validation failed: %s", errors[BASE])
+                if not errors and len(user_input.get(GENERATION_ENTITIES, [])) > 1:
+                    gen_entities = user_input[GENERATION_ENTITIES]
+                    device_classes = set()
+                    _entity_registry = er.async_get(self.hass)
+                    for gen_entity in gen_entities:
+                        r_entity = _entity_registry.async_get(gen_entity)
+                        if r_entity is not None:
+                            dc = r_entity.device_class or r_entity.original_device_class
+                            if dc in (SensorDeviceClass.ENERGY, SensorDeviceClass.POWER):
+                                device_classes.add(dc)
+                    if len(device_classes) > 1:
+                        errors[BASE] = EXCEPTION_GENERATION_MIXED_TYPES
+                        _LOGGER.debug("Options validation failed: %s", errors[BASE])
                 if not errors:
                     if user_input.get(SITE_EXPORT_ENTITY, []) != [] and len(user_input.get(SITE_EXPORT_ENTITY, [])) > 1:
                         errors[BASE] = EXCEPTION_EXPORT_MULTIPLE_ENTITIES
@@ -584,7 +598,10 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             for entry, details in entity_registry.entities.items()
             if "solcast_pv_forecast" not in entry
             and details.disabled_by is None
-            and (SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class))
+            and (
+                SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class)
+                or SensorDeviceClass.POWER in (details.device_class, details.original_device_class)
+            )
         ]
 
         if self._options.get(SITE_EXPORT_ENTITY, "") != "":
