@@ -153,9 +153,9 @@ def patch_solcast_api(solcast: SolcastApi) -> SolcastApi:
 
     Cannot use freezegun with these tests because time must tick (the tick= option won't work).
     """
-    solcast.get_now_utc = get_now_utc  # type: ignore[method-assign]
-    solcast.get_real_now_utc = get_real_now_utc  # type: ignore[method-assign]
-    solcast.get_hour_start_utc = get_hour_start_utc  # type: ignore[method-assign]
+    solcast.dt_helper.now_utc = get_now_utc  # type: ignore[method-assign]
+    solcast.dt_helper.real_now_utc = get_real_now_utc  # type: ignore[method-assign]
+    solcast.dt_helper.hour_start_utc = get_hour_start_utc  # type: ignore[method-assign]
     return solcast
 
 
@@ -1193,31 +1193,31 @@ async def test_remaining_actions(
         queries: list[dict[str, Any]] = [
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.get_day_start_utc().isoformat(),
-                    EVENT_END_DATETIME: solcast.get_day_start_utc(future=1).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=1).isoformat(),
                 },
                 "expect": 48,
             },
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.get_day_start_utc().isoformat(),
-                    EVENT_END_DATETIME: solcast.get_day_start_utc(future=1).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=1).isoformat(),
                     UNDAMPENED: True,
                 },
                 "expect": 48,
             },
             {
                 "query": {
-                    EVENT_START_DATETIME: (solcast.get_day_start_utc(future=-1) + timedelta(hours=3)).isoformat(),
-                    EVENT_END_DATETIME: solcast.get_day_start_utc().isoformat(),
+                    EVENT_START_DATETIME: (solcast.dt_helper.get_day_start_utc(future=-1) + timedelta(hours=3)).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
                     SITE: "1111-1111-1111-1111",
                 },
                 "expect": 42,
             },
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.get_day_start_utc(future=-3).isoformat(),
-                    EVENT_END_DATETIME: solcast.get_day_start_utc(future=-1).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=-3).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=-1).isoformat(),
                     SITE: "2222_2222_2222_2222",
                     UNDAMPENED: True,
                 },
@@ -1244,8 +1244,8 @@ async def test_remaining_actions(
                 DOMAIN,
                 "query_forecast_data",
                 {
-                    EVENT_START_DATETIME: solcast.get_day_start_utc(future=DEFAULT_FORECAST_DAYS + 2).isoformat(),
-                    EVENT_END_DATETIME: solcast.get_day_start_utc(future=DEFAULT_FORECAST_DAYS + 6).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=DEFAULT_FORECAST_DAYS + 2).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=DEFAULT_FORECAST_DAYS + 6).isoformat(),
                 },
                 blocking=True,
                 return_response=True,
@@ -1717,8 +1717,8 @@ async def test_estimated_actuals(
         queries: list[dict[str, Any]] = [
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.get_day_start_utc(future=-1).isoformat(),
-                    EVENT_END_DATETIME: solcast.get_day_start_utc().isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=-1).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
                 },
                 "expect": 48,
             },
@@ -1745,8 +1745,8 @@ async def test_estimated_actuals(
                 DOMAIN,
                 "query_estimate_data",
                 {
-                    EVENT_START_DATETIME: solcast.get_day_start_utc(future=-50).isoformat(),
-                    EVENT_END_DATETIME: solcast.get_day_start_utc(future=-40).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=-50).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=-40).isoformat(),
                 },
                 blocking=True,
                 return_response=True,
@@ -1764,7 +1764,7 @@ async def test_estimated_actuals(
         if energy_dashboard is None:
             pytest.fail("Energy dashboard data is None")
         else:
-            assert energy_dashboard["wh_hours"].get((solcast.get_day_start_utc() - timedelta(hours=8)).isoformat()) == 936.0
+            assert energy_dashboard["wh_hours"].get((solcast.dt_helper.get_day_start_utc() - timedelta(hours=8)).isoformat()) == 936.0
 
         session_set(MOCK_ALTER_HISTORY)
         await _exec_update_actuals(hass, coordinator, solcast, caplog, "force_update_estimates")
@@ -1779,7 +1779,7 @@ async def test_estimated_actuals(
         if energy_dashboard is None:
             pytest.fail("Energy dashboard data is None")
         else:
-            assert energy_dashboard["wh_hours"].get((solcast.get_day_start_utc() - timedelta(hours=8)).isoformat()) == 374.0
+            assert energy_dashboard["wh_hours"].get((solcast.dt_helper.get_day_start_utc() - timedelta(hours=8)).isoformat()) == 374.0
 
         _LOGGER.debug("Testing get actuals abort if already in progress")
         caplog.clear()

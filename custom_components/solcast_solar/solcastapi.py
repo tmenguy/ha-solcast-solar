@@ -209,6 +209,7 @@ from .util import (
     AutoUpdate,
     DataCallStatus,
     DateTimeEncoder,
+    DateTimeHelper,
     HistoryType,
     JSONDecoder,
     NoIndentEncoder,
@@ -385,6 +386,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self._serialise_lock = asyncio.Lock()
         self._tally: dict[str, float | None] = {}
         self._tz = options.tz
+        self.dt_helper = DateTimeHelper(self._tz)
         self._use_forecast_confidence = f"pv_{options.key_estimate}"
 
     def migrate_config_files(self) -> None:
@@ -883,7 +885,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             bool: True for stale, False if updated recently.
         """
         last_updated = self.get_last_updated()
-        return last_updated is not None and last_updated < self.get_day_start_utc(future=-1)
+        return last_updated is not None and last_updated < self.dt_helper.get_day_start_utc(future=-1)
 
     def is_stale_usage_cache(self) -> bool:
         """Return whether the usage cache was last reset over 24-hours ago (i.e. is stale).
@@ -895,7 +897,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         for api_key in api_keys:
             api_key = api_key.strip()
             api_used_reset = self._api_used_reset.get(api_key)
-            if api_used_reset is not None and api_used_reset < self.__get_utc_previous_midnight():
+            if api_used_reset is not None and api_used_reset < self.dt_helper.utc_previous_midnight():
                 return True
         return False
 
@@ -1203,7 +1205,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         """
         filename = self.__get_usage_cache_filename(api_key)
         if reset:
-            self._api_used_reset[api_key] = self.__get_utc_previous_midnight()
+            self._api_used_reset[api_key] = self.dt_helper.utc_previous_midnight()
         _LOGGER.debug(
             "Writing API usage cache %s",
             redact_msg_api_key(filename, api_key),
@@ -1233,7 +1235,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 assert isinstance(self._api_limit[api_key], int), "daily_limit is not an integer"
                 self._api_used[api_key] = usage.get(DAILY_LIMIT_CONSUMED, 0)
                 assert isinstance(self._api_used[api_key], int), "daily_limit_consumed is not an integer"
-                self._api_used_reset[api_key] = usage.get(RESET, self.__get_utc_previous_midnight())
+                self._api_used_reset[api_key] = usage.get(RESET, self.dt_helper.utc_previous_midnight())
                 assert isinstance(self._api_used_reset[api_key], dt), "reset is not a datetime"
                 if (used_reset := self._api_used_reset[api_key]) is not None:
                     _LOGGER.debug(
@@ -1251,7 +1253,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         (" for " + redact_api_key(api_key)) if self.__is_multi_key() else "",
                     )
                 if used_reset is not None:
-                    if self.get_real_now_utc() > used_reset + timedelta(hours=24):
+                    if self.dt_helper.real_now_utc() > used_reset + timedelta(hours=24):
                         _LOGGER.warning(
                             "Resetting usage for %s, last reset was more than 24-hours ago",
                             redact_api_key(api_key),
@@ -1304,7 +1306,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         _LOGGER.warning("Creating usage cache for %s, assuming zero API used", redact_api_key(api_key))
                         self._api_limit[api_key] = quota[api_key]
                         self._api_used[api_key] = 0
-                        self._api_used_reset[api_key] = self.__get_utc_previous_midnight()
+                        self._api_used_reset[api_key] = self.dt_helper.utc_previous_midnight()
                     await self.__serialise_usage(api_key, reset=True)
                 _LOGGER.debug(
                     "API counter for %s is %d/%d",
@@ -2266,62 +2268,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         }
         return {k: v for k, v in result.items() if v is not None}
 
-    def dst(self, dt_obj: dt | None = None) -> bool:
-        """Return whether a given date is daylight savings time, or for zones using Winter time whether standard time."""
-        result = False
-        if dt_obj is not None:
-            delta = timedelta(hours=1) if str(self._tz) not in WINTER_TIME else timedelta(hours=0)
-            result = dt_obj.astimezone(self._tz).dst() == delta
-        return result
-
-    def is_interval_dst(self, interval: dict[str, Any]) -> bool:
-        """Return whether an interval is daylight savings time, or for zones using Winter time whether standard time."""
-        return self.dst(interval[PERIOD_START].astimezone(self._tz))
-
-    def get_day_start_utc(self, future: int = 0) -> dt:
-        """Datetime helper.
-
-        Arguments:
-            future(int): An optional number of days into the future (or negative number for into the past)
-
-        Returns:
-            datetime: The UTC date and time representing midnight local time.
-        """
-        for_when = (dt.now(self._tz) + timedelta(days=future)).astimezone(self._tz)
-        return for_when.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(datetime.UTC)
-
-    def __get_utc_previous_midnight(self) -> dt:
-        """Datetime helper.
-
-        Returns:
-            datetime: The UTC date and time representing midnight UTC of the current day.
-        """
-        return dt.now().astimezone(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-
-    def get_now_utc(self) -> dt:
-        """Datetime helper.
-
-        Returns:
-            datetime: The UTC date and time representing now as at the previous minute boundary.
-        """
-        return dt.now(self._tz).replace(second=0, microsecond=0).astimezone(datetime.UTC)
-
-    def get_real_now_utc(self) -> dt:
-        """Datetime helper.
-
-        Returns:
-            datetime: The UTC date and time representing now including seconds/microseconds.
-        """
-        return dt.now(self._tz).astimezone(datetime.UTC)
-
-    def get_hour_start_utc(self) -> dt:
-        """Datetime helper.
-
-        Returns:
-            datetime: The UTC date and time representing the start of the current hour.
-        """
-        return dt.now(self._tz).replace(minute=0, second=0, microsecond=0).astimezone(datetime.UTC)
-
     def get_forecast_day(self, future_day: int) -> dict[str, Any] | None:
         """Return forecast data for the Nth day ahead.
 
@@ -2357,9 +2303,11 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             ]
 
         def get_start_and_end(forecasts: list[dict[str, Any]]) -> tuple[int, int, dt, dt]:
-            start_utc = self.get_day_start_utc(future=future_day)
+            start_utc = self.dt_helper.get_day_start_utc(future=future_day)
             start, _ = self.__get_list_slice(forecasts, start_utc)
-            end_utc = min(self.get_day_start_utc(future=future_day + 1), forecasts[-1][PERIOD_START])  # Don't go past the last forecast.
+            end_utc = min(
+                self.dt_helper.get_day_start_utc(future=future_day + 1), forecasts[-1][PERIOD_START]
+            )  # Don't go past the last forecast.
             end, _ = self.__get_list_slice(forecasts, end_utc)
             if not start:
                 # Data is missing, so adjust the start time to the first available forecast.
@@ -2432,7 +2380,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             int | None - A forecast for an hour period as Wh (either used for a sensor or its attributes).
         """
-        start_utc = self.get_hour_start_utc() + timedelta(hours=n_hour)
+        start_utc = self.dt_helper.hour_start_utc() + timedelta(hours=n_hour)
         end_utc = start_utc + timedelta(hours=1)
         estimate = self.__get_forecast_pv_estimates(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence)
         return round(500 * estimate) if estimate is not None else None
@@ -2453,7 +2401,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             int | None - A forecast for a multiple hour period as Wh (either used for a sensor or its attributes).
         """
-        start_utc = self.get_now_utc()
+        start_utc = self.dt_helper.now_utc()
         end_utc = start_utc + timedelta(hours=n_hours)
         remaining = self.__get_forecast_pv_remaining(
             start_utc,
@@ -2479,7 +2427,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             int | None: A power forecast in N minutes as W (either used for a sensor or its attributes).
         """
-        time_utc = self.get_now_utc() + timedelta(minutes=n_mins)
+        time_utc = self.dt_helper.now_utc() + timedelta(minutes=n_mins)
         forecast = self.__get_forecast_pv_moment(time_utc, site=site, forecast_confidence=forecast_confidence)
         return round(1000 * forecast) if forecast is not None else None
 
@@ -2500,8 +2448,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             int | None: An expected peak generation for a given day as Watts.
         """
         forecast_confidence = self._use_forecast_confidence if forecast_confidence is None else forecast_confidence
-        start_utc = self.get_day_start_utc(future=n_day)
-        end_utc = self.get_day_start_utc(future=n_day + 1)
+        start_utc = self.dt_helper.get_day_start_utc(future=n_day)
+        end_utc = self.dt_helper.get_day_start_utc(future=n_day + 1)
         result = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence)
         return int(round(1000 * result[forecast_confidence])) if result is not None else None
 
@@ -2521,8 +2469,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             dt | None: The date and time of expected peak generation for a given day.
         """
-        start_utc = self.get_day_start_utc(future=n_day)
-        end_utc = self.get_day_start_utc(future=n_day + 1)
+        start_utc = self.dt_helper.get_day_start_utc(future=n_day)
+        end_utc = self.dt_helper.get_day_start_utc(future=n_day + 1)
         result = self.__get_max_forecast_pv_estimate(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence)
         return result[PERIOD_START].astimezone(self._tz) if result is not None else None
 
@@ -2537,8 +2485,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             float | None: The expected remaining solar generation for the current day as kWh.
         """
-        start_utc = self.get_now_utc()
-        end_utc = self.get_day_start_utc(future=1)
+        start_utc = self.dt_helper.now_utc()
+        end_utc = self.dt_helper.get_day_start_utc(future=1)
         remaining = self.__get_forecast_pv_remaining(
             start_utc,
             end_utc=end_utc,
@@ -2563,8 +2511,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             float | None: The forecast total solar generation for a given day as kWh.
         """
-        start_utc = self.get_day_start_utc(future=n_day)
-        end_utc = self.get_day_start_utc(future=n_day + 1)
+        start_utc = self.dt_helper.get_day_start_utc(future=n_day)
+        end_utc = self.dt_helper.get_day_start_utc(future=n_day + 1)
         estimate = self.__get_forecast_pv_estimates(start_utc, end_utc, site=site, forecast_confidence=forecast_confidence)
         return round(0.5 * estimate, 4) if estimate is not None else None
 
@@ -2725,12 +2673,12 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
         def get_start_and_end(forecasts: list[dict[str, Any]]) -> tuple[int, int, list[int]]:
             try:
-                start, end = self.__get_list_slice(forecasts, self.get_day_start_utc())  # Get start of day index.
+                start, end = self.__get_list_slice(forecasts, self.dt_helper.get_day_start_utc())  # Get start of day index.
                 if start:
                     xx = list(range(0, 1800 * len(self._spline_period), 300))
                 else:
                     # Data is missing at the start of the set, so adjust the start time to the first available forecast.
-                    start, end = self.__get_list_slice(forecasts, forecasts[0][PERIOD_START], self.get_day_start_utc(future=1))
+                    start, end = self.__get_list_slice(forecasts, forecasts[0][PERIOD_START], self.dt_helper.get_day_start_utc(future=1))
                     xx = list(range(1800 * (48 - (end - start)), 1800 * len(self._spline_period), 300))
             except IndexError:
                 start = 0
@@ -2839,7 +2787,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         )
         if (start_index == 0 and end_index == 0) or data[len(data) - 1][PERIOD_START] < end_utc:
             return None  # Set sensor to unavailable
-        day_start = self.get_day_start_utc()
+        day_start = self.dt_helper.get_day_start_utc()
         result = self.__get_remaining(site, forecast_confidence, (start_utc - day_start).total_seconds())
         if end_utc is not None:
             end_utc = end_utc.replace(minute=math.floor(end_utc.minute / 5) * 5)
@@ -2911,7 +2859,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             float | None: Forecast power for a point in time as kW (from splined data).
         """
         forecast_confidence = self._use_forecast_confidence if forecast_confidence is None else forecast_confidence
-        day_start = self.get_day_start_utc()
+        day_start = self.dt_helper.get_day_start_utc()
         time_utc = time_utc.replace(minute=math.floor(time_utc.minute / 5) * 5)
         return self.__get_moment(site, forecast_confidence, (time_utc - day_start).total_seconds())
 
@@ -3025,7 +2973,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         for day in range(days):
             # PV generation
             generation_intervals: dict[dt, float] = {
-                self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1) + timedelta(minutes=minute): 0
+                self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1) + timedelta(minutes=minute): 0
                 for minute in range(0, 1440, 30)
             }
             for entity in self.options.generation_entities:
@@ -3039,8 +2987,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 entity_history = await get_instance(self.hass).async_add_executor_job(
                     state_changes_during_period,
                     self.hass,
-                    self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1),
-                    self.get_day_start_utc(future=(-1 * day)),
+                    self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1),
+                    self.dt_helper.get_day_start_utc(future=(-1 * day)),
                     entity,
                 )
                 if entity_history.get(entity) and len(entity_history[entity]) > 4:
@@ -3058,7 +3006,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         ]
 
                         if len(power_readings) > 1:
-                            period_start = self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
+                            period_start = self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
 
                             # For each 30-min interval, compute the time-weighted average power.
                             for interval_start in generation_intervals:
@@ -3117,7 +3065,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                 [
                                     (
                                         e.last_updated.astimezone(datetime.UTC)
-                                        - (self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1))
+                                        - (self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1))
                                     ).total_seconds()
                                     for e in entity_history[entity]
                                     if e.state.replace(".", "").isnumeric()
@@ -3125,8 +3073,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             ),
                         ]
 
-                        period_start = self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
-                        period_end = self.get_day_start_utc(future=(-1 * day))
+                        period_start = self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
+                        period_end = self.dt_helper.get_day_start_utc(future=(-1 * day))
                         if sample_generation_time and sample_generation_time[0] == period_start:
                             sample_generation[0] = 0.0
                             sample_timedelta[0] = 0
@@ -3257,7 +3205,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 generation_intervals[i] = round(gen, 3)
 
             export_limiting: dict[dt, bool] = {
-                self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1) + timedelta(minutes=minute): False
+                self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1) + timedelta(minutes=minute): False
                 for minute in range(0, 1440, 30)
             }
 
@@ -3274,8 +3222,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     break
             if found:
                 _LOGGER.debug("Suppression entity %s exists", entity)
-                query_start_time = self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
-                query_end_time = self.get_day_start_utc(future=(-1 * day))
+                query_start_time = self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1)
+                query_end_time = self.dt_helper.get_day_start_utc(future=(-1 * day))
 
                 # Get state changes during the period
                 entity_history = await get_instance(self.hass).async_add_executor_job(
@@ -3344,15 +3292,15 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     _LOGGER.error("Site export entity %s is disabled, please enable it", entity)
                     entity = ""
                 export_intervals: dict[dt, float] = {
-                    self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1) + timedelta(minutes=minute): 0
+                    self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1) + timedelta(minutes=minute): 0
                     for minute in range(0, 1440, _INTERVAL)
                 }
                 if entity:
                     entity_history = await get_instance(self.hass).async_add_executor_job(
                         state_changes_during_period,
                         self.hass,
-                        self.get_day_start_utc(future=(-1 * day)) - timedelta(days=1),
-                        self.get_day_start_utc(future=(-1 * day)),
+                        self.dt_helper.get_day_start_utc(future=(-1 * day)) - timedelta(days=1),
+                        self.dt_helper.get_day_start_utc(future=(-1 * day)),
                         entity,
                     )
                     if entity_history.get(entity) and len(entity_history[entity]):
@@ -3399,7 +3347,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             LAST_UPDATED: dt.now(datetime.UTC).replace(microsecond=0),
             GENERATION: sorted(
                 filter(
-                    lambda generated: generated[PERIOD_START] >= self.get_day_start_utc(future=-22),
+                    lambda generated: generated[PERIOD_START] >= self.dt_helper.get_day_start_utc(future=-22),
                     generation.values(),
                 ),
                 key=itemgetter(PERIOD_START),
@@ -3410,7 +3358,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
     def adjusted_interval(self, interval: dict[str, Any]) -> int:
         """Adjust a forecast/actual interval as standard time."""
-        offset = 1 if self.is_interval_dst(interval) else 0
+        offset = 1 if self.dt_helper.is_interval_dst(interval) else 0
         return (
             ((interval[PERIOD_START].astimezone(self._tz).hour - offset) * 2 + interval[PERIOD_START].astimezone(self._tz).minute // 30)
             if interval[PERIOD_START].astimezone(self._tz).hour - offset >= 0
@@ -3419,7 +3367,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
     def adjusted_interval_dt(self, interval: dt) -> int:
         """Adjust a datetime as standard time."""
-        offset = 1 if self.dst(interval.astimezone(self._tz)) else 0
+        offset = 1 if self.dt_helper.dst(interval.astimezone(self._tz)) else 0
         return (
             ((interval.astimezone(self._tz).hour - offset) * 2 + interval.astimezone(self._tz).minute // 30)
             if interval.astimezone(self._tz).hour - offset >= 0
@@ -3546,7 +3494,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         _LOGGER.debug(
             "Getting undampened actuals from %s to %s",
             earliest_common.strftime(DT_DATE_FORMAT_UTC),
-            self.get_day_start_utc().strftime(DT_DATE_FORMAT_UTC),
+            self.dt_helper.get_day_start_utc().strftime(DT_DATE_FORMAT_UTC),
         )
         actuals: defaultdict[dt, list[float]] = defaultdict(lambda: [0.0] * 48)
         for site in self.sites:
@@ -3557,7 +3505,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             start, end = self.__get_list_slice(
                 self._data_actuals[SITE_INFO][site[RESOURCE_ID]][FORECASTS],
                 earliest_common,
-                self.get_day_start_utc() - timedelta(minutes=30),
+                self.dt_helper.get_day_start_utc() - timedelta(minutes=30),
                 search_past=True,
             )
             for actual in self._data_actuals[SITE_INFO][site[RESOURCE_ID]][FORECASTS][start:end]:
@@ -3684,7 +3632,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
         )
 
-        if earliest_common is None or earliest_common > self.get_day_start_utc() - timedelta(
+        if earliest_common is None or earliest_common > self.dt_helper.get_day_start_utc() - timedelta(
             days=self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
         ):
             _LOGGER.info("Insufficient continuous dampening history to determine best automated dampening settings")
@@ -3693,7 +3641,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         _LOGGER.debug(
             "Earliest date with complete dampening history is %s, delta is %d days",
             earliest_common.astimezone(self._tz).strftime(DT_DATE_ONLY_FORMAT),
-            (self.get_day_start_utc() - earliest_common).days,
+            (self.dt_helper.get_day_start_utc() - earliest_common).days,
         )
 
         actuals = self._build_actuals_from_sites(earliest_common)
@@ -4073,7 +4021,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     continue
                 for forecast in self._data_undampened[SITE_INFO][site[RESOURCE_ID]][FORECASTS]:
                     period_start = forecast[PERIOD_START]
-                    if period_start >= self.get_day_start_utc(future=-1) and period_start < self.get_day_start_utc():
+                    if period_start >= self.dt_helper.get_day_start_utc(future=-1) and period_start < self.dt_helper.get_day_start_utc():
                         if period_start not in undampened_interval_pv50:
                             undampened_interval_pv50[period_start] = forecast[ESTIMATE] * 0.5
                         else:
@@ -4088,7 +4036,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 )
 
                 await self.add_dampening_history(  # Add entry for no delta adjustment
-                    period_start=self.get_day_start_utc(future=-1),
+                    period_start=self.dt_helper.get_day_start_utc(future=-1),
                     model=dampening_model,
                     delta=VALUE_ADAPTIVE_DAMPENING_NO_DELTA,
                     factors=dampening,
@@ -4096,7 +4044,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
                 _LOGGER.debug(
                     "Dampening factors on %s for model %d and delta adjustment %d: %s",
-                    self.get_day_start_utc(future=-1).strftime(DT_DATE_FORMAT_UTC),
+                    self.dt_helper.get_day_start_utc(future=-1).strftime(DT_DATE_FORMAT_UTC),
                     dampening_model,
                     VALUE_ADAPTIVE_DAMPENING_NO_DELTA,
                     ",".join(f"{factor:.3f}" for factor in dampening),
@@ -4124,14 +4072,14 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             )
 
                     await self.add_dampening_history(
-                        period_start=self.get_day_start_utc(future=-1),  # Adding history for the previous day
+                        period_start=self.dt_helper.get_day_start_utc(future=-1),  # Adding history for the previous day
                         model=dampening_model,
                         delta=delta_adjustment,
                         factors=adjusted_dampening,
                     )
                     _LOGGER.debug(
                         "Dampening factors on %s for model %d and delta adjustment %d: %s",
-                        self.get_day_start_utc(future=-1).strftime(DT_DATE_FORMAT_UTC),
+                        self.dt_helper.get_day_start_utc(future=-1).strftime(DT_DATE_FORMAT_UTC),
                         dampening_model,
                         delta_adjustment,
                         ",".join(f"{factor:.3f}" for factor in adjusted_dampening),
@@ -4139,7 +4087,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
             # Trim, sort and serialise.
 
-            cutoff = self.get_day_start_utc(future=-self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS])
+            cutoff = self.dt_helper.get_day_start_utc(future=-self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS])
 
             serialisable = {}
 
@@ -4352,8 +4300,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     continue
                 start, end = self.__get_list_slice(
                     self._data_actuals[SITE_INFO][site[RESOURCE_ID]][FORECASTS],
-                    self.get_day_start_utc() - timedelta(days=self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS]),
-                    self.get_day_start_utc(),
+                    self.dt_helper.get_day_start_utc() - timedelta(days=self.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS]),
+                    self.dt_helper.get_day_start_utc(),
                     search_past=True,
                 )
                 site_actuals = {
@@ -4424,7 +4372,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 prior_factor = self.granular_dampening[ALL][interval] if self.granular_dampening.get(ALL) is not None else 1.0
 
             dst_offset = (
-                1 if self.dst(dt.now(self._tz).replace(hour=interval // 2, minute=30 * (interval % 2), second=0, microsecond=0)) else 0
+                1
+                if self.dt_helper.dst(dt.now(self._tz).replace(hour=interval // 2, minute=30 * (interval % 2), second=0, microsecond=0))
+                else 0
             )
             interval_time = f"{interval // 2 + (dst_offset):02}:{30 * (interval % 2):02}"
             if interval in ignored_intervals:
@@ -4614,7 +4564,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     continue
                 for forecast in self._data_actuals[SITE_INFO][site[RESOURCE_ID]][FORECASTS]:
                     period_start = forecast[PERIOD_START]
-                    if period_start >= self.get_day_start_utc(future=-1) and period_start < self.get_day_start_utc():
+                    if period_start >= self.dt_helper.get_day_start_utc(future=-1) and period_start < self.dt_helper.get_day_start_utc():
                         if period_start not in undampened_interval_pv50:
                             undampened_interval_pv50[period_start] = forecast[ESTIMATE] * 0.5
                         else:
@@ -4627,7 +4577,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     actuals_undampened_day = [
                         actual
                         for actual in self._data_actuals[SITE_INFO][site[RESOURCE_ID]][FORECASTS]
-                        if actual[PERIOD_START] >= self.get_day_start_utc(future=-1) and actual[PERIOD_START] < self.get_day_start_utc()
+                        if actual[PERIOD_START] >= self.dt_helper.get_day_start_utc(future=-1)
+                        and actual[PERIOD_START] < self.dt_helper.get_day_start_utc()
                     ]
                     extant_actuals = (
                         {actual[PERIOD_START]: actual for actual in self._data_actuals_dampened[SITE_INFO][site[RESOURCE_ID]][FORECASTS]}
@@ -4766,7 +4717,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         """Migrate un-dampened forecasts if un-dampened data for a site does not exist."""
         apply_dampening: list[str] = []
         forecasts: dict[str, dict[dt, Any]] = {}
-        past_days = self.get_day_start_utc(future=-14)
+        past_days = self.dt_helper.get_day_start_utc(future=-14)
         for site in self.sites:
             site = site[RESOURCE_ID]
             if not self._data_undampened[SITE_INFO].get(site) or len(self._data_undampened[SITE_INFO][site].get(FORECASTS, [])) == 0:
@@ -4889,7 +4840,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             self._auto_dampening_factors = {
                 period_start: factor
                 for period_start, factor in self._auto_dampening_factors.items()
-                if period_start >= self.get_day_start_utc()
+                if period_start >= self.dt_helper.get_day_start_utc()
             }
 
             undampened_interval_pv50: dict[dt, float] = {}
@@ -4898,7 +4849,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     continue
                 for forecast in self._data_undampened[SITE_INFO][site[RESOURCE_ID]][FORECASTS]:
                     period_start = forecast[PERIOD_START]
-                    if period_start >= self.get_day_start_utc():
+                    if period_start >= self.dt_helper.get_day_start_utc():
                         if period_start not in undampened_interval_pv50:
                             undampened_interval_pv50[period_start] = forecast[ESTIMATE] * 0.5
                         else:
@@ -4912,9 +4863,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     for forecast in self._data_undampened[SITE_INFO][site[RESOURCE_ID]][FORECASTS]
                     if forecast[PERIOD_START]
                     >= (
-                        self.get_day_start_utc()
+                        self.dt_helper.get_day_start_utc()
                         if self._data[SITE_INFO].get(site[RESOURCE_ID])
-                        else self.get_day_start_utc() - timedelta(hours=do_past_hours)
+                        else self.dt_helper.get_day_start_utc() - timedelta(hours=do_past_hours)
                     )  # Was >= dt.now(datetime.UTC)
                 ]
                 forecasts = (
@@ -4965,7 +4916,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
     async def sort_and_prune(self, site: str | None, data: dict[str, Any], past_days: int, forecasts: dict[Any, Any]) -> None:
         """Sort and prune a forecast list."""
 
-        _past_days = self.get_day_start_utc(future=past_days * -1)
+        _past_days = self.dt_helper.get_day_start_utc(future=past_days * -1)
         _forecasts: list[dict[str, Any]] = sorted(
             filter(
                 lambda forecast: forecast[PERIOD_START] >= _past_days,
@@ -4996,8 +4947,8 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         failure = False
 
         try:
-            last_day = self.get_day_start_utc(future=self.advanced_options[ADVANCED_FORECAST_FUTURE_DAYS])
-            hours = math.ceil((last_day - self.get_now_utc()).total_seconds() / 3600)
+            last_day = self.dt_helper.get_day_start_utc(future=self.advanced_options[ADVANCED_FORECAST_FUTURE_DAYS])
+            hours = math.ceil((last_day - self.dt_helper.now_utc()).total_seconds() / 3600)
             _LOGGER.debug(
                 "Polling API for site %s, last day %s, %d hours",
                 site,
@@ -5410,11 +5361,11 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             if self.options.use_actuals == HistoryType.ESTIMATED_ACTUALS
             else self._data_estimated_actuals_dampened
         )
-        forecasts_start, _ = self.__get_list_slice(self._data_forecasts, self.get_day_start_utc(), search_past=True)
+        forecasts_start, _ = self.__get_list_slice(self._data_forecasts, self.dt_helper.get_day_start_utc(), search_past=True)
         actuals_start, actuals_end = self.__get_list_slice(
             _data,
-            self.get_day_start_utc() - timedelta(days=self.advanced_options[ADVANCED_HISTORY_MAX_DAYS]),
-            self.get_day_start_utc(),
+            self.dt_helper.get_day_start_utc() - timedelta(days=self.advanced_options[ADVANCED_HISTORY_MAX_DAYS]),
+            self.dt_helper.get_day_start_utc(),
             search_past=True,
         )
         return {
@@ -5532,7 +5483,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                             _LOGGER.debug(msg)
                         earliest = min(earliest, limits[EARLIEST_PERIOD])
                     else:
-                        earliest = self.get_day_start_utc()  # Past hard limits done, so re-calculate from today onwards
+                        earliest = self.dt_helper.get_day_start_utc()  # Past hard limits done, so re-calculate from today onwards
                     latest = limits[LAST_PERIOD]
                 if _api_key not in logged_hard_limit:
                     logged_hard_limit.append(_api_key)
@@ -5770,7 +5721,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                         forecasts[period_start] = {
                                             PERIOD_START: period_start,
                                         } | {est: site_forecasts[period_start][est] for est in (ESTIMATE, ESTIMATE10, ESTIMATE90)}
-                                        if dampened and self.options.auto_dampen and period_start >= self.get_day_start_utc():
+                                        if dampened and self.options.auto_dampen and period_start >= self.dt_helper.get_day_start_utc():
                                             forecasts[period_start][DAMPENING_FACTOR] = round(self._auto_dampening_factors[period_start], 4)
 
                             # Prevent blocking
@@ -5833,7 +5784,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             int: The starting index of the data structure just prior to midnight local time.
         """
         index = 0
-        midnight_utc = self.get_day_start_utc()
+        midnight_utc = self.dt_helper.get_day_start_utc()
         for index in range(len(data) - 1, -1, -1):
             if data[index][PERIOD_START] < midnight_utc:
                 break
@@ -5858,16 +5809,16 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.latest_period = self._data_forecasts[-1][PERIOD_START] if len(self._data_forecasts) > 0 else None
 
         for future_day in range(self.advanced_options[ADVANCED_FORECAST_FUTURE_DAYS]):
-            start_utc = self.get_day_start_utc(future=future_day)
-            end_utc = self.get_day_start_utc(future=future_day + 1)
+            start_utc = self.dt_helper.get_day_start_utc(future=future_day)
+            end_utc = self.dt_helper.get_day_start_utc(future=future_day + 1)
             start_index, end_index = self.__get_list_slice(self._data_forecasts, start_utc, end_utc)
 
             expected_intervals = 48
             _is_dst: bool | None = (
-                self.is_interval_dst(self._data_forecasts[start_index]) if start_index < len(self._data_forecasts) else None
+                self.dt_helper.is_interval_dst(self._data_forecasts[start_index]) if start_index < len(self._data_forecasts) else None
             )
             for interval in range(start_index, min(len(self._data_forecasts), start_index + 8)):
-                is_daylight = self.is_interval_dst(self._data_forecasts[interval])
+                is_daylight = self.dt_helper.is_interval_dst(self._data_forecasts[interval])
                 if is_daylight != _is_dst:
                     time_transitioning = True
                     expected_intervals = 50 if _is_dst else 46

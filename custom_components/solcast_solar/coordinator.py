@@ -479,13 +479,13 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         percentiles_to_calculate = tuple(self.solcast.advanced_options[ADVANCED_ESTIMATED_ACTUALS_LOG_APE_PERCENTILES])
 
         earliest_undampened_start = self.solcast.get_earliest_estimate_after_undampened(
-            self.solcast.get_day_start_utc() - timedelta(days=self.solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS])
+            self.solcast.dt_helper.get_day_start_utc() - timedelta(days=self.solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS])
         )
         if not self.solcast.options.get_actuals or earliest_undampened_start is None:
             return
         if self.solcast.options.auto_dampen:
             earliest_dampened_start = self.solcast.get_earliest_estimate_after_dampened(
-                self.solcast.get_day_start_utc() - timedelta(days=self.solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS])
+                self.solcast.dt_helper.get_day_start_utc() - timedelta(days=self.solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS])
             )
 
         generation_dampening, generation_dampening_day = await self.solcast.prepare_generation_data(earliest_undampened_start)
@@ -497,7 +497,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug(
                     "Calculating dampened estimated actual MAPE from %s to %s",
                     earliest_dampened_start.astimezone(self.solcast.options.tz).strftime(DT_DATE_ONLY_FORMAT),
-                    (self.solcast.get_day_start_utc() - timedelta(minutes=30))
+                    (self.solcast.dt_helper.get_day_start_utc() - timedelta(minutes=30))
                     .astimezone(self.solcast.options.tz)
                     .strftime(DT_DATE_ONLY_FORMAT),
                 )
@@ -507,7 +507,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 generation_dampening,
                 await self.solcast.get_estimate_list(
                     earliest_dampened_start,
-                    self.solcast.get_day_start_utc() - timedelta(minutes=30),
+                    self.solcast.dt_helper.get_day_start_utc() - timedelta(minutes=30),
                     False,  # Undampened = False
                 ),
                 percentiles_to_calculate,
@@ -520,7 +520,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug(
                 "Calculating undampened estimated actual MAPE from %s to %s",
                 earliest_undampened_start.astimezone(self.solcast.options.tz).strftime(DT_DATE_ONLY_FORMAT),
-                (self.solcast.get_day_start_utc() - timedelta(minutes=30))
+                (self.solcast.dt_helper.get_day_start_utc() - timedelta(minutes=30))
                 .astimezone(self.solcast.options.tz)
                 .strftime(DT_DATE_ONLY_FORMAT),
             )
@@ -529,7 +529,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             generation_dampening,
             await self.solcast.get_estimate_list(
                 earliest_undampened_start,
-                self.solcast.get_day_start_utc() - timedelta(minutes=30),
+                self.solcast.dt_helper.get_day_start_utc() - timedelta(minutes=30),
                 True,  # Undampened = True
             ),
             percentiles_to_calculate,
@@ -644,7 +644,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Check for an auto forecast update event."""
         if self.solcast.options.auto_update != AutoUpdate.NONE:
             if len(self._intervals) > 0:
-                _now = self.solcast.get_real_now_utc().replace(microsecond=0)
+                _now = self.solcast.dt_helper.real_now_utc().replace(microsecond=0)
                 _from = _now.replace(minute=int(_now.minute / 5) * 5, second=0)
 
                 pop_expired: list[int] = []
@@ -720,12 +720,12 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 self.__get_sun_rise_set()
                 self.__calculate_forecast_updates(init=init)
             case AutoUpdate.ALL_DAY:
-                self._sunrise_yesterday = self.solcast.get_day_start_utc(future=-1)
-                self._sunset_yesterday = self.solcast.get_day_start_utc()
+                self._sunrise_yesterday = self.solcast.dt_helper.get_day_start_utc(future=-1)
+                self._sunset_yesterday = self.solcast.dt_helper.get_day_start_utc()
                 self._sunrise = self._sunset_yesterday
-                self._sunset = self.solcast.get_day_start_utc(future=1)
+                self._sunset = self.solcast.dt_helper.get_day_start_utc(future=1)
                 self._sunrise_tomorrow = self._sunset
-                self._sunset_tomorrow = self.solcast.get_day_start_utc(future=2)
+                self._sunset_tomorrow = self.solcast.dt_helper.get_day_start_utc(future=2)
                 self.__calculate_forecast_updates(init=init)
             case _:
                 pass
@@ -738,9 +738,9 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             sunset = get_astral_event_next(self.hass, "sunset", day_start).replace(microsecond=0)
             return sunrise, sunset
 
-        self._sunrise_yesterday, self._sunset_yesterday = sun_rise_set(self.solcast.get_day_start_utc(future=-1))
-        self._sunrise, self._sunset = sun_rise_set(self.solcast.get_day_start_utc())
-        self._sunrise_tomorrow, self._sunset_tomorrow = sun_rise_set(self.solcast.get_day_start_utc(future=1))
+        self._sunrise_yesterday, self._sunset_yesterday = sun_rise_set(self.solcast.dt_helper.get_day_start_utc(future=-1))
+        self._sunrise, self._sunset = sun_rise_set(self.solcast.dt_helper.get_day_start_utc())
+        self._sunrise_tomorrow, self._sunset_tomorrow = sun_rise_set(self.solcast.dt_helper.get_day_start_utc(future=1))
         _LOGGER.debug(
             "Sun rise / set today at %s / %s",
             self._sunrise.astimezone(self.solcast.options.tz).strftime(DT_TIME_FORMAT),
@@ -767,7 +767,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             intervals = intervals_yesterday + [
                 (sunrise + timedelta(seconds=interval * i)).replace(microsecond=0) for i in range(self.divisions)
             ]
-            _now = self.solcast.get_real_now_utc()
+            _now = self.solcast.dt_helper.real_now_utc()
             for i in intervals:
                 if i < _now:
                     self.interval_just_passed = i

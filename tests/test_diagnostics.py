@@ -52,7 +52,7 @@ async def test_diagnostics(
         for site, data in diagnostics["data"][0]["siteinfo"].items():  # type: ignore[call-overload, index, union-attr] # pyright: ignore[reportArgumentType, reportIndexIssue, reportOptionalSubscript, reportUnknownMemberType]
             assert site in ["1111-1111-1111-1111", "2222-2222-2222-2222"]
             assert len(data["forecasts"]) > 300  # type: ignore[arg-type, call-overload, index] # pyright: ignore[reportArgumentType, reportIndexIssue, reportOptionalSubscript, reportUnknownMemberType]
-        assert diagnostics["energy_forecasts_graph"][solcast.get_now_utc().replace(hour=2, minute=0, second=0).isoformat()] == 3600.0  # type: ignore[call-overload, index]
+        assert diagnostics["energy_forecasts_graph"][solcast.dt_helper.now_utc().replace(hour=2, minute=0, second=0).isoformat()] == 3600.0  # type: ignore[call-overload, index]
 
         await hass.services.async_call(DOMAIN, "set_hard_limit", {"hard_limit": "5.0"}, blocking=True)
         await hass.async_block_till_done()  # Because integration reloads

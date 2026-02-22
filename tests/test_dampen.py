@@ -889,8 +889,8 @@ async def test_get_pv_generation_period_edges_and_gaps(
         solcast = entry.runtime_data.coordinator.solcast
         entity_id = options[GENERATION_ENTITIES][0]
 
-        period_start_raw = solcast.get_day_start_utc(future=0) - timedelta(days=1)
-        period_end_raw = solcast.get_day_start_utc(future=0)
+        period_start_raw = solcast.dt_helper.get_day_start_utc(future=0) - timedelta(days=1)
+        period_end_raw = solcast.dt_helper.get_day_start_utc(future=0)
         period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
         period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
 
@@ -954,7 +954,7 @@ async def test_get_pv_generation_uniform_increment_log(
         period_start = fixed_day - timedelta(days=1)
         period_end = fixed_day
 
-        monkeypatch.setattr(solcast, "get_day_start_utc", lambda future=0: fixed_day)
+        monkeypatch.setattr(solcast.dt_helper, "get_day_start_utc", lambda future=0: fixed_day)
 
         def _state(value: float, when: dt) -> State:
             return State(
@@ -1015,7 +1015,7 @@ async def test_get_pv_generation_zero_timedelta_samples(
         fixed_day = dt(2026, 2, 9, tzinfo=datetime.UTC)
         period_start = fixed_day - timedelta(days=1)
 
-        monkeypatch.setattr(solcast, "get_day_start_utc", lambda future=0: fixed_day)
+        monkeypatch.setattr(solcast.dt_helper, "get_day_start_utc", lambda future=0: fixed_day)
 
         def _state(value: float, when: dt) -> State:
             return State(
@@ -1060,7 +1060,7 @@ async def test_select_comparison_interval_variance(
         entry = await async_init_integration(hass, copy.deepcopy(DEFAULT_INPUT2))
         solcast = entry.runtime_data.coordinator.solcast
 
-        day_start = solcast.get_day_start_utc() - timedelta(days=1)
+        day_start = solcast.dt_helper.get_day_start_utc() - timedelta(days=1)
         ts = day_start
         generation_dampening = defaultdict(dict, {ts: {GENERATION: 1.0, EXPORT_LIMITING: False}})
 
@@ -1096,7 +1096,7 @@ async def test_select_comparison_interval_single_factor(
         entry = await async_init_integration(hass, copy.deepcopy(DEFAULT_INPUT2))
         solcast = entry.runtime_data.coordinator.solcast
 
-        day_start = solcast.get_day_start_utc() - timedelta(days=1)
+        day_start = solcast.dt_helper.get_day_start_utc() - timedelta(days=1)
         generation_dampening = defaultdict(dict, {day_start: {GENERATION: 1.0, EXPORT_LIMITING: False}})
 
         factors = [1.0] * 48
@@ -1127,7 +1127,7 @@ async def test_calculate_single_interval_error_with_generation(
         entry = await async_init_integration(hass, copy.deepcopy(DEFAULT_INPUT2))
         solcast = entry.runtime_data.coordinator.solcast
 
-        day_start = solcast.get_day_start_utc()
+        day_start = solcast.dt_helper.get_day_start_utc()
         peak_interval = 0
         dampened_actuals = defaultdict(lambda: [4.0] * 48)
         dampened_actuals[solcast._get_day_start(day_start)] = [4.0] * 48
@@ -1166,7 +1166,7 @@ async def test_calculate_single_interval_error_no_generation(
         entry = await async_init_integration(hass, copy.deepcopy(DEFAULT_INPUT2))
         solcast = entry.runtime_data.coordinator.solcast
 
-        day_start = solcast.get_day_start_utc()
+        day_start = solcast.dt_helper.get_day_start_utc()
         dampened_actuals = defaultdict(lambda: [1.0] * 48)
         dampened_actuals[solcast._get_day_start(day_start)] = [1.0] * 48
         generation_dampening = defaultdict(dict, {day_start: {GENERATION: 0.0, EXPORT_LIMITING: False}})
@@ -1201,7 +1201,7 @@ async def test_calculate_single_interval_error_skips_ignored_and_missing(
         entry = await async_init_integration(hass, copy.deepcopy(DEFAULT_INPUT2))
         solcast = entry.runtime_data.coordinator.solcast
 
-        day_start = solcast.get_day_start_utc()
+        day_start = solcast.dt_helper.get_day_start_utc()
         next_day = day_start + timedelta(days=1)
 
         generation_dampening = defaultdict(
@@ -1252,7 +1252,7 @@ async def test_determine_best_dampening_settings_alternative_issue(
         entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
         solcast = entry.runtime_data.coordinator.solcast
 
-        day_start = solcast.get_day_start_utc() - timedelta(days=1)
+        day_start = solcast.dt_helper.get_day_start_utc() - timedelta(days=1)
         factors = [1.0] * 48
         factors[0] = 0.9
         history_entry = {"period_start": day_start, "factors": factors}
@@ -1345,8 +1345,8 @@ async def test_get_pv_generation_power_entity(
             original_device_class=SensorDeviceClass.POWER,
         )
 
-        period_start_raw = solcast.get_day_start_utc(future=0) - timedelta(days=1)
-        period_end_raw = solcast.get_day_start_utc(future=0)
+        period_start_raw = solcast.dt_helper.get_day_start_utc(future=0) - timedelta(days=1)
+        period_end_raw = solcast.dt_helper.get_day_start_utc(future=0)
         period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
         period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
 
@@ -1426,8 +1426,8 @@ async def test_get_pv_generation_power_entity_watt_conversion(
             original_device_class=SensorDeviceClass.POWER,
         )
 
-        period_start_raw = solcast.get_day_start_utc(future=0) - timedelta(days=1)
-        period_end_raw = solcast.get_day_start_utc(future=0)
+        period_start_raw = solcast.dt_helper.get_day_start_utc(future=0) - timedelta(days=1)
+        period_end_raw = solcast.dt_helper.get_day_start_utc(future=0)
         period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
         period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
 
@@ -1499,7 +1499,7 @@ async def test_get_pv_generation_power_entity_insufficient_readings(
             original_device_class=SensorDeviceClass.POWER,
         )
 
-        period_start_raw = solcast.get_day_start_utc(future=0) - timedelta(days=1)
+        period_start_raw = solcast.dt_helper.get_day_start_utc(future=0) - timedelta(days=1)
         period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
 
         # 5 states total (passes the >4 check) but only 1 numeric reading.

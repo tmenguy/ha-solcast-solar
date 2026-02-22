@@ -45,8 +45,8 @@ async def test_energy_data(
         if response is not None:
             # Test dictionary structure and length
             assert response.get("wh_hours") is not None
-            day_start = coordinator.solcast.get_day_start_utc()
-            day_start_earliest_whole_day = coordinator.solcast.get_day_start_utc(future=-6)
+            day_start = coordinator.solcast.dt_helper.get_day_start_utc()
+            day_start_earliest_whole_day = coordinator.solcast.dt_helper.get_day_start_utc(future=-6)
             today_and_beyond = 0
             earliest_and_beyond = 0
             for timestamp, wh_hour in response["wh_hours"].items():

@@ -126,7 +126,7 @@ async def test_timezone_transition(
         freezer.move_to(scenario["start_date"] + " 00:00:00")
         entry = await async_init_integration(hass, DEFAULT_INPUT1, timezone=scenario["timezone"])
         coordinator: SolcastUpdateCoordinator = entry.runtime_data.coordinator
-        assert coordinator.solcast.dst(dt.now())
+        assert coordinator.solcast.dt_helper.dst(dt.now())
 
         assert (
             f"Transitioning between {'standard/Summer' if scenario['timezone'] == 'Australia/Sydney' else 'standard/Winter'} time"
@@ -147,7 +147,7 @@ async def test_timezone_transition(
         freezer.move_to(scenario["end_date"] + " 00:00:00")
         entry = await async_init_integration(hass, DEFAULT_INPUT1, timezone=scenario["timezone"])
         coordinator: SolcastUpdateCoordinator = entry.runtime_data.coordinator
-        assert not coordinator.solcast.dst(dt.now())
+        assert not coordinator.solcast.dt_helper.dst(dt.now())
 
         assert (
             f"Transitioning between {'standard/Summer' if scenario['timezone'] == 'Australia/Sydney' else 'standard/Winter'} time"
