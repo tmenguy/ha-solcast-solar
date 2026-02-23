@@ -113,7 +113,7 @@ async def test_forecast_retry(
         session_set(MOCK_BUSY)
         caplog.clear()
 
-        solcast._data["last_updated"] -= timedelta(minutes=20)
+        solcast.data["last_updated"] -= timedelta(minutes=20)
         with mock.patch("homeassistant.components.solcast_solar.solcastapi.SolcastApi._sleep", new_callable=AsyncMockDoNothing):
             async with asyncio.timeout(10):
                 while "Raise issue for api_unavailable" not in caplog.text:

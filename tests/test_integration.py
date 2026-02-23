@@ -174,9 +174,9 @@ async def _exec_update(
     if last_update_delta == 0:
         last_updated = dt(year=2020, month=1, day=1, hour=1, minute=1, second=1, tzinfo=datetime.UTC)
     else:
-        last_updated = solcast._data["last_updated"] - timedelta(seconds=last_update_delta)  # pyright: ignore[reportPrivateUsage]
+        last_updated = solcast.data["last_updated"] - timedelta(seconds=last_update_delta)
         _LOGGER.info("Mock last updated: %s", last_updated)
-    solcast._data["last_updated"] = last_updated  # pyright: ignore[reportPrivateUsage]
+    solcast.data["last_updated"] = last_updated
     await hass.services.async_call(DOMAIN, action, {}, blocking=True)
     if wait_exception:
         await _wait_for_raise(hass, wait_exception)
@@ -202,9 +202,9 @@ async def _exec_update_actuals(
     if last_update_delta == 0:
         last_updated = dt(year=2020, month=1, day=1, hour=1, minute=1, second=1, tzinfo=datetime.UTC)
     else:
-        last_updated = solcast._data_actuals["last_updated"] - timedelta(seconds=last_update_delta)  # pyright: ignore[reportPrivateUsage]
+        last_updated = solcast.data_actuals["last_updated"] - timedelta(seconds=last_update_delta)
         _LOGGER.info("Mock last updated: %s", last_updated)
-    solcast._data_actuals["last_updated"] = last_updated  # pyright: ignore[reportPrivateUsage]
+    solcast.data_actuals["last_updated"] = last_updated
     await hass.services.async_call(DOMAIN, action, {}, blocking=True)
     if wait_exception:
         await _wait_for_raise(hass, wait_exception)
@@ -635,7 +635,7 @@ async def test_integration(  # noqa: C901
         assert solcast.sites_status is SitesStatus.OK
         assert solcast._loaded_data is True  # pyright: ignore[reportPrivateUsage]
         assert "Dampening factors corrupt or not found, setting to 1.0" not in caplog.text
-        assert solcast._tz == ZONE  # pyright: ignore[reportPrivateUsage]
+        assert solcast.tz == ZONE
 
         # Test cache files are as expected
         if len(options["api_key"].split(",")) == 1:
@@ -860,10 +860,10 @@ async def test_integration(  # noqa: C901
         solcast.options.auto_update = AutoUpdate.NONE
 
         # Verify data schema
-        verify_data_schema(solcast._data)  # pyright: ignore[reportPrivateUsage]
-        verify_data_schema(solcast._data_undampened)  # pyright: ignore[reportPrivateUsage]
-        verify_data_schema(solcast._data_actuals)  # pyright: ignore[reportPrivateUsage]
-        verify_data_schema(solcast._data_actuals_dampened)  # pyright: ignore[reportPrivateUsage]
+        verify_data_schema(solcast.data)
+        verify_data_schema(solcast.data_undampened)
+        verify_data_schema(solcast.data_actuals)
+        verify_data_schema(solcast.data_actuals_dampened)
 
         caplog.clear()
 
@@ -1193,31 +1193,31 @@ async def test_remaining_actions(
         queries: list[dict[str, Any]] = [
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
-                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=1).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.day_start_utc().isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.day_start_utc(future=1).isoformat(),
                 },
                 "expect": 48,
             },
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
-                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=1).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.day_start_utc().isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.day_start_utc(future=1).isoformat(),
                     UNDAMPENED: True,
                 },
                 "expect": 48,
             },
             {
                 "query": {
-                    EVENT_START_DATETIME: (solcast.dt_helper.get_day_start_utc(future=-1) + timedelta(hours=3)).isoformat(),
-                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
+                    EVENT_START_DATETIME: (solcast.dt_helper.day_start_utc(future=-1) + timedelta(hours=3)).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.day_start_utc().isoformat(),
                     SITE: "1111-1111-1111-1111",
                 },
                 "expect": 42,
             },
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=-3).isoformat(),
-                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=-1).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.day_start_utc(future=-3).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.day_start_utc(future=-1).isoformat(),
                     SITE: "2222_2222_2222_2222",
                     UNDAMPENED: True,
                 },
@@ -1244,18 +1244,18 @@ async def test_remaining_actions(
                 DOMAIN,
                 "query_forecast_data",
                 {
-                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=DEFAULT_FORECAST_DAYS + 2).isoformat(),
-                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=DEFAULT_FORECAST_DAYS + 6).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.day_start_utc(future=DEFAULT_FORECAST_DAYS + 2).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.day_start_utc(future=DEFAULT_FORECAST_DAYS + 6).isoformat(),
                 },
                 blocking=True,
                 return_response=True,
             )
 
         # Verify data schema
-        verify_data_schema(solcast._data)  # pyright: ignore[reportPrivateUsage]
-        verify_data_schema(solcast._data_undampened)  # pyright: ignore[reportPrivateUsage]
-        verify_data_schema(solcast._data_actuals)  # pyright: ignore[reportPrivateUsage]
-        verify_data_schema(solcast._data_actuals_dampened)  # pyright: ignore[reportPrivateUsage]
+        verify_data_schema(solcast.data)
+        verify_data_schema(solcast.data_undampened)
+        verify_data_schema(solcast.data_actuals)
+        verify_data_schema(solcast.data_actuals_dampened)
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
@@ -1324,7 +1324,7 @@ async def test_scenarios(  # noqa: C901
                 DEFAULT_INPUT1[AUTO_DAMPEN],
             )
             solcast_bad: SolcastApi = SolcastApi(session, connection_options, hass, entry)
-            await solcast_bad.serialise_data(solcast_bad._data, str(Path(f"{config_dir}/solcast.json")))  # pyright: ignore[reportPrivateUsage]
+            await solcast_bad.serialise_data(solcast_bad.data, str(Path(f"{config_dir}/solcast.json")))
             assert "Not serialising empty data" in caplog.text
 
         # Assert good start
@@ -1414,7 +1414,7 @@ async def test_scenarios(  # noqa: C901
             pytest.fail("Reload failed")
         await _wait_for_frozen_update(hass, caplog, freezer)
         assert "is older than expected, should be" in caplog.text
-        assert solcast._data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)  # pyright: ignore[reportPrivateUsage]
+        assert solcast.data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)
         assert "ERROR" not in caplog.text
         _no_exception(caplog)
 
@@ -1436,7 +1436,7 @@ async def test_scenarios(  # noqa: C901
             pytest.fail("Reload failed")
         await _wait_for_frozen_update(hass, caplog, freezer)
         assert "is older than expected, should be" in caplog.text
-        assert solcast._data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)  # pyright: ignore[reportPrivateUsage]
+        assert solcast.data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)
         assert "hours of past data" in caplog.text
         assert "ERROR" not in caplog.text
         _no_exception(caplog)
@@ -1469,7 +1469,7 @@ async def test_scenarios(  # noqa: C901
             pytest.fail("Reload failed")
         await _wait_for_frozen_update(hass, caplog, freezer)
         assert "The update automation has not been running" in caplog.text
-        assert solcast._data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)  # pyright: ignore[reportPrivateUsage]
+        assert solcast.data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)
         assert "hours of past data" in caplog.text
         assert "ERROR" not in caplog.text
         _no_exception(caplog)
@@ -1610,7 +1610,7 @@ async def test_scenarios(  # noqa: C901
         session_set(MOCK_BUSY)
         sites_file.write_text(corrupt, encoding="utf-8")
         await _reload(hass, entry)
-        assert "Exception in __sites_data(): Expecting value:" in caplog.text
+        assert "Exception in _sites_data(): Expecting value:" in caplog.text
         sites_file.write_text(json.dumps(sites), encoding="utf-8")
         session_clear(MOCK_BUSY)
         caplog.clear()
@@ -1717,8 +1717,8 @@ async def test_estimated_actuals(
         queries: list[dict[str, Any]] = [
             {
                 "query": {
-                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=-1).isoformat(),
-                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc().isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.day_start_utc(future=-1).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.day_start_utc().isoformat(),
                 },
                 "expect": 48,
             },
@@ -1745,8 +1745,8 @@ async def test_estimated_actuals(
                 DOMAIN,
                 "query_estimate_data",
                 {
-                    EVENT_START_DATETIME: solcast.dt_helper.get_day_start_utc(future=-50).isoformat(),
-                    EVENT_END_DATETIME: solcast.dt_helper.get_day_start_utc(future=-40).isoformat(),
+                    EVENT_START_DATETIME: solcast.dt_helper.day_start_utc(future=-50).isoformat(),
+                    EVENT_END_DATETIME: solcast.dt_helper.day_start_utc(future=-40).isoformat(),
                 },
                 blocking=True,
                 return_response=True,
@@ -1764,7 +1764,7 @@ async def test_estimated_actuals(
         if energy_dashboard is None:
             pytest.fail("Energy dashboard data is None")
         else:
-            assert energy_dashboard["wh_hours"].get((solcast.dt_helper.get_day_start_utc() - timedelta(hours=8)).isoformat()) == 936.0
+            assert energy_dashboard["wh_hours"].get((solcast.dt_helper.day_start_utc() - timedelta(hours=8)).isoformat()) == 936.0
 
         session_set(MOCK_ALTER_HISTORY)
         await _exec_update_actuals(hass, coordinator, solcast, caplog, "force_update_estimates")
@@ -1779,7 +1779,7 @@ async def test_estimated_actuals(
         if energy_dashboard is None:
             pytest.fail("Energy dashboard data is None")
         else:
-            assert energy_dashboard["wh_hours"].get((solcast.dt_helper.get_day_start_utc() - timedelta(hours=8)).isoformat()) == 374.0
+            assert energy_dashboard["wh_hours"].get((solcast.dt_helper.day_start_utc() - timedelta(hours=8)).isoformat()) == 374.0
 
         _LOGGER.debug("Testing get actuals abort if already in progress")
         caplog.clear()

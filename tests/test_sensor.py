@@ -414,7 +414,7 @@ async def test_sensor_states(  # noqa: C901
         assert state.state != STATE_UNAVAILABLE
         assert state.state == sensors["api_used"]["state"][key]
 
-        freezer.move_to((dt.now(solcast._tz) + timedelta(hours=24)).replace(minute=27, second=27))  # pyright: ignore[reportPrivateUsage]
+        freezer.move_to((dt.now(solcast.tz) + timedelta(hours=24)).replace(minute=27, second=27))
         await hass.async_block_till_done()
 
         # Consolidate breakdowns for the key scenarios
@@ -608,12 +608,12 @@ async def test_sensor_unavailable(
         solcast: SolcastApi = coordinator.solcast
 
         # Turn SolcastApi to custard.
-        old_solcast_data = copy.deepcopy(solcast._data)  # pyright: ignore[reportPrivateUsage]
-        old_solcast_data_undampened = copy.deepcopy(solcast._data_undampened)  # pyright: ignore[reportPrivateUsage]
-        solcast._data["siteinfo"]["1111-1111-1111-1111"]["forecasts"] = ["blah"]  # pyright: ignore[reportPrivateUsage]
-        solcast._data["siteinfo"]["2222-2222-2222-2222"]["forecasts"] = []  # pyright: ignore[reportPrivateUsage]
-        solcast._data_undampened["siteinfo"]["1111-1111-1111-1111"]["forecasts"] = []  # pyright: ignore[reportPrivateUsage]
-        solcast._data_undampened["siteinfo"]["2222-2222-2222-2222"]["forecasts"] = []  # pyright: ignore[reportPrivateUsage]
+        old_solcast_data = copy.deepcopy(solcast.data)
+        old_solcast_data_undampened = copy.deepcopy(solcast.data_undampened)
+        solcast.data["siteinfo"]["1111-1111-1111-1111"]["forecasts"] = ["blah"]
+        solcast.data["siteinfo"]["2222-2222-2222-2222"]["forecasts"] = []
+        solcast.data_undampened["siteinfo"]["1111-1111-1111-1111"]["forecasts"] = []
+        solcast.data_undampened["siteinfo"]["2222-2222-2222-2222"]["forecasts"] = []
 
         await solcast.build_forecast_data()
         coordinator._data_updated = True  # pyright: ignore[reportPrivateUsage]
@@ -634,9 +634,9 @@ async def test_sensor_unavailable(
         caplog.clear()
 
         # Test when some future day data is missing (remove D3 onwards).
-        solcast._data_undampened = old_solcast_data_undampened  # pyright: ignore[reportPrivateUsage]
+        solcast.data_undampened = old_solcast_data_undampened
         for site in ("1111-1111-1111-1111", "2222-2222-2222-2222"):
-            solcast._data["siteinfo"][site]["forecasts"] = old_solcast_data["siteinfo"][site]["forecasts"][  # pyright: ignore[reportPrivateUsage]
+            solcast.data["siteinfo"][site]["forecasts"] = old_solcast_data["siteinfo"][site]["forecasts"][
                 : -(269 + (DEFAULT_FORECAST_DAYS - 8) * 48)
             ]
         await solcast.build_forecast_data()
@@ -655,9 +655,9 @@ async def test_sensor_unavailable(
         caplog.clear()
 
         # Test when 'today' is partial (remove D3 onwards).
-        solcast._data_undampened = old_solcast_data_undampened  # pyright: ignore[reportPrivateUsage]
+        solcast.data_undampened = old_solcast_data_undampened
         for site in ("1111-1111-1111-1111", "2222-2222-2222-2222"):
-            solcast._data["siteinfo"][site]["forecasts"] = old_solcast_data["siteinfo"][site]["forecasts"][  # pyright: ignore[reportPrivateUsage]
+            solcast.data["siteinfo"][site]["forecasts"] = old_solcast_data["siteinfo"][site]["forecasts"][
                 : -(325 + (DEFAULT_FORECAST_DAYS - 8) * 48)
             ]
         await solcast.build_forecast_data()

@@ -150,7 +150,7 @@ def validate_api_limit(user_input: dict[str, Any], api_count: int) -> tuple[str,
     return api_quota, None
 
 
-async def __get_time_zone(hass: HomeAssistant) -> ZoneInfo | timezone:
+async def _get_time_zone(hass: HomeAssistant) -> ZoneInfo | timezone:
     tz = await dt_util.async_get_time_zone(hass.config.time_zone)
     return tz if tz is not None else dt_util.UTC
 
@@ -172,7 +172,7 @@ async def validate_sites(hass: HomeAssistant, user_input: dict[str, Any]) -> tup
         user_input[API_QUOTA],
         DEFAULT_SOLCAST_HTTPS_URL,
         hass.config.path(f"{hass.config.config_dir}/solcast.json"),
-        await __get_time_zone(hass),
+        await _get_time_zone(hass),
         user_input[AUTO_UPDATE],
         {str(a): 1.0 for a in range(24)},
         user_input[CUSTOM_HOUR_SENSOR],

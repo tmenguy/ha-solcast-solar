@@ -285,7 +285,7 @@ def get_session_headers(solcast: SolcastApi, version: str) -> dict[str, str]:
 async def __get_granular_dampening(hass: HomeAssistant, entry: ConfigEntry, solcast: SolcastApi) -> None:
     opt = {**entry.options}
     # Set internal per-site dampening set flag. This is a hidden option until True.
-    opt[SITE_DAMP] = await solcast.granular_dampening_data()
+    opt[SITE_DAMP] = await solcast.dampening.granular_data()
     hass.config_entries.async_update_entry(entry, options=opt)
 
 
@@ -319,19 +319,16 @@ async def __check_auto_update_missed(coordinator: SolcastUpdateCoordinator) -> b
     """Check whether an auto-update has been missed, and if so update forecast."""
     stale = False
     if coordinator.solcast.options.auto_update != AutoUpdate.NONE:
-        auto_updated = coordinator.solcast.get_data()[AUTO_UPDATED]
+        auto_updated = coordinator.solcast.data[AUTO_UPDATED]
         if auto_updated == 99999 or auto_updated != coordinator.divisions:  # Cannot determine freshness
             _LOGGER.debug("Cannot determine freshness of auto-update forecast (last update forced, or configuration changed)")
             stale = False
         elif auto_updated > 0:
             _LOGGER.debug("Checking whether auto update forecast is stale")
-            if (
-                coordinator.interval_just_passed is not None
-                and coordinator.solcast.get_data()[LAST_ATTEMPT] < coordinator.interval_just_passed
-            ):
+            if coordinator.interval_just_passed is not None and coordinator.solcast.data[LAST_ATTEMPT] < coordinator.interval_just_passed:
                 _LOGGER.info(
                     "Last auto update forecast recorded (%s) is older than expected, should be (%s), updating forecast",
-                    coordinator.solcast.get_data()[LAST_ATTEMPT].astimezone(coordinator.solcast.options.tz).strftime(DT_DATE_FORMAT),
+                    coordinator.solcast.data[LAST_ATTEMPT].astimezone(coordinator.solcast.options.tz).strftime(DT_DATE_FORMAT),
                     coordinator.interval_just_passed.astimezone(coordinator.solcast.options.tz).strftime(DT_DATE_FORMAT),
                 )
                 kwargs: dict[str, Any] = {
@@ -440,8 +437,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     hass.data[DOMAIN][ENTRY_OPTIONS] = {**entry.options}
 
     if await solcast.load_saved_data():
-        await solcast.model_automated_dampening()
-        await solcast.apply_forward_dampening()
+        await solcast.dampening.model_automated()
+        await solcast.dampening.apply_forward()
         await solcast.build_forecast_and_actuals(raise_exc=True)
 
     coordinator = SolcastUpdateCoordinator(hass, entry, solcast, version)
@@ -541,7 +538,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         """
         try:
             _LOGGER.info("Action: Query estimate data")
-            day_start = coordinator.solcast.dt_helper.get_day_start_utc()
+            day_start = coordinator.solcast.dt_helper.day_start_utc()
             data = await coordinator.service_query_estimate_data(
                 dt_util.as_utc(call.data.get(EVENT_START_DATETIME, day_start - timedelta(days=1))),
                 dt_util.as_utc(call.data.get(EVENT_END_DATETIME, day_start)),
@@ -605,18 +602,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
                 damp_factors.update({f"{i}": factor})
                 opt[f"damp{i:02}"] = factor
             solcast.damp = damp_factors
-            if solcast.granular_dampening:
+            if solcast.dampening.factors:
                 _LOGGER.debug("Clear granular dampening")
                 opt[SITE_DAMP] = False  # Clear "hidden" option.
-                solcast.set_allow_granular_dampening_reset(True)
+                solcast.dampening.set_allow_granular_reset(True)
         else:
-            await solcast.refresh_granular_dampening_data()  # Ensure latest file content gets updated
-            solcast.granular_dampening[site] = [float(factors[i]) for i in range(len(factors))]
-            await solcast.serialise_granular_dampening()
+            await solcast.dampening.refresh_granular_data()  # Ensure latest file content gets updated
+            solcast.dampening.factors[site] = [float(factors[i]) for i in range(len(factors))]
+            await solcast.dampening.serialise_granular()
             old_damp = opt.get(SITE_DAMP, False)
             opt[SITE_DAMP] = True  # Set "hidden" option.
             if opt[SITE_DAMP] == old_damp:
-                await solcast.apply_forward_dampening()
+                await solcast.dampening.apply_forward()
                 await coordinator.solcast.build_forecast_data()
         coordinator.set_data_updated(True)
         await coordinator.update_integration_listeners()
@@ -642,7 +639,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             site = site.lower().replace("_", "-")
         else:
             site_underscores = False
-        data = await solcast.get_dampening(site=site, site_underscores=site_underscores)
+        data = await solcast.dampening.get(site=site, site_underscores=site_underscores)
         return {"data": data}
 
     async def action_call_set_hard_limit(call: ServiceCall) -> None:
@@ -935,7 +932,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
             reload = True
             if hass.data[DOMAIN][ENTRY_OPTIONS].get(AUTO_DAMPEN, False):
                 # Turning auto-dampening off, so reset the granular dampening file content.
-                path = Path(coordinator.solcast.get_filename_dampening())
+                path = Path(coordinator.solcast.dampening.get_filename())
                 _LOGGER.debug("Unlink %s", path)
                 if path.exists():
                     path.unlink()
@@ -943,12 +940,12 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         if changed(SITE_DAMP):
             damp_changed = True
             if not entry.options[SITE_DAMP]:
-                if coordinator.solcast.allow_granular_dampening_reset():
-                    coordinator.solcast.granular_dampening = {}
-                    path = Path(coordinator.solcast.get_filename_dampening())
+                if coordinator.solcast.dampening.allow_granular_reset():
+                    coordinator.solcast.dampening.factors = {}
+                    path = Path(coordinator.solcast.dampening.get_filename())
                     if path.exists():
                         path.unlink()
-            await coordinator.solcast.apply_forward_dampening()
+            await coordinator.solcast.dampening.apply_forward()
 
         if damp_changed or changed(USE_ACTUALS):
             recalculate_and_refresh = True

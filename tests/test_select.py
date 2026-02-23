@@ -57,7 +57,7 @@ async def test_select_change_value(
         coordinator: SolcastUpdateCoordinator = entry.runtime_data.coordinator
         solcast: SolcastApi = coordinator.solcast
 
-        freezer.move_to((dt.now(solcast._tz) + timedelta(hours=24)).replace(minute=27, second=27))  # pyright: ignore[reportPrivateUsage]
+        freezer.move_to((dt.now(solcast.tz) + timedelta(hours=24)).replace(minute=27, second=27))
         await hass.async_block_till_done()
 
         assert (

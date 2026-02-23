@@ -146,19 +146,11 @@ class DateTimeHelper:
         """
         self._tz = tz
 
-    def dst(self, dt_obj: dt | None = None) -> bool:
-        """Return whether a given date is daylight savings time, or for zones using Winter time whether standard time."""
-        result = False
-        if dt_obj is not None:
-            delta = timedelta(hours=1) if str(self._tz) not in WINTER_TIME else timedelta(hours=0)
-            result = dt_obj.astimezone(self._tz).dst() == delta
-        return result
+    def day_start(self, ts: dt) -> dt:
+        """Get day start datetime for a given timestamp."""
+        return ts.astimezone(self._tz).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def is_interval_dst(self, interval: dict[str, Any]) -> bool:
-        """Return whether an interval is daylight savings time, or for zones using Winter time whether standard time."""
-        return self.dst(interval[PERIOD_START].astimezone(self._tz))
-
-    def get_day_start_utc(self, future: int = 0) -> dt:
+    def day_start_utc(self, future: int = 0) -> dt:
         """Return the UTC datetime representing midnight local time.
 
         Arguments:
@@ -171,9 +163,21 @@ class DateTimeHelper:
         for_when = (dt.now(self._tz) + timedelta(days=future)).astimezone(self._tz)
         return for_when.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(UTC)
 
-    def utc_previous_midnight(self) -> dt:
-        """Return the UTC datetime representing midnight UTC of the current day."""
-        return dt.now().astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    def dst(self, dt_obj: dt | None = None) -> bool:
+        """Return whether a given date is daylight savings time, or for zones using Winter time whether standard time."""
+        result = False
+        if dt_obj is not None:
+            delta = timedelta(hours=1) if str(self._tz) not in WINTER_TIME else timedelta(hours=0)
+            result = dt_obj.astimezone(self._tz).dst() == delta
+        return result
+
+    def hour_start_utc(self) -> dt:
+        """Return the UTC datetime representing the start of the current hour."""
+        return dt.now(self._tz).replace(minute=0, second=0, microsecond=0).astimezone(UTC)
+
+    def is_interval_dst(self, interval: dict[str, Any]) -> bool:
+        """Return whether an interval is daylight savings time, or for zones using Winter time whether standard time."""
+        return self.dst(interval[PERIOD_START].astimezone(self._tz))
 
     def now_utc(self) -> dt:
         """Return the UTC datetime as at the previous minute boundary."""
@@ -183,9 +187,9 @@ class DateTimeHelper:
         """Return the UTC datetime including seconds/microseconds."""
         return dt.now(self._tz).astimezone(UTC)
 
-    def hour_start_utc(self) -> dt:
-        """Return the UTC datetime representing the start of the current hour."""
-        return dt.now(self._tz).replace(minute=0, second=0, microsecond=0).astimezone(UTC)
+    def utc_previous_midnight(self) -> dt:
+        """Return the UTC datetime representing midnight UTC of the current day."""
+        return dt.now().astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 class DateTimeEncoder(json.JSONEncoder):
