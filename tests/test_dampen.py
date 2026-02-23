@@ -620,7 +620,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
             freezer.move_to((dt.now(solcast.tz) + timedelta(**roll)).replace(minute=0, second=0, microsecond=0))
             await hass.async_block_till_done()
             solcast.suppress_advanced_watchdog_reload = True
-            await solcast.read_advanced_options()
+            await solcast.advanced_opt.read_advanced_options()
             await _wait_for_it(hass, caplog, freezer, "Update generation data", long_time=True)
             await _wait_for_it(hass, caplog, freezer, "Estimated actual mean APE", long_time=True)
             _no_exception(caplog)

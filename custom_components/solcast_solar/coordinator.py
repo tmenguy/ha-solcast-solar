@@ -394,13 +394,13 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                     await asyncio.sleep(0.5)
                     if self.watchdog[task][EVENT] == FileEvent.UPDATE:
                         self.watchdog[task][EVENT] = FileEvent.NO_EVENT
-                        change = await self.solcast.read_advanced_options()
+                        change = await self.solcast.advanced_opt.read_advanced_options()
                         if change and self.solcast.advanced_options.get(ADVANCED_RELOAD_ON_ADVANCED_CHANGE, False):
                             _LOGGER.debug("Advanced options changed, restarting")
                             async_call_later(self.hass, 1, self._restart)
                 if self.watchdog[task][EVENT] == FileEvent.DELETE:
                     _LOGGER.debug("Advanced options file deleted, no longer monitoring %s for changes", self._file_advanced)
-                    self.solcast.set_default_advanced_options()
+                    self.solcast.advanced_opt.set_default_advanced_options()
             finally:
                 observer.stop()
                 observer.join()
@@ -461,7 +461,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             )
             self._last_day = current_day
 
-            self.solcast.log_advanced_options()  # Daily reminder of advanced options in use
+            self.solcast.advanced_opt.log_advanced_options()  # Daily reminder of advanced options in use
             await self._update_midnight_spline_recalculate()
             self._auto_update_setup()
 

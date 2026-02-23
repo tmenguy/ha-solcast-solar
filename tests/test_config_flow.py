@@ -811,7 +811,7 @@ async def test_advanced_options(
         entry = await async_init_integration(hass, options)
         coodinator: SolcastUpdateCoordinator = entry.runtime_data.coordinator
         solcast: SolcastApi = coodinator.solcast
-        advanced_options_with_aliases, _ = solcast._advanced_options_with_aliases()
+        advanced_options_with_aliases, _ = solcast.advanced_opt.advanced_options_with_aliases()
 
         async def wait():
             for _ in range(2000):
