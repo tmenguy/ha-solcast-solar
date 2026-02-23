@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers import issue_registry as ir
@@ -400,6 +401,19 @@ async def raise_or_clear_advanced_deprecated(
         if issue is not None:
             _LOGGER.debug("Removing advanced deprecation issue")
             ir.async_delete_issue(hass, DOMAIN, ISSUE_ADVANCED_DEPRECATED)
+
+
+async def async_trigger_automation_by_name(hass: HomeAssistant, name: str) -> bool:
+    """Trigger an automation by friendly name; returns True if found and triggered."""
+    success = False
+    entity_id = None
+    for state in hass.states.async_all("automation"):
+        if state.attributes.get("friendly_name") == name:
+            entity_id = state.entity_id
+    if entity_id:
+        await hass.services.async_call("automation", "trigger", {ATTR_ENTITY_ID: entity_id}, blocking=True)
+        success = True
+    return success
 
 
 async def clear_cache(filename: str, warn: bool = True):

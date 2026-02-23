@@ -481,8 +481,8 @@ class SolcastSensor(CoordinatorEntity, SensorEntity):
 
         elif self.entity_description.key == "dampen":
             exclude = [FACTORS]
-            for option in ADVANCED_OPTIONS:
-                if "dampening" in option and not ADVANCED_OPTIONS[option].get(AMENDABLE, False):
+            for option, settings in ADVANCED_OPTIONS.items():
+                if "dampening" in option and not settings.get(AMENDABLE, False):
                     exclude.append(option)
             self._state_info[UNRECORDED_ATTRIBUTES] = self._state_info[UNRECORDED_ATTRIBUTES] | frozenset(exclude)
 

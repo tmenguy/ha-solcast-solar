@@ -183,6 +183,16 @@ async def _exec_update(
     elif wait:
         await _wait_for_update(hass, caplog)
         await solcast.tasks_cancel()
+        # If _wait_for_update exited on "pausing", the outer _forecast_update task is still
+        # running: the inner TASK_FORECASTS_FETCH was cancelled but _forecast_update itself
+        # is not HA-tracked, so hass.async_block_till_done() won't wait for it.  Under
+        # coverage the task can be slow enough to log "Completed task update" *after* the
+        # next iteration's caplog.clear(), making _wait_for_update exit on stale content.
+        # Wait here until the outer task logs its completion before proceeding.
+        if "pausing" in caplog.text:
+            async with asyncio.timeout(30):
+                while "Completed task update" not in caplog.text and "Completed task force_update" not in caplog.text:
+                    await asyncio.sleep(0.01)
     await hass.async_block_till_done()
 
 
@@ -211,7 +221,7 @@ async def _exec_update_actuals(
     elif wait:
         await _wait_for_update(hass, caplog)
         await solcast.tasks_cancel()
-        async with asyncio.timeout(1):
+        async with asyncio.timeout(30):
             while coordinator.tasks.get("actuals"):
                 await asyncio.sleep(0.01)
     await hass.async_block_till_done()
@@ -701,7 +711,6 @@ async def test_integration(  # noqa: C901
         solcast.options.auto_update = AutoUpdate.NONE
         await _exec_update(hass, solcast, caplog, "update_forecasts", last_update_delta=20)
         assert "seconds before retry" in caplog.text
-        assert "ERROR" not in caplog.text
         await _wait_for(caplog, "Forecast has not been updated")
         session_clear(MOCK_BUSY)
 

@@ -28,7 +28,7 @@ from aiohttp import ClientConnectionError, ClientResponseError, ClientSession
 from aiohttp.client_reqrep import ClientResponse
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, CONF_API_KEY
+from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers import issue_registry as ir
@@ -156,6 +156,7 @@ from .util import (
     SitesStatus,
     SolcastApiStatus,
     UsageStatus,
+    async_trigger_automation_by_name,
     clear_cache,
     cubic_interp,
     forecast_entry_update,
@@ -405,17 +406,19 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             estimate_set.append(ESTIMATE90)
         return estimate_set
 
-    def is_stale_data(self) -> bool:
-        """Return whether the forecast was last updated some time ago (i.e. is stale).
+    @property
+    def stale_data(self) -> bool:
+        """Whether the forecast was last updated some time ago (i.e. is stale).
 
         Returns:
             bool: True for stale, False if updated recently.
         """
-        last_updated = self.get_last_updated()
+        last_updated = self.last_updated
         return last_updated is not None and last_updated < self.dt_helper.day_start_utc(future=-1)
 
-    def is_stale_usage_cache(self) -> bool:
-        """Return whether the usage cache was last reset over 24-hours ago (i.e. is stale).
+    @property
+    def stale_usage_cache(self) -> bool:
+        """Whether the usage cache was last reset over 24-hours ago (i.e. is stale).
 
         Returns:
             bool: True for stale, False if reset recently.
@@ -428,8 +431,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 return True
         return False
 
-    def get_dampen(self) -> bool:
-        """Return whether dampening is enabled.
+    @property
+    def dampening_enabled(self) -> bool:
+        """Whether dampening is enabled.
 
         Returns:
             bool: Whether dampening is enabled.
@@ -440,8 +444,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             or (not self.options.auto_dampen and not self.dampening.factors and sum(self.options.dampening.values()) != 24)
         )
 
-    def _is_multi_key(self) -> bool:
-        """Test whether multiple API keys are in use.
+    @property
+    def multi_key(self) -> bool:
+        """Whether multiple API keys are in use.
 
         Returns:
             bool: True for multiple API Solcast accounts configured. If configured then separate files will be used for caches.
@@ -457,7 +462,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             str: A fully qualified cache filename using a simple name or separate files for more than one API key.
         """
-        return f"{self._config_dir}/solcast-usage{'' if not self._is_multi_key() else '-' + api_key}.json"
+        return f"{self._config_dir}/solcast-usage{'' if not self.multi_key else '-' + api_key}.json"
 
     def _get_sites_cache_filename(self, api_key: str) -> str:
         """Build a site details cache filename.
@@ -468,7 +473,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Returns:
             str: A fully qualified cache filename using a simple name or separate files for more than one API key.
         """
-        return f"{self._config_dir}/solcast-sites{'' if not self._is_multi_key() else '-' + api_key}.json"
+        return f"{self._config_dir}/solcast-sites{'' if not self.multi_key else '-' + api_key}.json"
 
     async def serialise_data(self, data: dict[str, Any], filename: str) -> bool:
         """Serialise data to file.
@@ -563,7 +568,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             self._api_used_reset[api_key] = None
             _LOGGER.debug(
                 "Sites loaded%s",
-                (" for " + redact_api_key(api_key)) if self._is_multi_key() else "",
+                (" for " + redact_api_key(api_key)) if self.multi_key else "",
             )
 
         def check_rekey(response_json: dict[str, Any], api_key: str) -> bool:
@@ -789,7 +794,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 else:
                     _LOGGER.debug(
                         "Usage loaded%s",
-                        (" for " + redact_api_key(api_key)) if self._is_multi_key() else "",
+                        (" for " + redact_api_key(api_key)) if self.multi_key else "",
                     )
                 if used_reset is not None:
                     if self.dt_helper.real_now_utc() > used_reset + timedelta(hours=24):
@@ -1052,9 +1057,9 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     for _site in response_json.get(SITES, []):
                         if _site.get(API_KEY):
                             extant_sites[_site[API_KEY]].append(_site)
-                            if not self._is_multi_key():
+                            if not self.multi_key:
                                 single_key = _site[API_KEY]
-                        elif not self._is_multi_key():  # The key is unknown because old schema version
+                        elif not self.multi_key:  # The key is unknown because old schema version
                             extant_sites[UNKNOWN].append(_site)
             for usage in usages:
                 async with aiofiles.open(usage) as file:
@@ -1066,14 +1071,14 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                     match = re.search(r"solcast-usage-(.+)\.json", usage)
                     if match:
                         extant_usage[match.group(1)] = response_json
-                    elif not self._is_multi_key() and single_key:
+                    elif not self.multi_key and single_key:
                         extant_usage[single_key] = response_json
                     else:  # The key is unknown because old schema version
                         extant_usage[UNKNOWN] = response_json
             return extant_sites, extant_usage
 
         api_keys = [api_key.strip() for api_key in self.options.api_key.split(",")]
-        if self._is_multi_key():
+        if self.multi_key:
             await from_single_site_to_multi(api_keys)
         else:
             await from_multi_site_to_single(api_keys)
@@ -1099,7 +1104,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         Arguments:
             force (bool): Force the reset even if the cache is not stale.
         """
-        if force or self.is_stale_usage_cache():
+        if force or self.stale_usage_cache:
             _LOGGER.debug("Reset API usage")
             for api_key in self._api_used:
                 self._api_used[api_key] = 0
@@ -1393,45 +1398,97 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.data[FAILURE][LAST_14D] = [0, *self.data[FAILURE][LAST_14D][:-1]]
         await self.serialise_data(self.data, self.filename)
 
-    def get_last_attempt(self) -> dt:
-        """Get the date/time of last attempted forecast update.
+    @property
+    def last_attempt(self) -> dt:
+        """Date/time of last attempted forecast update.
 
         Returns:
             dt: The date/time of last attempt.
         """
         return self.data[LAST_ATTEMPT].replace(microsecond=0)
 
-    def get_estimated_actuals_updated_today(self) -> bool:
-        """Check if estimated actuals were updated today.
+    @property
+    def estimated_actuals_updated_today(self) -> bool:
+        """Whether estimated actuals were updated today.
 
         Returns:
             bool: True if updated today, False otherwise.
         """
         return self.data_actuals[LAST_UPDATED].astimezone(self.tz).date() == dt.now(self.tz).date()
 
-    def get_failures_last_24h(self) -> int:
-        """Get the number of failures in the last 24 hours.
+    @property
+    def failures_last_24h(self) -> int:
+        """Number of failures in the last 24 hours.
 
         Returns:
             int: The number of failures in the last 24 hours.
         """
         return self.data[FAILURE][LAST_24H]
 
-    def get_failures_last_7d(self) -> int:
-        """Get the number of failures in the last 7 days.
+    @property
+    def failures_last_7d(self) -> int:
+        """Number of failures in the last 7 days.
 
         Returns:
-            list[int]: The number of failures in the last 7 days.
+            int: The number of failures in the last 7 days.
         """
         return sum(self.data[FAILURE][LAST_7D])
 
-    def get_failures_last_14d(self) -> int:
-        """Get the number of failures in the last 14 days.
+    @property
+    def failures_last_14d(self) -> int:
+        """Number of failures in the last 14 days.
 
         Returns:
-            list[int]: The number of failures in the last 14 days.
+            int: The number of failures in the last 14 days.
         """
         return sum(self.data[FAILURE][LAST_14D])
+
+    @property
+    def api_used_count(self) -> int:
+        """API polling count for this UTC 24hr period (minimum of all API keys).
+
+        A maximum is used because forecasts are polled at the same time for each configured API key. Should
+        one API key fail but the other succeed then usage will be misaligned, so the highest usage of all
+        API keys will apply.
+
+        Returns:
+            int: The tracked API usage count.
+        """
+        return max(list(self._api_used.values()))
+
+    @property
+    def api_limit(self) -> int:
+        """API polling limit for this UTC 24hr period (minimum of all API keys).
+
+        A minimum is used because forecasts are polled at the same time, so even if one API key has a
+        higher limit that limit will never be reached.
+
+        Returns:
+            int: The lowest API limit of all configured API keys.
+        """
+        return min(list(self._api_limit.values()))
+
+    @property
+    def last_updated(self) -> dt | None:
+        """When the data was last updated.
+
+        Returns:
+            dt | None: The last successful forecast fetch.
+        """
+        return self.data[LAST_UPDATED].astimezone(self.tz) if self.data.get(LAST_UPDATED) is not None else None
+
+    def get_rooftop_site_total_today(self, site: str) -> float | None:
+        """Return total kW for today for a site.
+
+        Arguments:
+            site (str): A Solcast site ID.
+
+        Returns:
+            float | None: Total site kW forecast today.
+        """
+        if self._tally.get(site) is None:
+            _LOGGER.warning("Site total kW forecast today is currently unavailable for %s", site)
+        return self._tally.get(site)
 
     async def delete_solcast_file(self, *args: tuple[Any]) -> None:
         """Delete the solcast json files.
@@ -1490,50 +1547,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         estimate_slice = data[start_index:end_index]
 
         return tuple({**data, PERIOD_START: data[PERIOD_START].astimezone(self.tz)} for data in estimate_slice)
-
-    def get_api_used_count(self) -> int:
-        """Return API polling count for this UTC 24hr period (minimum of all API keys).
-
-        A maximum is used because forecasts are polled at the same time for each configured API key. Should
-        one API key fail but the other succeed then usage will be misaligned, so the highest usage of all
-        API keys will apply.
-
-        Returns:
-            int: The tracked API usage count.
-        """
-        return max(list(self._api_used.values()))
-
-    def get_api_limit(self) -> int:
-        """Return API polling limit for this UTC 24hr period (minimum of all API keys).
-
-        A minimum is used because forecasts are polled at the same time, so even if one API key has a
-        higher limit that limit will never be reached.
-
-        Returns:
-            int: The lowest API limit of all configured API keys.
-        """
-        return min(list(self._api_limit.values()))
-
-    def get_last_updated(self) -> dt | None:
-        """Return when the data was last updated.
-
-        Returns:
-            dt | None: The last successful forecast fetch.
-        """
-        return self.data[LAST_UPDATED].astimezone(self.tz) if self.data.get(LAST_UPDATED) is not None else None
-
-    def get_rooftop_site_total_today(self, site: str) -> float | None:
-        """Return total kW for today for a site.
-
-        Arguments:
-            site (str): A Solcast site ID.
-
-        Returns:
-            float | None: Total site kW forecast today.
-        """
-        if self._tally.get(site) is None:
-            _LOGGER.warning("Site total kW forecast today is currently unavailable for %s", site)
-        return self._tally.get(site)
 
     def get_rooftop_site_extra_data(self, site: str = "") -> dict[str, Any]:
         """Return information about a site.
@@ -2295,7 +2308,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 return f", next auto update at {self._next_update}"
             return ""
 
-        if last_updated := self.get_last_updated():
+        if last_updated := self.last_updated:
             if last_updated + timedelta(seconds=10) > dt.now(UTC):
                 status = f"Not requesting a solar forecast because time is within ten seconds of last update ({last_updated.astimezone(self.tz)})"
                 _LOGGER.warning(status)
@@ -2578,23 +2591,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.data[FAILURE][LAST_7D][0] = self.data[FAILURE][LAST_24H]
         self.data[FAILURE][LAST_14D][0] = self.data[FAILURE][LAST_24H]
 
-    async def async_get_automation_entity_id_by_name(self, name: str) -> str | None:
-        """Return the first automation entity_id whose friendly_name matches name."""
-        entity_id = None
-        for state in self.hass.states.async_all("automation"):
-            if state.attributes.get("friendly_name") == name:
-                entity_id = state.entity_id
-        return entity_id
-
-    async def async_trigger_automation_by_name(self, name: str) -> bool:
-        """Trigger an automation by friendly name; returns True if found and triggered."""
-        success = False
-        entity_id = await self.async_get_automation_entity_id_by_name(name)
-        if entity_id:
-            await self.hass.services.async_call("automation", "trigger", {ATTR_ENTITY_ID: entity_id}, blocking=True)
-            success = True
-        return success
-
     async def fetch_data(  # noqa: C901
         self,
         hours: int = 0,
@@ -2723,7 +2719,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                 _LOGGER.debug("Remove issue for %s", ISSUE_API_UNAVAILABLE)
                                 ir.async_delete_issue(self.hass, DOMAIN, ISSUE_API_UNAVAILABLE)
                                 if (trigger := self.advanced_options[ADVANCED_TRIGGER_ON_API_AVAILABLE]) and trigger:
-                                    await self.async_trigger_automation_by_name(trigger)
+                                    await async_trigger_automation_by_name(self.hass, trigger)
                             _LOGGER.debug(
                                 "Task fetch_data took %.3f seconds",
                                 time.time() - start_time,
@@ -2763,7 +2759,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                     learn_more_url=LEARN_MORE_MISSING_FORECAST_DATA,
                                 )
                                 if (trigger := self.advanced_options[ADVANCED_TRIGGER_ON_API_UNAVAILABLE]) and trigger:
-                                    await self.async_trigger_automation_by_name(trigger)
+                                    await async_trigger_automation_by_name(self.hass, trigger)
 
                     else:
                         _LOGGER.warning(

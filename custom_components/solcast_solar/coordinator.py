@@ -179,11 +179,11 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             ENTITY_PEAK_W_TIME_TOMORROW: [{METHOD: self.solcast.get_peak_time_day, VALUE: 1}],
             ENTITY_PEAK_W_TODAY: [{METHOD: self.solcast.get_peak_power_day, VALUE: 0}],
             ENTITY_PEAK_W_TOMORROW: [{METHOD: self.solcast.get_peak_power_day, VALUE: 1}],
-            ENTITY_API_COUNTER: [{METHOD: self.solcast.get_api_used_count}],
-            ENTITY_API_LIMIT: [{METHOD: self.solcast.get_api_limit}],
-            ENTITY_LAST_UPDATED: [{METHOD: self.solcast.get_last_updated}],
-            ENTITY_LAST_UPDATED_OLD: [{METHOD: self.solcast.get_last_updated}],
-            ENTITY_DAMPEN: [{METHOD: self.solcast.get_dampen}],
+            ENTITY_API_COUNTER: [{METHOD: lambda: self.solcast.api_used_count}],
+            ENTITY_API_LIMIT: [{METHOD: lambda: self.solcast.api_limit}],
+            ENTITY_LAST_UPDATED: [{METHOD: lambda: self.solcast.last_updated}],
+            ENTITY_LAST_UPDATED_OLD: [{METHOD: lambda: self.solcast.last_updated}],
+            ENTITY_DAMPEN: [{METHOD: lambda: self.solcast.dampening_enabled}],
         }
         days = [ENTITY_TOTAL_KWH_FORECAST_TODAY, ENTITY_TOTAL_KWH_FORECAST_TOMORROW] + [
             f"total_kwh_forecast_d{r}" for r in range(3, self.advanced_day_entities)
@@ -557,7 +557,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Check if generation fetch was missed and schedule it."""
 
         if self.solcast.options.get_actuals:
-            if not self.solcast.get_estimated_actuals_updated_today():
+            if not self.solcast.estimated_actuals_updated_today:
                 now_minute = self._get_minute_of_day(dt.now(self.solcast.options.tz))
                 if now_minute <= self.solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_GENERATION_FETCH_DELAY]:
                     update_at = (
@@ -583,7 +583,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
         scheduled = False
         if self.solcast.options.get_actuals:
-            if not self.solcast.get_estimated_actuals_updated_today():
+            if not self.solcast.estimated_actuals_updated_today:
                 now_minute = self._get_minute_of_day(dt.now(self.solcast.options.tz))
                 if now_minute <= self.solcast.advanced_options[ADVANCED_ESTIMATED_ACTUALS_FETCH_DELAY]:
                     update_at = (
@@ -752,7 +752,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
         This is an even spread between sunrise and sunset.
         """
-        self.divisions = int(self.solcast.get_api_limit() / min(len(self.solcast.sites), 2))
+        self.divisions = int(self.solcast.api_limit / min(len(self.solcast.sites), 2))
 
         def get_intervals(sunrise: dt, sunset: dt, log: bool = True):
             intervals_yesterday = []
@@ -822,10 +822,10 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Return attributes for the last updated sensor."""
 
         base: dict[str, int | dt] = {
-            "last_attempt": self.solcast.get_last_attempt().astimezone(self.solcast.options.tz),
-            "failure_count_today": self.solcast.get_failures_last_24h(),
-            "failure_count_7_day": self.solcast.get_failures_last_7d(),
-            "failure_count_14_day": self.solcast.get_failures_last_14d(),
+            "last_attempt": self.solcast.last_attempt.astimezone(self.solcast.options.tz),
+            "failure_count_today": self.solcast.failures_last_24h,
+            "failure_count_7_day": self.solcast.failures_last_7d,
+            "failure_count_14_day": self.solcast.failures_last_14d,
         }
         if self.solcast.options.auto_update != AutoUpdate.NONE:
             return base | {
@@ -841,7 +841,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         try:
             _LOGGER.debug("Started task %s", "update" if completion == "" else completion.replace("Completed task ", ""))
             _LOGGER.debug("Checking for stale usage cache")
-            if self.solcast.is_stale_usage_cache():
+            if self.solcast.stale_usage_cache:
                 _LOGGER.warning("Usage cache reset time is stale, last reset was more than 24-hours ago, resetting API usage")
                 await self.solcast.reset_usage_cache()
                 await self._restart_time_track_midnight_update()

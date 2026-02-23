@@ -301,7 +301,7 @@ async def __check_stale_start(coordinator: SolcastUpdateCoordinator) -> bool:
     """Check whether the integration has been failed for some time and then is restarted, and if so update forecast."""
     _LOGGER.debug("Checking for stale start")
     stale = False
-    if coordinator.solcast.is_stale_data():
+    if coordinator.solcast.stale_data:
         _LOGGER.warning("The update automation has not been running, updating forecast")
         kwargs: dict[str, Any] = {
             "ignore_auto_enabled": True,
