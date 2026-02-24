@@ -30,6 +30,8 @@ from .const import (
     EXCEPTION_HARD_NOT_POSITIVE_NUMBER,
     EXCEPTION_HARD_TOO_MANY,
     EXCEPTION_INTEGRATION_NOT_LOADED,
+    EXCEPTION_INVALID_CUSTOM_HOURS_FORMAT,
+    EXCEPTION_INVALID_CUSTOM_HOURS_RANGE,
     HARD_LIMIT,
     HARD_LIMIT_API,
     HOURS,
@@ -441,14 +443,14 @@ class ServiceActions:
         if not hours_str.isdigit():
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
-                translation_key="invalid_custom_hours_format",
+                translation_key=EXCEPTION_INVALID_CUSTOM_HOURS_FORMAT,
             )
 
         hour_val = int(hours_str)
         if hour_val < 1 or hour_val > 144:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
-                translation_key="invalid_custom_hours_range",
+                translation_key=EXCEPTION_INVALID_CUSTOM_HOURS_RANGE,
             )
 
         opt = {**self._entry.options}
