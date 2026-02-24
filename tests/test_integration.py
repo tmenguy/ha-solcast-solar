@@ -640,7 +640,7 @@ async def test_integration(  # noqa: C901
         if coordinator is None or solcast is None:
             pytest.fail("No coordinator or solcast")
 
-        coordinator.set_next_update()
+        coordinator._updater.set_next_update()
 
         assert solcast.sites_status is SitesStatus.OK
         assert solcast._loaded_data is True  # pyright: ignore[reportPrivateUsage]

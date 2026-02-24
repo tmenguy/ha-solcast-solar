@@ -57,9 +57,9 @@ async def test_midnight(
         assert hass.states.get("sensor.solcast_pv_forecast_api_used").state == "4"  # type: ignore[union-attr]
         assert "Transitioning between summer/standard time" not in caplog.text
 
-        coordinator._intervals = [  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
+        coordinator._updater._intervals = [  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
             dt.fromisoformat("2025-01-10T00:59:30+00:00"),
-            *coordinator._intervals,  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
+            *coordinator._updater._intervals,  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
         ]
         caplog.clear()
         coordinator._data_updated = False  # Improve test coverage  # pyright: ignore[reportPrivateUsage]
