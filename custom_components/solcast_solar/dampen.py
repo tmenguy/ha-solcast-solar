@@ -109,8 +109,9 @@ _LOGGER = logging.getLogger(__name__)
 
 class _ModelEvalResult(NamedTuple):
     """Result of evaluating all model/delta combinations for adaptive dampening."""
-
     daily_model_errors: dict[dt, dict[tuple[int, int], float]]
+    daily_ranks: dict[dt, dict[tuple[int, int], int]]
+    borda_scores: dict[tuple[int, int], float]
     best_ape_adjusted: float
     best_ape_no_delta: float
     best_model_adjusted: int
@@ -352,7 +353,7 @@ class Dampening:
         percentiles: tuple[int, ...] = (50,),
         log_breakdown: bool = False,
         ignored_days: dict[dt, bool] | None = None,
-    ) -> tuple[bool, float, list[float], dict[dt, float]]:  #!#!#
+    ) -> tuple[bool, float, list[float], dict[dt, float]]:
         """Calculate error for a single common peak interval across all days.
 
         Compares actual generation vs dampened estimated actual for one specific interval
@@ -363,10 +364,10 @@ class Dampening:
         filtered out due to export limiting or other exclusions).
 
         Returns:
-            Tuple of (has_inf, mean_ape, percentile_list, daily_errors)  #!#!#
+            Tuple of (has_inf, mean_ape, percentile_list, daily_errors)
         """
         interval_errors: list[float] = []
-        daily_errors: dict[dt, float] = {}  #!#!#
+        daily_errors: dict[dt, float] = {}
 
         # Iterate through actual generation timestamps that exist (not filtered out)
         for timestamp, gen_data in generation_dampening.items():
@@ -390,7 +391,7 @@ class Dampening:
             else:
                 interval_ape = math.inf
 
-            daily_errors[day_start] = interval_ape  #!#!#
+            daily_errors[day_start] = interval_ape
 
             if log_breakdown:
                 _LOGGER.debug(
@@ -403,13 +404,13 @@ class Dampening:
                 )
 
         if len(interval_errors) == 0:
-            return (False, math.inf, [math.inf] * len(percentiles), daily_errors)  #!#!#
+            return (False, math.inf, [math.inf] * len(percentiles), daily_errors)
 
         return (
             False,  # No inf values since we filtered them out
             sum(interval_errors) / len(interval_errors),
             [percentile(sorted(interval_errors), p) for p in percentiles],
-            daily_errors,  #!#!#
+            daily_errors,
         )
 
     async def determine_best_settings(self) -> None:
@@ -462,7 +463,7 @@ class Dampening:
             earliest_common, actuals, generation_dampening, included_intervals, common_peak_interval, use_error
         )
 
-        self._log_model_rankings(result.daily_model_errors)
+        self._log_model_rankings(result)
         await self._apply_best_settings(result, common_peak_interval, use_error)
 
         _LOGGER.debug("Task dampening determine_best_settings took %.3f seconds", time.time() - start_time)
@@ -511,7 +512,7 @@ class Dampening:
                 common_peak_interval // 2,
                 (common_peak_interval % 2) * 30,
             )
-            improvement = result.extant_ape - selected_error
+            improvement = math.inf if result.borda_scores else result.extant_ape - selected_error
             if is_different and improvement > min_error_delta:
                 _LOGGER.info(
                     "Updating automated dampening settings based on %.3f%% improvement over current settings",
@@ -622,6 +623,20 @@ class Dampening:
             },
         )
 
+    def _get_daily_ranks(self, daily_model_errors: dict[dt, dict[tuple[int, int], float]]) -> dict[dt, dict[tuple[int, int], int]]:
+        """Helper to calculate error rankings for each day."""
+        daily_ranks = {}
+        for day, errors in daily_model_errors.items():
+            sorted_items = sorted(errors.items(), key=lambda x: x[1]) # sort only on errors
+            day_rank_map = {}
+            current_rank = 1
+            for i, (md, error) in enumerate(sorted_items):
+                if i > 0 and error > sorted_items[i-1][1]:
+                    current_rank = i + 1 # new rank is current index+1
+                day_rank_map[md] = current_rank
+            daily_ranks[day] = day_rank_map
+        return daily_ranks
+
     async def _evaluate_model_combinations(
         self,
         earliest_common: dt,
@@ -704,17 +719,14 @@ class Dampening:
                     f" (MAPE {error_single_interval:.3f}%)" if use_error != -1 else "",
                 )
 
-        # Compute Borda scores (mean rank position, lower = better). Per-day tie-break of lighter configs.
+        daily_ranks = self._get_daily_ranks(daily_model_errors)
+
+        # Compute Borda scores (mean rank position, lower = better).
         rank_sums: defaultdict[tuple[int, int], float] = defaultdict(float)
         rank_counts: defaultdict[tuple[int, int], int] = defaultdict(int)
-        for day_errors in daily_model_errors.values():
-            for rank, (md, _) in enumerate(
-                sorted(
-                    day_errors.items(),
-                    key=lambda item: (item[1], item[0][0], item[0][1] if item[0][1] >= 0 else float("inf")),
-                ),
-                1,
-            ):
+
+        for day, ranks in daily_ranks.items():
+            for md, rank in ranks.items():
                 rank_sums[md] += rank
                 rank_counts[md] += 1
 
@@ -760,6 +772,8 @@ class Dampening:
 
         return _ModelEvalResult(
             daily_model_errors=daily_model_errors,
+            daily_ranks=daily_ranks,
+            borda_scores=borda_scores,
             best_ape_adjusted=best_ape_adjusted,
             best_ape_no_delta=best_ape_no_delta,
             best_model_adjusted=best_model_adjusted,
@@ -768,41 +782,31 @@ class Dampening:
             extant_ape=extant_ape,
         )
 
-    def _log_model_rankings(self, daily_model_errors: dict[dt, dict[tuple[int, int], float]]) -> None:
+    def _log_model_rankings(self, result: _ModelEvalResult) -> None:
         """Log a per-day rank distribution table for all evaluated model/delta combinations."""
         model_rank_frequencies: defaultdict[tuple[int, int], defaultdict[int, int]] = defaultdict(lambda: defaultdict(int))
         model_chronological_logs: defaultdict[tuple[int, int], list[str]] = defaultdict(list)
         max_rank_observed = 0
 
-        for day in sorted(daily_model_errors.keys()):
-            day_errors = daily_model_errors[day]
-            # Sort by error first, then break ties in favour of less aggressive configs:
-            # model numerically ascending, delta in order 0 < 1 < 2 < … < -1, factoring future models, which may not be present and are assumed to be more aggressive.
-            sorted_day_models = sorted(
-                day_errors.items(),
-                key=lambda item: (item[1], item[0][0], item[0][1] if item[0][1] >= 0 else float("inf")),
-            )
-            day_rank_map: dict[tuple[int, int], int] = {}
+        daily_model_errors = result.daily_model_errors
+        daily_ranks = result.daily_ranks
+        borda_scores = result.borda_scores
 
-            for rank, (md, _) in enumerate(sorted_day_models, 1):
-                day_rank_map[md] = rank
+        for day, ranks in daily_ranks.items():
+            for md, rank in ranks.items():
                 model_rank_frequencies[md][rank] += 1
                 max_rank_observed = max(max_rank_observed, rank)
-
-            for md, _err in day_errors.items():
-                model_chronological_logs[md].append(f"{_err:.2f}% ({ordinal(day_rank_map[md])})")
+                err = daily_model_errors[day][md]
+                model_chronological_logs[md].append(f"{err:.2f}% ({ordinal(rank)})")
 
         if not model_rank_frequencies:
             _LOGGER.debug("No ranking data available (insufficient history or all-infinity errors)")
             return
 
-        # Sort by Borda score, ties broken by lighter-touch preference
-        borda_log: dict[tuple[int, int], float] = {
-            md: sum(rank * count for rank, count in freqs.items()) / sum(freqs.values()) for md, freqs in model_rank_frequencies.items()
-        }
+        # Use existing borda_scores for sorting
         sorted_by_borda = sorted(
-            borda_log.keys(),
-            key=lambda md: (borda_log[md], md[0], md[1] if md[1] >= 0 else float("inf")),
+            borda_scores.keys(),
+            key=lambda md: (borda_scores[md], md[0], md[1] if md[1] >= 0 else float("inf")),
         )
 
         model_rank_profiles = {md: [freqs[r] for r in range(1, max_rank_observed + 1)] for md, freqs in model_rank_frequencies.items()}
@@ -814,7 +818,7 @@ class Dampening:
                 i,
                 md[0],
                 md[1],
-                borda_log[md],
+                borda_scores[md],
                 ", ".join([f"{ordinal(r)}:{count}" for r, count in enumerate(model_rank_profiles[md], 1)]),
             )
             _LOGGER.debug("      History: [%s]", ", ".join(model_chronological_logs[md]))
@@ -822,13 +826,13 @@ class Dampening:
         no_delta_winner = next((md for md in sorted_by_borda if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
         adjusted_winner = next((md for md in sorted_by_borda if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
         if no_delta_winner:
-            _LOGGER.info("Ranking winner (no delta): Model %d (Borda %.2f)", no_delta_winner[0], borda_log[no_delta_winner])
+            _LOGGER.info("Ranking winner (no delta): Model %d (Borda %.2f)", no_delta_winner[0], borda_scores[no_delta_winner])
         if adjusted_winner:
             _LOGGER.info(
                 "Ranking winner (adjusted): Model %d Delta %d (Borda %.2f)",
                 adjusted_winner[0],
                 adjusted_winner[1],
-                borda_log[adjusted_winner],
+                borda_scores[adjusted_winner],
             )
 
     async def get(self, site: str | None, site_underscores: bool) -> list[dict[str, Any]]:
