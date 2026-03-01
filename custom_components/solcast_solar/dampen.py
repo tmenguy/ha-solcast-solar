@@ -727,18 +727,18 @@ class Dampening:
 
         for day in sorted(daily_model_errors.keys()):
             day_errors = daily_model_errors[day]
-            sorted_day_models = sorted(day_errors.items(), key=lambda item: item[1])
+            # Sort by error first, then break ties in favour of less aggressive configs:
+            # model numerically ascending, delta in order 0 < 1 < 2 < … < -1, factoring future models, which may not be present and are assumed to be more aggressive.
+            sorted_day_models = sorted(
+                day_errors.items(),
+                key=lambda item: (item[1], item[0][0], item[0][1] if item[0][1] >= 0 else float("inf")),
+            )
             day_rank_map: dict[tuple[int, int], int] = {}
-            current_rank = 0
-            last_error = -1.0
 
-            for md, error in sorted_day_models:
-                if error != last_error:
-                    current_rank += 1
-                day_rank_map[md] = current_rank
-                last_error = error
-                model_rank_frequencies[md][current_rank] += 1
-                max_rank_observed = max(max_rank_observed, current_rank)
+            for rank, (md, _) in enumerate(sorted_day_models, 1):
+                day_rank_map[md] = rank
+                model_rank_frequencies[md][rank] += 1
+                max_rank_observed = max(max_rank_observed, rank)
 
             for md, _err in day_errors.items():
                 model_chronological_logs[md].append(f"{_err:.2f}% ({ordinal(day_rank_map[md])})")
@@ -746,7 +746,7 @@ class Dampening:
         model_rank_profiles = {md: [freqs[r] for r in range(1, max_rank_observed + 1)] for md, freqs in model_rank_frequencies.items()}
         sorted_models_lex = sorted(
             model_rank_profiles.keys(),
-            key=lambda md: (model_rank_profiles[md], -md[0], -md[1]),
+            key=lambda md: (model_rank_profiles[md], -md[0], -md[1] if md[1] >= 0 else float("-inf")),
             reverse=True,
         )
 
