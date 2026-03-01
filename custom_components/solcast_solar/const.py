@@ -342,6 +342,7 @@ UNRECORDED_ATTRIBUTES: Final[str] = "unrecorded_attributes"
 UPGRADE_FUNCTION: Final[str] = "upgrade_function"
 USE_ACTUALS: Final[str] = "use_actuals"
 VALUE: Final[str] = "value"
+VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED: Final[int] = -99
 VALUE_ADAPTIVE_DAMPENING_NO_DELTA: Final[int] = -1
 VERSION: Final[str] = "version"
 WINTER_TIME: Final[list[str]] = ["Europe/Dublin"]  # Zones that use "Winter time" rather than "Daylight time"

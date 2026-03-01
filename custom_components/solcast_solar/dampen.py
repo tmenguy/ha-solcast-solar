@@ -16,7 +16,7 @@ from operator import itemgetter
 from pathlib import Path
 import random
 import time
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
 import aiofiles
 
@@ -82,6 +82,7 @@ from .const import (
     SITE,
     SITE_DAMP,
     SITE_INFO,
+    VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED,
     VALUE_ADAPTIVE_DAMPENING_NO_DELTA,
     VERSION,
 )
@@ -104,6 +105,18 @@ SET_ALLOW_RESET: Final[bool] = True
 
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class _ModelEvalResult(NamedTuple):
+    """Result of evaluating all model/delta combinations for adaptive dampening."""
+
+    daily_model_errors: dict[dt, dict[tuple[int, int], float]]
+    best_ape_adjusted: float
+    best_ape_no_delta: float
+    best_model_adjusted: int
+    best_model_no_delta: int
+    best_delta_adjusted: int
+    extant_ape: float
 
 
 class Dampening:
@@ -339,7 +352,7 @@ class Dampening:
         percentiles: tuple[int, ...] = (50,),
         log_breakdown: bool = False,
         ignored_days: dict[dt, bool] | None = None,
-    ) -> tuple[bool, float, list[float]]:
+    ) -> tuple[bool, float, list[float], dict[dt, float]]:  #!#!#
         """Calculate error for a single common peak interval across all days.
 
         Compares actual generation vs dampened estimated actual for one specific interval
@@ -350,9 +363,10 @@ class Dampening:
         filtered out due to export limiting or other exclusions).
 
         Returns:
-            Tuple of (has_inf, mean_ape, percentile_list)
+            Tuple of (has_inf, mean_ape, percentile_list, daily_errors)  #!#!#
         """
         interval_errors: list[float] = []
+        daily_errors: dict[dt, float] = {}  #!#!#
 
         # Iterate through actual generation timestamps that exist (not filtered out)
         for timestamp, gen_data in generation_dampening.items():
@@ -376,6 +390,8 @@ class Dampening:
             else:
                 interval_ape = math.inf
 
+            daily_errors[day_start] = interval_ape  #!#!#
+
             if log_breakdown:
                 _LOGGER.debug(
                     "Single interval APE for day %s, Actual %.2f kWh, Estimate %.2f kWh, Error %.2f%s",
@@ -387,12 +403,13 @@ class Dampening:
                 )
 
         if len(interval_errors) == 0:
-            return (False, math.inf, [math.inf] * len(percentiles))
+            return (False, math.inf, [math.inf] * len(percentiles), daily_errors)  #!#!#
 
         return (
             False,  # No inf values since we filtered them out
             sum(interval_errors) / len(interval_errors),
             [percentile(sorted(interval_errors), p) for p in percentiles],
+            daily_errors,  #!#!#
         )
 
     async def determine_best_settings(self) -> None:
@@ -407,24 +424,16 @@ class Dampening:
         _LOGGER.debug("Determining best automated dampening settings")
         start_time = time.time()
 
-        # Error selection method for adaptive dampening error rate (a percentile, or -1 for MAPE)
         if not self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SHIT]:
-            USE_ERROR = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SELECTION]
+            use_error = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SELECTION]
         else:
-            USE_ERROR = random.randint(-1, 100)
-            _LOGGER.debug("Adaptive dampening selection going ape shit with USE_ERROR=%d", USE_ERROR)
+            use_error = random.randint(-1, 100)
+            _LOGGER.debug("Adaptive dampening selection going ape shit with USE_ERROR=%d", use_error)
 
-        # Find earliest data where continuous dampening history is available for all models and deltas
+        min_history_days = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
+        earliest_common = self._find_earliest_common_history(min_history_days)
 
-        CONFIG_UNCHANGED: Final[int] = -99
-
-        earliest_common = self._find_earliest_common_history(
-            self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
-        )
-
-        if earliest_common is None or earliest_common > self.api.dt_helper.day_start_utc() - timedelta(
-            days=self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
-        ):
+        if earliest_common is None or earliest_common > self.api.dt_helper.day_start_utc() - timedelta(days=min_history_days):
             _LOGGER.info("Insufficient continuous dampening history to determine best automated dampening settings")
             return
 
@@ -435,16 +444,9 @@ class Dampening:
         )
 
         actuals = self._build_actuals_from_sites(earliest_common)
-        dampened_actuals: defaultdict[dt, list[float]] = defaultdict(lambda: [0.0] * 48)
-        ignored_days: dict[dt, bool] = {}
         generation_dampening, _ = await self.prepare_generation_data(earliest_common)
 
-        # Select the best interval for single-interval comparison
-        common_peak_interval, avg_gen, avg_factor, variance = self._select_comparison_interval(
-            generation_dampening,
-            self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS],
-        )
-
+        common_peak_interval, avg_gen, avg_factor, variance = self._select_comparison_interval(generation_dampening, min_history_days)
         _LOGGER.debug(
             "Selected interval %d (%02d:%02d) for adaptive comparison: %.3f kWh, factor %.3f, variance %.4f",
             common_peak_interval,
@@ -455,194 +457,50 @@ class Dampening:
             variance,
         )
 
-        best_ape_adjusted = math.inf
-        best_ape_no_delta = math.inf
-        best_model_adjusted = CONFIG_UNCHANGED
-        best_model_no_delta = CONFIG_UNCHANGED
-        best_delta_adjusted = CONFIG_UNCHANGED
-        extant_ape = math.inf
-
-        # Build list of intervals to include on each day. Only include intervals where a model has applied
-        # dampening, ie where the base factor for any model in that interval on that day is not 1.0
-        included_intervals = defaultdict(
-            lambda: [False] * 48,
-            {
-                day_start: [
-                    any(
-                        entry["factors"][i] != 1.0
-                        for deltas in self.auto_factors_history.values()
-                        for entry in deltas[-1]
-                        if self.api.dt_helper.day_start(entry["period_start"]) == day_start
-                    )
-                    for i in range(48)
-                ]
-                for day_start in {
-                    self.api.dt_helper.day_start(entry["period_start"])
-                    for deltas in self.auto_factors_history.values()
-                    for entry in deltas[-1]
-                }
-            },
+        included_intervals = self._build_included_intervals()
+        result = await self._evaluate_model_combinations(
+            earliest_common, actuals, generation_dampening, included_intervals, common_peak_interval, use_error
         )
 
-        for model in range(
-            ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_MODEL][MINIMUM], ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_MODEL][MAXIMUM] + 1
-        ):
-            for delta in range(
-                ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL][MINIMUM_EXTENDED],
-                ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL][MAXIMUM] + 1,
-            ):
-                model_entries = self.auto_factors_history[model][delta]
+        self._log_model_rankings(result.daily_model_errors)
+        await self._apply_best_settings(result, common_peak_interval, use_error)
 
-                should_skip, reason = self._should_skip_model_delta(
-                    model, delta, self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
-                )
-                if should_skip:
-                    _LOGGER.debug("Skipping model %d and delta %d as %s", model, delta, reason)
-                    continue
+        _LOGGER.debug("Task dampening determine_best_settings took %.3f seconds", time.time() - start_time)
 
-                await asyncio.sleep(0)  # Be nice to HA
-                _LOGGER.debug("Evaluating model %d and delta %d", model, delta)
-
-                valid = True
-                dampened_actuals.clear()
-                dampened_intervals: dict[dt, set[int]] = {}  # Track which intervals were dampened per day
-
-                for model_entry in model_entries:
-                    period_start = model_entry["period_start"]
-                    factors = model_entry["factors"]
-
-                    if period_start < earliest_common:
-                        continue
-
-                    day_start = self.api.dt_helper.day_start(period_start)
-
-                    # Validate actuals exist for this day
-                    if day_start not in actuals:
-                        _LOGGER.debug(
-                            "Model %d and delta %d skipped due to missing actuals for dampening history entry %s",
-                            model,
-                            delta,
-                            day_start.strftime(DT_DATE_FORMAT),
-                        )
-                        valid = False
-                        break
-
-                    # Apply dampening factors to actuals for this day
-                    # Each model_entry represents one day's dampening history
-                    dampened_actuals[day_start] = [actuals[day_start][interval] * factors[interval] for interval in range(48)]
-                    dampened_intervals[day_start] = {interval for interval in range(48) if included_intervals[day_start][interval]}
-
-                # Validate counts
-                actual_count = sum(len(v) for v in actuals.values())
-                dampened_count = sum(len(v) for v in dampened_actuals.values())
-
-                if dampened_count != actual_count:
-                    valid = False
-                    _LOGGER.debug(
-                        "Model %d and delta %d produced mismatched actuals count (%d dampened vs %d actuals)",
-                        model,
-                        delta,
-                        dampened_count,
-                        actual_count,
-                    )
-
-                if valid:
-                    # Filter generation data to only include timestamps for dampened intervals
-                    filtered_generation: defaultdict[dt, dict[str, Any]] = defaultdict(
-                        dict,
-                        {
-                            ts: gen_data
-                            for ts, gen_data in generation_dampening.items()
-                            if (
-                                (day_start := self.api.dt_helper.day_start(ts)) in dampened_intervals
-                                and self.adjusted_interval_dt(ts) in dampened_intervals[day_start]
-                            )
-                        },
-                    )
-
-                    # Recalculate daily generation totals from filtered intervals
-                    filtered_generation_day: defaultdict[dt, float] = defaultdict(float)
-                    for ts, gen_data in filtered_generation.items():
-                        if not gen_data.get(EXPORT_LIMITING, False):
-                            filtered_generation_day[self.api.dt_helper.day_start(ts)] += gen_data[GENERATION]
-
-                    # Calculate single-interval error for model comparison
-                    inf_d, error_single_interval, percentiles_single = await self.calculate_single_interval_error(
-                        dampened_actuals,
-                        generation_dampening,
-                        common_peak_interval,
-                        percentiles=(USE_ERROR,) if USE_ERROR != -1 else (),
-                        log_breakdown=self.api.advanced_options[ADVANCED_ESTIMATED_ACTUALS_LOG_MAPE_BREAKDOWN],
-                        ignored_days=ignored_days,
-                    )
-
-                    # Use percentile if configured, otherwise use MAPE (mean APE) from single-interval calculation
-                    error_metric = percentiles_single[0] if percentiles_single else error_single_interval
-                    extant_ape = (
-                        error_metric
-                        if (
-                            model == self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
-                            and delta == self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]
-                        )
-                        else extant_ape
-                    )
-
-                    if inf_d:
-                        _LOGGER.debug("Ignored %s values for model %d and delta %d", math.inf, model, delta)
-
-                    # Defensive check for cases where all errors are infinity or error calculation failed
-                    if error_metric == math.inf or error_single_interval == -1:
-                        _LOGGER.debug("Skipping APE calculation for model %d and delta %d due to APE calculation issue", model, delta)
-                        continue
-
-                    _LOGGER.debug(
-                        "Model %d and delta %d achieved single-interval %s of %.3f%%%s",
-                        model,
-                        delta,
-                        "MAPE" if USE_ERROR == -1 else f"{ordinal(USE_ERROR)} percentile APE",
-                        error_metric,
-                        f" (MAPE {error_single_interval:.3f}%)" if USE_ERROR != -1 else "",
-                    )
-
-                    # Track best models based on single-interval error
-                    if delta == VALUE_ADAPTIVE_DAMPENING_NO_DELTA and error_metric < best_ape_no_delta:
-                        best_ape_no_delta = error_metric
-                        best_model_no_delta = model
-                    elif delta != VALUE_ADAPTIVE_DAMPENING_NO_DELTA and error_metric < best_ape_adjusted:
-                        best_ape_adjusted = error_metric
-                        best_delta_adjusted = delta
-                        best_model_adjusted = model
-                else:
-                    _LOGGER.debug("Skipping APE calculation for model %d and delta %d", model, delta)
-
-        metric_desc = "MAPE" if USE_ERROR == -1 else f"{ordinal(USE_ERROR)} percentile APE"
+    async def _apply_best_settings(
+        self,
+        result: _ModelEvalResult,
+        common_peak_interval: int,
+        use_error: int,
+    ) -> None:
+        """Log and conditionally serialise the best adaptive dampening configuration."""
+        metric_desc = "MAPE" if use_error == -1 else f"{ordinal(use_error)} percentile APE"
         min_error_delta = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA]
-
-        # Determine mode-specific values
         use_delta_mode = not self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT]
 
         if use_delta_mode:
-            selected_model = best_model_adjusted
-            selected_delta = best_delta_adjusted
-            selected_error = best_ape_adjusted
-            current_valid = {selected_model, selected_delta} != {CONFIG_UNCHANGED}
+            selected_model = result.best_model_adjusted
+            selected_delta: int | None = result.best_delta_adjusted
+            selected_error = result.best_ape_adjusted
+            current_valid = {selected_model, selected_delta} != {VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED}
             is_different = {selected_model, selected_delta} != {
                 self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL],
                 self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL],
             }
-            alternative_model = best_model_no_delta
-            alternative_error = best_ape_no_delta
+            alternative_model = result.best_model_no_delta
+            alternative_error = result.best_ape_no_delta
         else:
-            selected_model = best_model_no_delta
+            selected_model = result.best_model_no_delta
             selected_delta = None
-            selected_error = best_ape_no_delta
-            current_valid = selected_model != CONFIG_UNCHANGED
+            selected_error = result.best_ape_no_delta
+            current_valid = selected_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
             is_different = selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
-            alternative_model = best_model_adjusted
-            alternative_error = best_ape_adjusted
+            alternative_model = result.best_model_adjusted
+            alternative_error = result.best_ape_adjusted
 
-        # Process selected configuration
-        if current_valid:
+        if not current_valid:
+            _LOGGER.info("Could not determine best automated dampening settings - values unmodified")
+        else:
             _LOGGER.info(
                 "Best automated dampening settings: model %d%s with single-interval %s of %.3f%% (interval %d: %02d:%02d)",
                 selected_model,
@@ -653,9 +511,7 @@ class Dampening:
                 common_peak_interval // 2,
                 (common_peak_interval % 2) * 30,
             )
-
-            improvement = extant_ape - selected_error
-
+            improvement = result.extant_ape - selected_error
             if is_different and improvement > min_error_delta:
                 _LOGGER.info(
                     "Updating automated dampening settings based on %.3f%% improvement over current settings",
@@ -678,27 +534,239 @@ class Dampening:
                     self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL],
                     f" delta {self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]}" if use_delta_mode else "",
                     metric_desc,
-                    extant_ape,
+                    result.extant_ape,
                 )
             else:
                 _LOGGER.info("Adaptive dampening configuration unchanged")
-        else:
-            _LOGGER.info("Could not determine best automated dampening settings - values unmodified")
 
-        # Warn if alternative mode would have performed better
-        if alternative_model != CONFIG_UNCHANGED and alternative_error < selected_error:
+        if alternative_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED and alternative_error < selected_error:
             _LOGGER.info(
                 "%s is set %s but adaptive dampening found that model %d%s had a lower single-interval %s of %.3f%% vs the selected %.3f%%",
                 ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT,
                 "false" if use_delta_mode else "true",
                 alternative_model,
-                " with no delta adjustment" if use_delta_mode else f" and delta {best_delta_adjusted}",
+                " with no delta adjustment" if use_delta_mode else f" and delta {result.best_delta_adjusted}",
                 metric_desc,
                 alternative_error,
                 selected_error,
             )
 
-        _LOGGER.debug("Task dampening determine_best_settings took %.3f seconds", time.time() - start_time)
+    def _build_dampened_actuals_for_model(
+        self,
+        model: int,
+        delta: int,
+        earliest_common: dt,
+        actuals: defaultdict[dt, list[float]],
+        included_intervals: defaultdict[dt, list[bool]],
+    ) -> defaultdict[dt, list[float]] | None:
+        """Build dampened actuals for a single model/delta combination.
+
+        Applies the model's historical dampening factors to undampened actuals from the
+        common start date forward. Returns None if any required actuals are missing or
+        the resulting day count does not match the actuals input.
+        """
+        model_entries = self.auto_factors_history[model][delta]
+        dampened_actuals: defaultdict[dt, list[float]] = defaultdict(lambda: [0.0] * 48)
+
+        for model_entry in model_entries:
+            period_start = model_entry["period_start"]
+            if period_start < earliest_common:
+                continue
+            day_start = self.api.dt_helper.day_start(period_start)
+            if day_start not in actuals:
+                _LOGGER.debug(
+                    "Model %d and delta %d skipped due to missing actuals for dampening history entry %s",
+                    model,
+                    delta,
+                    day_start.strftime(DT_DATE_FORMAT),
+                )
+                return None
+            factors = model_entry["factors"]
+            dampened_actuals[day_start] = [actuals[day_start][i] * factors[i] for i in range(48)]
+
+        if len(dampened_actuals) != len(actuals):
+            _LOGGER.debug(
+                "Model %d and delta %d produced mismatched actuals count (%d dampened vs %d actuals)",
+                model,
+                delta,
+                sum(len(v) for v in dampened_actuals.values()),
+                sum(len(v) for v in actuals.values()),
+            )
+            return None
+
+        return dampened_actuals
+
+    def _build_included_intervals(self) -> defaultdict[dt, list[bool]]:
+        """Build a per-day map of which intervals had dampening applied by any model.
+
+        Uses the delta=-1 (no-delta) history entries as the reference for whether
+        dampening was active at each interval on each day.
+        """
+        return defaultdict(
+            lambda: [False] * 48,
+            {
+                day_start: [
+                    any(
+                        entry["factors"][i] != 1.0
+                        for deltas in self.auto_factors_history.values()
+                        for entry in deltas[-1]
+                        if self.api.dt_helper.day_start(entry["period_start"]) == day_start
+                    )
+                    for i in range(48)
+                ]
+                for day_start in {
+                    self.api.dt_helper.day_start(entry["period_start"])
+                    for deltas in self.auto_factors_history.values()
+                    for entry in deltas[-1]
+                }
+            },
+        )
+
+    async def _evaluate_model_combinations(
+        self,
+        earliest_common: dt,
+        actuals: defaultdict[dt, list[float]],
+        generation_dampening: defaultdict[dt, dict[str, Any]],
+        included_intervals: defaultdict[dt, list[bool]],
+        common_peak_interval: int,
+        use_error: int,
+    ) -> _ModelEvalResult:
+        """Evaluate all model/delta combinations and return the best-performing settings.
+
+        For each model/delta combination applies its historical dampening factors to the
+        undampened actuals, then computes single-interval error at the selected comparison
+        interval. Returns per-day error rankings and the best model/delta for each mode.
+        """
+        ignored_days: dict[dt, bool] = {}
+        daily_model_errors: dict[dt, dict[tuple[int, int], float]] = defaultdict(dict)
+        best_ape_adjusted = math.inf
+        best_ape_no_delta = math.inf
+        best_model_adjusted = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
+        best_model_no_delta = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
+        best_delta_adjusted = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
+        extant_ape = math.inf
+
+        for model in range(
+            ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_MODEL][MINIMUM],
+            ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_MODEL][MAXIMUM] + 1,
+        ):
+            for delta in range(
+                ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL][MINIMUM_EXTENDED],
+                ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL][MAXIMUM] + 1,
+            ):
+                should_skip, reason = self._should_skip_model_delta(
+                    model, delta, self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
+                )
+                if should_skip:
+                    _LOGGER.debug("Skipping model %d and delta %d as %s", model, delta, reason)
+                    continue
+
+                await asyncio.sleep(0)  # Be nice to HA
+                _LOGGER.debug("Evaluating model %d and delta %d", model, delta)
+
+                dampened_actuals = self._build_dampened_actuals_for_model(model, delta, earliest_common, actuals, included_intervals)
+                if dampened_actuals is None:
+                    _LOGGER.debug("Skipping APE calculation for model %d and delta %d", model, delta)
+                    continue
+
+                _, error_single_interval, percentiles_single, daily_errors = await self.calculate_single_interval_error(
+                    dampened_actuals,
+                    generation_dampening,
+                    common_peak_interval,
+                    percentiles=(use_error,) if use_error != -1 else (),
+                    log_breakdown=self.api.advanced_options[ADVANCED_ESTIMATED_ACTUALS_LOG_MAPE_BREAKDOWN],
+                    ignored_days=ignored_days,
+                )
+
+                for day, error in daily_errors.items():
+                    daily_model_errors[day][(model, delta)] = error
+
+                error_metric = percentiles_single[0] if percentiles_single else error_single_interval
+                if (
+                    model == self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
+                    and delta == self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]
+                ):
+                    extant_ape = error_metric
+
+                if error_metric == math.inf:
+                    _LOGGER.debug("Skipping APE calculation for model %d and delta %d due to APE calculation issue", model, delta)
+                    continue
+
+                _LOGGER.debug(
+                    "Model %d and delta %d achieved single-interval %s of %.3f%%%s",
+                    model,
+                    delta,
+                    "MAPE" if use_error == -1 else f"{ordinal(use_error)} percentile APE",
+                    error_metric,
+                    f" (MAPE {error_single_interval:.3f}%)" if use_error != -1 else "",
+                )
+
+                if delta == VALUE_ADAPTIVE_DAMPENING_NO_DELTA and error_metric < best_ape_no_delta:
+                    best_ape_no_delta = error_metric
+                    best_model_no_delta = model
+                elif delta != VALUE_ADAPTIVE_DAMPENING_NO_DELTA and error_metric < best_ape_adjusted:
+                    best_ape_adjusted = error_metric
+                    best_delta_adjusted = delta
+                    best_model_adjusted = model
+
+        return _ModelEvalResult(
+            daily_model_errors=daily_model_errors,
+            best_ape_adjusted=best_ape_adjusted,
+            best_ape_no_delta=best_ape_no_delta,
+            best_model_adjusted=best_model_adjusted,
+            best_model_no_delta=best_model_no_delta,
+            best_delta_adjusted=best_delta_adjusted,
+            extant_ape=extant_ape,
+        )
+
+    def _log_model_rankings(self, daily_model_errors: dict[dt, dict[tuple[int, int], float]]) -> None:
+        """Log a per-day rank distribution table for all evaluated model/delta combinations."""
+        model_rank_frequencies: defaultdict[tuple[int, int], defaultdict[int, int]] = defaultdict(lambda: defaultdict(int))
+        model_chronological_logs: defaultdict[tuple[int, int], list[str]] = defaultdict(list)
+        max_rank_observed = 0
+
+        for day in sorted(daily_model_errors.keys()):
+            day_errors = daily_model_errors[day]
+            sorted_day_models = sorted(day_errors.items(), key=lambda item: item[1])
+            day_rank_map: dict[tuple[int, int], int] = {}
+            current_rank = 0
+            last_error = -1.0
+
+            for md, error in sorted_day_models:
+                if error != last_error:
+                    current_rank += 1
+                day_rank_map[md] = current_rank
+                last_error = error
+                model_rank_frequencies[md][current_rank] += 1
+                max_rank_observed = max(max_rank_observed, current_rank)
+
+            for md, _err in day_errors.items():
+                model_chronological_logs[md].append(f"{_err:.2f}% ({ordinal(day_rank_map[md])})")
+
+        model_rank_profiles = {md: [freqs[r] for r in range(1, max_rank_observed + 1)] for md, freqs in model_rank_frequencies.items()}
+        sorted_models_lex = sorted(
+            model_rank_profiles.keys(),
+            key=lambda md: (model_rank_profiles[md], -md[0], -md[1]),
+            reverse=True,
+        )
+
+        if not sorted_models_lex:
+            _LOGGER.debug("No ranking data available (insufficient history or all-infinity errors)")
+            return
+
+        _LOGGER.debug("Ranking:")
+        for i, md in enumerate(sorted_models_lex, 1):
+            _LOGGER.debug(
+                "  #%d: Model %d Delta %d : Distribution: [%s]",
+                i,
+                md[0],
+                md[1],
+                ", ".join([f"{ordinal(r)}:{count}" for r, count in enumerate(model_rank_profiles[md], 1)]),
+            )
+            _LOGGER.debug("      History: [%s]", ", ".join(model_chronological_logs[md]))
+
+        rank_model, rank_delta = sorted_models_lex[0]
+        _LOGGER.info("Best model selected via ranking: Model %d Delta %d", rank_model, rank_delta)
 
     async def get(self, site: str | None, site_underscores: bool) -> list[dict[str, Any]]:
         """Retrieve the currently set dampening factors.
@@ -2099,7 +2167,7 @@ class Dampening:
         - Substantial generation (not dawn/dusk)
         - Dampening actually being applied (factor < 1.0)
         - Model disagreement (variance in factors)
-        - Number of models applying dampening
+        - Breadth of dampening across model/delta configurations
 
         Args:
             generation_dampening: Generation data for calculating interval totals.
@@ -2122,20 +2190,26 @@ class Dampening:
         # Analyze dampening factors across all models to find where dampening is most applied
         # AND where models differ significantly in their approach (variance)
         interval_factors_by_model: list[list[float]] = [[] for _ in range(48)]
+        total_combos = 0
+        combo_dampens: list[set[tuple[int, int]]] = [set() for _ in range(48)]
 
-        for model_data in self.auto_factors_history.values():
-            for delta_entries in model_data.values():
+        for model_key, model_data in self.auto_factors_history.items():
+            for delta_key, delta_entries in model_data.items():
                 if len(delta_entries) >= min_history_days:
+                    total_combos += 1
                     for entry in delta_entries:
                         for i, factor in enumerate(entry["factors"]):
                             if factor < 1.0:  # Only count where dampening is applied
                                 interval_dampen_sum[i] += factor
                                 interval_dampen_count[i] += 1
+                                combo_dampens[i].add((model_key, delta_key))
                             # Track all factors for variance calculation
                             interval_factors_by_model[i].append(factor)
 
-        # Calculate averages and variance
+        # Calculate averages and normalize generation to peak interval (0-1 range)
         avg_generation = [interval_totals[i] / interval_counts[i] if interval_counts[i] > 0 else 0.0 for i in range(48)]
+        max_generation = max(avg_generation) if any(g > 0 for g in avg_generation) else 1.0
+        normalized_generation = [g / max_generation for g in avg_generation]
         avg_dampen_factor = [interval_dampen_sum[i] / interval_dampen_count[i] if interval_dampen_count[i] > 0 else 1.0 for i in range(48)]
 
         # Calculate variance of dampening factors across models for each interval
@@ -2150,19 +2224,26 @@ class Dampening:
             else:
                 dampen_variance.append(0.0)
 
-        # Count how many models apply dampening (factor < 1.0) at each interval
-        dampening_model_count = []
-        for i in range(48):
-            factors_below_one = sum(1 for f in interval_factors_by_model[i] if f < 1.0)
-            dampening_model_count.append(factors_below_one)
+        # Calculate breadth of dampening: fraction of model/delta combos that apply dampening
+        # Intervals where more configurations apply dampening are better for model comparison
+        dampening_breadth = [len(combo_dampens[i]) / total_combos if total_combos > 0 else 0.0 for i in range(48)]
 
-        # Score = generation × (1 - avg_factor) × sqrt(variance) × dampening_model_count × scale
-        # Balances: substantial generation, dampening application, model disagreement, AND number of models dampening
-        # Higher dampening_model_count = more models can be meaningfully compared
+        # Score = normalized_generation × (1 - avg_factor) × sqrt(variance) × dampening_breadth
+        # All factors are 0-1 range, preventing high-generation intervals from dominating
+        # through raw scale when they have sparse dampening coverage
         dampening_impact = [
-            avg_generation[i] * (1.0 - avg_dampen_factor[i]) * (dampen_variance[i] ** 0.5) * dampening_model_count[i] * 0.5
-            for i in range(48)
+            normalized_generation[i] * (1.0 - avg_dampen_factor[i]) * (dampen_variance[i] ** 0.5) * dampening_breadth[i] for i in range(48)
         ]
+
+        # When variance is zero everywhere (e.g. early training with uniform factors),
+        # the variance term collapses all scores to zero and index(0.0) returns interval 0
+        # (midnight), where no solar generation exists. Fall back progressively.
+        if not dampening_impact or max(dampening_impact) == 0.0:
+            # First fallback: generation × dampening × breadth (no variance component)
+            dampening_impact = [normalized_generation[i] * (1.0 - avg_dampen_factor[i]) * dampening_breadth[i] for i in range(48)]
+        if max(dampening_impact) == 0.0:
+            # Second fallback: pure generation — ensures a daytime interval is always chosen
+            dampening_impact = list(normalized_generation)
 
         # Select interval with highest weighted score
         selected_interval = dampening_impact.index(max(dampening_impact)) if dampening_impact else 0

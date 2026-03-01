@@ -2244,7 +2244,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
             estimate_actuals: list[dict[str, Any]] = act_response.get(ESTIMATED_ACTUALS, [])
 
-            oldest = (dt.now(self.tz).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=6)).astimezone(UTC)
+            oldest = (dt.now(self.tz).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)).astimezone(UTC)
 
             for estimate_actual in estimate_actuals:
                 period_start = dt.fromisoformat(estimate_actual[PERIOD_END]).astimezone(UTC).replace(second=0, microsecond=0) - timedelta(
@@ -2459,7 +2459,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
 
                 estimate_actuals: list[dict[str, Any]] = act_response.get(ESTIMATED_ACTUALS, [])
 
-                oldest = (dt.now(self.tz).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=6)).astimezone(UTC)
+                oldest = (dt.now(self.tz).replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)).astimezone(UTC)
 
                 actuals: dict[dt, Any] = {}
                 for estimate_actual in estimate_actuals:

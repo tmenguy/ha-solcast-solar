@@ -1117,6 +1117,47 @@ async def test_select_comparison_interval_single_factor(
         assert await async_cleanup_integration_tests(hass)
 
 
+async def test_build_dampened_actuals_count_mismatch(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that _build_dampened_actuals_for_model returns None on day count mismatch.
+
+    Sets up actuals covering two days but model history only covering one, so the
+    post-loop check (len(dampened_actuals) != len(actuals)) fires and returns None.
+    """
+    assert await async_cleanup_integration_tests(hass)
+
+    try:
+        entry = await async_init_integration(hass, copy.deepcopy(DEFAULT_INPUT2))
+        solcast = entry.runtime_data.coordinator.solcast
+
+        day1 = solcast.dt_helper.day_start_utc() - timedelta(days=2)
+        day2 = solcast.dt_helper.day_start_utc() - timedelta(days=1)
+
+        factors = [1.0] * 48
+        factors[0] = 0.9
+
+        # Model history only has an entry for day1 — day2 exists in actuals but not history.
+        solcast.dampening.auto_factors_history = {0: {0: [{"period_start": day1, "factors": factors}]}}
+
+        # actuals covers two days; dampened_actuals will only build one day.
+        actuals: defaultdict[dt, list[float]] = defaultdict(lambda: [0.0] * 48)
+        actuals[day1] = [1.0] * 48
+        actuals[day2] = [1.0] * 48
+
+        included_intervals: defaultdict[dt, list[bool]] = defaultdict(lambda: [False] * 48)
+
+        caplog.clear()
+        result = solcast.dampening._build_dampened_actuals_for_model(0, 0, day1, actuals, included_intervals)
+
+        assert result is None
+        assert "mismatched actuals count" in caplog.text
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
 async def test_calculate_single_interval_error_with_generation(
     recorder_mock: Recorder,
     hass: HomeAssistant,
@@ -1139,7 +1180,7 @@ async def test_calculate_single_interval_error_with_generation(
         monkeypatch = pytest.MonkeyPatch()
         monkeypatch.setattr(solcast.dampening, "adjusted_interval_dt", lambda _ts: 0)
 
-        has_inf, mean_ape, percentiles = await solcast.dampening.calculate_single_interval_error(
+        has_inf, mean_ape, percentiles, _ = await solcast.dampening.calculate_single_interval_error(
             dampened_actuals,
             generation_dampening,
             peak_interval,
@@ -1174,7 +1215,7 @@ async def test_calculate_single_interval_error_no_generation(
         dampened_actuals[solcast.dt_helper.day_start(day_start)] = [1.0] * 48
         generation_dampening = defaultdict(dict, {day_start: {GENERATION: 0.0, EXPORT_LIMITING: False}})
 
-        has_inf, mean_ape, percentiles = await solcast.dampening.calculate_single_interval_error(
+        has_inf, mean_ape, percentiles, _ = await solcast.dampening.calculate_single_interval_error(
             dampened_actuals,
             generation_dampening,
             0,
@@ -1223,7 +1264,7 @@ async def test_calculate_single_interval_error_skips_ignored_and_missing(
 
         monkeypatch.setattr(solcast.dampening, "adjusted_interval_dt", lambda _ts: 0)
 
-        has_inf, mean_ape, percentiles = await solcast.dampening.calculate_single_interval_error(
+        has_inf, mean_ape, percentiles, _ = await solcast.dampening.calculate_single_interval_error(
             dampened_actuals,
             generation_dampening,
             0,
@@ -1302,8 +1343,8 @@ async def test_determine_best_settings_alternative_issue(
             delta = solcast._test_current_delta  # pyright: ignore[reportPrivateUsage]
             if delta == VALUE_ADAPTIVE_DAMPENING_NO_DELTA:
                 error = 5.0 if alternate_better and model == min_model else 15.0
-                return False, error, [error]
-            return True, 10.0, [10.0]
+                return False, error, [error], {}
+            return True, 10.0, [10.0], {}
 
         monkeypatch.setattr(solcast.dampening, "calculate_single_interval_error", _fake_calculate_single_interval_error)
 
