@@ -639,6 +639,7 @@ class Dampening:
         """
         ignored_days: dict[dt, bool] = {}
         daily_model_errors: dict[dt, dict[tuple[int, int], float]] = defaultdict(dict)
+        model_metrics: dict[tuple[int, int], float] = {}
         best_ape_adjusted = math.inf
         best_ape_no_delta = math.inf
         best_model_adjusted = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
@@ -688,6 +689,8 @@ class Dampening:
                 ):
                     extant_ape = error_metric
 
+                model_metrics[(model, delta)] = error_metric
+
                 if error_metric == math.inf:
                     _LOGGER.debug("Skipping APE calculation for model %d and delta %d due to APE calculation issue", model, delta)
                     continue
@@ -701,13 +704,59 @@ class Dampening:
                     f" (MAPE {error_single_interval:.3f}%)" if use_error != -1 else "",
                 )
 
-                if delta == VALUE_ADAPTIVE_DAMPENING_NO_DELTA and error_metric < best_ape_no_delta:
-                    best_ape_no_delta = error_metric
-                    best_model_no_delta = model
-                elif delta != VALUE_ADAPTIVE_DAMPENING_NO_DELTA and error_metric < best_ape_adjusted:
-                    best_ape_adjusted = error_metric
-                    best_delta_adjusted = delta
-                    best_model_adjusted = model
+        # Compute Borda scores (mean rank position, lower = better). Per-day tie-break of lighter configs.
+        rank_sums: defaultdict[tuple[int, int], float] = defaultdict(float)
+        rank_counts: defaultdict[tuple[int, int], int] = defaultdict(int)
+        for day_errors in daily_model_errors.values():
+            for rank, (md, _) in enumerate(
+                sorted(
+                    day_errors.items(),
+                    key=lambda item: (item[1], item[0][0], item[0][1] if item[0][1] >= 0 else float("inf")),
+                ),
+                1,
+            ):
+                rank_sums[md] += rank
+                rank_counts[md] += 1
+
+        borda_scores = {md: rank_sums[md] / rank_counts[md] for md in rank_sums}
+
+        if borda_scores:
+            # Select Borda winners.
+            no_delta_candidates = {md: s for md, s in borda_scores.items() if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA}
+            adjusted_candidates = {md: s for md, s in borda_scores.items() if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA}
+
+            if no_delta_candidates:
+                best_nd = min(no_delta_candidates, key=lambda md: (no_delta_candidates[md], md[0]))
+                best_model_no_delta = best_nd[0]
+                best_ape_no_delta = model_metrics.get(best_nd, math.inf)
+
+            if adjusted_candidates:
+                best_adj = min(
+                    adjusted_candidates,
+                    key=lambda md: (adjusted_candidates[md], md[0], md[1] if md[1] >= 0 else float("inf")),
+                )
+                best_model_adjusted = best_adj[0]
+                best_delta_adjusted = best_adj[1]
+                best_ape_adjusted = model_metrics.get(best_adj, math.inf)
+        else:
+            # No per-day breakdown available (e.g. single-interval only); fall back to minimum APE
+            _LOGGER.debug("No per-day errors collected; using APE-based model selection")
+            valid_metrics = [(md, m) for md, m in model_metrics.items() if m != math.inf]
+            no_delta_sorted = sorted(
+                ((md, m) for md, m in valid_metrics if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA),
+                key=lambda item: (item[1], item[0][0]),
+            )
+            adjusted_sorted = sorted(
+                ((md, m) for md, m in valid_metrics if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA),
+                key=lambda item: (item[1], item[0][0], item[0][1] if item[0][1] >= 0 else float("inf")),
+            )
+            if no_delta_sorted:
+                best_nd, best_ape_no_delta = no_delta_sorted[0]
+                best_model_no_delta = best_nd[0]
+            if adjusted_sorted:
+                best_adj, best_ape_adjusted = adjusted_sorted[0]
+                best_model_adjusted = best_adj[0]
+                best_delta_adjusted = best_adj[1]
 
         return _ModelEvalResult(
             daily_model_errors=daily_model_errors,
@@ -743,30 +792,44 @@ class Dampening:
             for md, _err in day_errors.items():
                 model_chronological_logs[md].append(f"{_err:.2f}% ({ordinal(day_rank_map[md])})")
 
-        model_rank_profiles = {md: [freqs[r] for r in range(1, max_rank_observed + 1)] for md, freqs in model_rank_frequencies.items()}
-        sorted_models_lex = sorted(
-            model_rank_profiles.keys(),
-            key=lambda md: (model_rank_profiles[md], -md[0], -md[1] if md[1] >= 0 else float("-inf")),
-            reverse=True,
-        )
-
-        if not sorted_models_lex:
+        if not model_rank_frequencies:
             _LOGGER.debug("No ranking data available (insufficient history or all-infinity errors)")
             return
 
+        # Sort by Borda score, ties broken by lighter-touch preference
+        borda_log: dict[tuple[int, int], float] = {
+            md: sum(rank * count for rank, count in freqs.items()) / sum(freqs.values()) for md, freqs in model_rank_frequencies.items()
+        }
+        sorted_by_borda = sorted(
+            borda_log.keys(),
+            key=lambda md: (borda_log[md], md[0], md[1] if md[1] >= 0 else float("inf")),
+        )
+
+        model_rank_profiles = {md: [freqs[r] for r in range(1, max_rank_observed + 1)] for md, freqs in model_rank_frequencies.items()}
+
         _LOGGER.debug("Ranking:")
-        for i, md in enumerate(sorted_models_lex, 1):
+        for i, md in enumerate(sorted_by_borda, 1):
             _LOGGER.debug(
-                "  #%d: Model %d Delta %d : Distribution: [%s]",
+                "  #%d: Model %d Delta %d : Borda %.2f : Distribution: [%s]",
                 i,
                 md[0],
                 md[1],
+                borda_log[md],
                 ", ".join([f"{ordinal(r)}:{count}" for r, count in enumerate(model_rank_profiles[md], 1)]),
             )
             _LOGGER.debug("      History: [%s]", ", ".join(model_chronological_logs[md]))
 
-        rank_model, rank_delta = sorted_models_lex[0]
-        _LOGGER.info("Best model selected via ranking: Model %d Delta %d", rank_model, rank_delta)
+        no_delta_winner = next((md for md in sorted_by_borda if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
+        adjusted_winner = next((md for md in sorted_by_borda if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
+        if no_delta_winner:
+            _LOGGER.info("Ranking winner (no delta): Model %d (Borda %.2f)", no_delta_winner[0], borda_log[no_delta_winner])
+        if adjusted_winner:
+            _LOGGER.info(
+                "Ranking winner (adjusted): Model %d Delta %d (Borda %.2f)",
+                adjusted_winner[0],
+                adjusted_winner[1],
+                borda_log[adjusted_winner],
+            )
 
     async def get(self, site: str | None, site_underscores: bool) -> list[dict[str, Any]]:
         """Retrieve the currently set dampening factors.
