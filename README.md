@@ -752,9 +752,11 @@ Past estimated actual data is acquired just after midnight each day local time, 
 
 Generation is gathered from history data of a sensor entity (or entities). A single PV solar inverter installation will likely have a single "total increasing" sensor that provides a "PV generation" or "PV export" value (_not_ export to grid, but export off your roof from the sun). Multiple inverters will have a value for each, and all sensor entities may be supplied, which will then be totalled for all rooftops.
 
-An increasing energy sensor (or sensors) must be supplied. This increasing sensor may reset at midnight, or may be a "total increasing" type; of importance is that it is increasing throughout the day.
+An increasing energy _or_ a power sensor (or sensors) must be supplied. An energy sensor may reset at midnight, or may be a "total increasing" type; of importance is that it is increasing throughout the day.
 
-The integration determines the units by inspecting the `unit_of_measurement` attribute and adjusts accordingly. Where this attribute is not set it assumes values are kWh. Generation history updates occur at midnight local time.
+The integration determines the units by inspecting the `unit_of_measurement` attribute and adjusts accordingly. Where this attribute is not set it assumes values are kWh or kW. Generation history updates occur at midnight local time.
+
+The entity desired to be used must be in the Home Assistant 'entity registry'. If you are trying to use a legacy sensor defined using YAML then that entity will not be present in the entity registry unless it has a `unique_id` attribute.
 
 > [!TIP]
 >

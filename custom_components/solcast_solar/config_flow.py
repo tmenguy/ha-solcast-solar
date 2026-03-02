@@ -592,11 +592,12 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             ]
 
         entity_registry = er.async_get(self.hass)
+        own_entities = {entry for entry, details in entity_registry.entities.items() if details.config_entry_id == self._entry.entry_id}
         sensors: list[SelectOptionDict] = [SelectOptionDict(label="not_loaded", value="")]
         sensors = [
             SelectOptionDict(label=entry, value=entry)
             for entry, details in entity_registry.entities.items()
-            if "solcast_pv_forecast" not in entry
+            if entry not in own_entities
             and details.disabled_by is None
             and (
                 SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class)
@@ -607,7 +608,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
         energy_sensors = [
             SelectOptionDict(label=entry, value=entry)
             for entry, details in entity_registry.entities.items()
-            if "solcast_pv_forecast" not in entry
+            if entry not in own_entities
             and details.disabled_by is None
             and (SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class))
         ]
