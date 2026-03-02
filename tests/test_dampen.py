@@ -772,7 +772,9 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         original_delta = solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] = 1
         await solcast.dampening.determine_best_settings()
-        assert "Insufficient improvement" in caplog.text
+        # With borda_scores non-empty the improvement is forced to inf, so the
+        # threshold is always exceeded and settings are updated when is_different.
+        assert "Updating automated dampening settings based on" in caplog.text
         # Restore original values
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA] = original_min_error_delta
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] = original_model
@@ -1356,6 +1358,86 @@ async def test_determine_best_settings_alternative_issue(
         caplog.clear()
         await solcast.dampening.determine_best_settings()
         assert "but adaptive dampening found that model" not in caplog.text
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+async def test_determine_best_settings_insufficient_improvement(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test the APE-fallback path where improvement is below the minimum threshold.
+
+    When calculate_single_interval_error returns no per-day breakdown (empty
+    daily_errors), borda_scores is empty and _apply_best_settings falls back to
+    comparing raw APE values.  This exercises the 'Insufficient improvement'
+    log branch.
+    """
+    assert await async_cleanup_integration_tests(hass)
+
+    try:
+        options = copy.deepcopy(DEFAULT_INPUT2)
+        options[GENERATION_ENTITIES] = ["sensor.solar_export_sensor_1111_1111_1111_1111"]
+        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
+        solcast = entry.runtime_data.coordinator.solcast
+
+        day_start = solcast.dt_helper.day_start_utc() - timedelta(days=1)
+        factors = [1.0] * 48
+        factors[0] = 0.9
+        history_entry = {"period_start": day_start, "factors": factors}
+
+        min_model = ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_MODEL][MINIMUM]
+        max_model = ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_MODEL][MAXIMUM]
+        min_delta = ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL][MINIMUM_EXTENDED]
+        max_delta = ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL][MAXIMUM]
+
+        solcast.dampening.auto_factors_history = {
+            model: {delta: [copy.deepcopy(history_entry)] for delta in range(min_delta, max_delta + 1)}
+            for model in range(min_model, max_model + 1)
+        }
+
+        solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS] = 1
+        solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT] = False
+        # Current config: model 1, delta 0 (will be evaluated at 10% error)
+        solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] = min_model + 1
+        solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] = 0
+        # High threshold so 5% improvement (10% -> 5%) is insufficient
+        solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA] = 100.0
+
+        monkeypatch.setattr(solcast.dampening, "_find_earliest_common_history", lambda _days: day_start)
+        monkeypatch.setattr(solcast.dampening, "_build_actuals_from_sites", lambda _start: {day_start: [1.0] * 48})
+
+        async def _fake_prepare_generation_data(_earliest: dt):
+            generation_dampening: defaultdict = defaultdict(dict)
+            generation_dampening[day_start] = {GENERATION: 1.0, EXPORT_LIMITING: False}
+            generation_dampening_day: defaultdict = defaultdict(float)
+            generation_dampening_day[solcast.dt_helper.day_start(day_start)] = 1.0
+            return generation_dampening, generation_dampening_day
+
+        monkeypatch.setattr(solcast.dampening, "prepare_generation_data", _fake_prepare_generation_data)
+
+        def _record_should_skip(model: int, delta: int, _min_days: int) -> tuple[bool, str]:
+            solcast._test_current_model = model  # pyright: ignore[reportPrivateUsage]
+            solcast._test_current_delta = delta  # pyright: ignore[reportPrivateUsage]
+            return False, ""
+
+        monkeypatch.setattr(solcast.dampening, "_should_skip_model_delta", _record_should_skip)
+
+        async def _fake_calculate_single_interval_error(*_args, **_kwargs):
+            model = solcast._test_current_model  # pyright: ignore[reportPrivateUsage]
+            delta = solcast._test_current_delta  # pyright: ignore[reportPrivateUsage]
+            # Model min_model with any delta is best (5%); everything else is 10%.
+            # Return empty daily_errors so borda_scores stays empty → APE fallback.
+            error = 5.0 if model == min_model else 10.0
+            return False, error, [], {}
+
+        monkeypatch.setattr(solcast.dampening, "calculate_single_interval_error", _fake_calculate_single_interval_error)
+
+        caplog.clear()
+        await solcast.dampening.determine_best_settings()
+        assert "Insufficient improvement" in caplog.text
     finally:
         assert await async_cleanup_integration_tests(hass)
 
