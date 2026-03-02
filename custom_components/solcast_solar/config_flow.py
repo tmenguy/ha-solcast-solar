@@ -603,6 +603,14 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 or SensorDeviceClass.POWER in (details.device_class, details.original_device_class)
             )
         ]
+        energy_sensors: list[SelectOptionDict] = [SelectOptionDict(label="not_loaded", value="")]
+        energy_sensors = [
+            SelectOptionDict(label=entry, value=entry)
+            for entry, details in entity_registry.entities.items()
+            if "solcast_pv_forecast" not in entry
+            and details.disabled_by is None
+            and (SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class))
+        ]
 
         if self._options.get(SITE_EXPORT_ENTITY, "") != "":
             site_export_default = [self._options[SITE_EXPORT_ENTITY]]
@@ -646,7 +654,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                         SelectSelectorConfig(options=sensors, mode=SelectSelectorMode.DROPDOWN, multiple=True)
                     ),
                     vol.Optional(SITE_EXPORT_ENTITY, default=site_export_default): SelectSelector(
-                        SelectSelectorConfig(options=sensors, mode=SelectSelectorMode.DROPDOWN, multiple=True)
+                        SelectSelectorConfig(options=energy_sensors, mode=SelectSelectorMode.DROPDOWN, multiple=True)
                     ),
                     vol.Optional(
                         SITE_EXPORT_LIMIT,
