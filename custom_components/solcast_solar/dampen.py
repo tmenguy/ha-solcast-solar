@@ -476,48 +476,66 @@ class Dampening:
         use_error: int,
     ) -> None:
         """Log and conditionally serialise the best adaptive dampening configuration."""
-        metric_desc = "MAPE" if use_error == -1 else f"{ordinal(use_error)} percentile APE"
+        if result.borda_scores:
+            metric_desc = "Borda score"
+            metric_suffix = ""
+        else:
+            metric_desc = "single interval MAPE" if use_error == -1 else f"single interval {ordinal(use_error)} percentile APE"
+            metric_suffix = "%"
         min_error_delta = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA]
         use_delta_mode = not self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT]
 
         if use_delta_mode:
             selected_model = result.best_model_adjusted
             selected_delta: int | None = result.best_delta_adjusted
-            selected_error = result.best_ape_adjusted
             current_valid = {selected_model, selected_delta} != {VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED}
             is_different = {selected_model, selected_delta} != {
                 self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL],
                 self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL],
             }
             alternative_model = result.best_model_no_delta
-            alternative_error = result.best_ape_no_delta
+            if result.borda_scores:
+                selected_md = (result.best_model_adjusted, result.best_delta_adjusted)
+                alternate_md = (result.best_model_no_delta, VALUE_ADAPTIVE_DAMPENING_NO_DELTA)
+                selected_error = result.borda_scores[selected_md]
+                alternative_error = result.borda_scores[alternate_md]
+            else:
+                selected_error = result.best_ape_adjusted
+                alternative_error = result.best_ape_no_delta
         else:
             selected_model = result.best_model_no_delta
             selected_delta = None
-            selected_error = result.best_ape_no_delta
             current_valid = selected_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
-            is_different = selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
+            is_different = selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] or self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA
             alternative_model = result.best_model_adjusted
-            alternative_error = result.best_ape_adjusted
+            if result.borda_scores:
+                selected_md = (result.best_model_no_delta, VALUE_ADAPTIVE_DAMPENING_NO_DELTA)
+                alternate_md = (result.best_model_adjusted, result.best_delta_adjusted)
+                selected_error = result.borda_scores[selected_md]
+                alternative_error = result.borda_scores[alternate_md]
+            else:
+                selected_error = result.best_ape_no_delta
+                alternative_error = result.best_ape_adjusted
 
         if not current_valid:
             _LOGGER.info("Could not determine best automated dampening settings - values unmodified")
         else:
             _LOGGER.info(
-                "Best automated dampening settings: model %d%s with single-interval %s of %.3f%% (interval %d: %02d:%02d)",
+                "Best automated dampening settings: model %d%s with %s of %.3f%s (interval %d: %02d:%02d)",
                 selected_model,
                 f" and delta {selected_delta}" if use_delta_mode else "",
                 metric_desc,
                 selected_error,
+                metric_suffix,
                 common_peak_interval,
                 common_peak_interval // 2,
                 (common_peak_interval % 2) * 30,
             )
-            improvement = math.inf if result.borda_scores else result.extant_ape - selected_error
-            if is_different and improvement > min_error_delta:
+            improvement = result.extant_ape - selected_error
+            if is_different and (result.borda_scores or improvement > min_error_delta):
                 _LOGGER.info(
-                    "Updating automated dampening settings based on %.3f%% improvement over current settings",
-                    improvement,
+                    "Updating automated dampening settings based on %s",
+                    metric_desc if result.borda_scores else f"{improvement:.3f}% improvement over current settings",
                 )
                 self.api.advanced_options.update(
                     {
@@ -530,7 +548,7 @@ class Dampening:
                 await self._serialise_advanced_options()
             elif is_different:
                 _LOGGER.info(
-                    "Insufficient improvement of %.3f%%%s over current model %d%s single-interval %s of %.3f%%, not updating settings",
+                    "Insufficient improvement of %.3f%%%s over current model %d%s %s of %.3f%%, not updating settings",
                     improvement,
                     f" (minimum {min_error_delta:.3f}%)" if min_error_delta != 0.0 else "",
                     self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL],
@@ -543,14 +561,16 @@ class Dampening:
 
         if alternative_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED and alternative_error < selected_error:
             _LOGGER.info(
-                "%s is set %s but adaptive dampening found that model %d%s had a lower single-interval %s of %.3f%% vs the selected %.3f%%",
+                "%s is set %s but adaptive dampening found that model %d%s had a lower %s of %.3f%s vs the selected %.3f%s",
                 ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT,
                 "false" if use_delta_mode else "true",
                 alternative_model,
                 " with no delta adjustment" if use_delta_mode else f" and delta {result.best_delta_adjusted}",
                 metric_desc,
                 alternative_error,
+                metric_suffix,
                 selected_error,
+                metric_suffix,
             )
 
     def _build_dampened_actuals_for_model(
