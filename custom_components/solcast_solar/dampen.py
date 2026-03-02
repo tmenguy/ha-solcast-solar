@@ -737,7 +737,7 @@ class Dampening:
                     delta,
                     "MAPE" if use_error == -1 else f"{ordinal(use_error)} percentile APE",
                     error_metric,
-                    f" (MAPE {error_single_interval:.3f}%)" if use_error != -1 else "",
+                    f" (MAPE {error_single_interval:.2f}%)" if use_error != -1 else "",
                 )
 
         daily_ranks = self._get_daily_ranks(daily_model_errors)
@@ -835,7 +835,7 @@ class Dampening:
         _LOGGER.debug("Ranking:")
         for i, md in enumerate(sorted_by_borda, 1):
             _LOGGER.debug(
-                "  #%d: Model %d Delta %d : Borda %.2f : Distribution: [%s]",
+                "  #%d: Model %d Delta %d : Borda %.3f : Distribution: [%s]",
                 i,
                 md[0],
                 md[1],
@@ -847,10 +847,10 @@ class Dampening:
         no_delta_winner = next((md for md in sorted_by_borda if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
         adjusted_winner = next((md for md in sorted_by_borda if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
         if no_delta_winner:
-            _LOGGER.info("Ranking winner (no delta): Model %d (Borda %.2f)", no_delta_winner[0], borda_scores[no_delta_winner])
+            _LOGGER.info("Ranking winner (no delta): Model %d (Borda %.3f)", no_delta_winner[0], borda_scores[no_delta_winner])
         if adjusted_winner:
             _LOGGER.info(
-                "Ranking winner (adjusted): Model %d Delta %d (Borda %.2f)",
+                "Ranking winner (adjusted): Model %d Delta %d (Borda %.3f)",
                 adjusted_winner[0],
                 adjusted_winner[1],
                 borda_scores[adjusted_winner],
