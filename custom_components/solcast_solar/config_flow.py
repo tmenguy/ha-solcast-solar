@@ -429,6 +429,60 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             self.hass.data[DOMAIN].pop(PRESUMED_DEAD)
             await self.hass.config_entries.async_reload(self._entry.entry_id)
 
+    def _build_sensor_options(self) -> tuple[list[SelectOptionDict], list[SelectOptionDict]]:
+        """Build sorted sensor and energy sensor option lists for the options form.
+
+        Returns:
+            tuple[list[SelectOptionDict], list[SelectOptionDict]]: Sorted lists of sensors
+                Energy/power and energy-only sensors, excluding own entities.
+
+        """
+        entity_registry = er.async_get(self.hass)
+        own_entities = {entry for entry, details in entity_registry.entities.items() if details.config_entry_id == self._entry.entry_id}
+        sensors: list[SelectOptionDict] = [
+            SelectOptionDict(label=entry, value=entry)
+            for entry, details in entity_registry.entities.items()
+            if entry not in own_entities
+            and entry.startswith("sensor.")
+            and details.disabled_by is None
+            and (
+                SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class)
+                or SensorDeviceClass.POWER in (details.device_class, details.original_device_class)
+            )
+        ]
+        state_entities = self.hass.states.async_entity_ids("sensor")
+        sensor_values = {option["value"] for option in sensors}
+        sensors += [
+            SelectOptionDict(label=entity, value=entity)
+            for entity in state_entities
+            if entity not in sensor_values
+            and entity not in own_entities
+            and (state := self.hass.states.get(entity)) is not None
+            and (device_class := state.attributes.get("device_class")) is not None
+            and device_class in (SensorDeviceClass.ENERGY, SensorDeviceClass.POWER)
+        ]
+        sensors.sort(key=lambda x: x["label"])
+        energy_sensors: list[SelectOptionDict] = [
+            SelectOptionDict(label=entry, value=entry)
+            for entry, details in entity_registry.entities.items()
+            if entry not in own_entities
+            and entry.startswith("sensor.")
+            and details.disabled_by is None
+            and (SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class))
+        ]
+        energy_sensor_values = {option["value"] for option in energy_sensors}
+        energy_sensors += [
+            SelectOptionDict(label=entity, value=entity)
+            for entity in state_entities
+            if entity not in energy_sensor_values
+            and entity not in own_entities
+            and (state := self.hass.states.get(entity)) is not None
+            and (device_class := state.attributes.get("device_class")) is not None
+            and device_class in (SensorDeviceClass.ENERGY)
+        ]
+        energy_sensors.sort(key=lambda x: x["label"])
+        return sensors, energy_sensors
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:  # noqa: C901
         """Initialise main options flow step.
 
@@ -591,27 +645,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 SelectOptionDict(label=site[NAME] + " (" + site[RESOURCE_ID] + ")", value=site[RESOURCE_ID]) for site in solcast.sites
             ]
 
-        entity_registry = er.async_get(self.hass)
-        own_entities = {entry for entry, details in entity_registry.entities.items() if details.config_entry_id == self._entry.entry_id}
-        sensors: list[SelectOptionDict] = [SelectOptionDict(label="not_loaded", value="")]
-        sensors = [
-            SelectOptionDict(label=entry, value=entry)
-            for entry, details in entity_registry.entities.items()
-            if entry not in own_entities
-            and details.disabled_by is None
-            and (
-                SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class)
-                or SensorDeviceClass.POWER in (details.device_class, details.original_device_class)
-            )
-        ]
-        energy_sensors: list[SelectOptionDict] = [SelectOptionDict(label="not_loaded", value="")]
-        energy_sensors = [
-            SelectOptionDict(label=entry, value=entry)
-            for entry, details in entity_registry.entities.items()
-            if entry not in own_entities
-            and details.disabled_by is None
-            and (SensorDeviceClass.ENERGY in (details.device_class, details.original_device_class))
-        ]
+        sensors, energy_sensors = self._build_sensor_options()
 
         if self._options.get(SITE_EXPORT_ENTITY, "") != "":
             site_export_default = [self._options[SITE_EXPORT_ENTITY]]

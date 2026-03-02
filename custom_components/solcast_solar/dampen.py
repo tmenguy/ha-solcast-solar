@@ -109,6 +109,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class _ModelEvalResult(NamedTuple):
     """Result of evaluating all model/delta combinations for adaptive dampening."""
+
     daily_model_errors: dict[dt, dict[tuple[int, int], float]]
     daily_ranks: dict[dt, dict[tuple[int, int], int]]
     borda_scores: dict[tuple[int, int], float]
@@ -627,12 +628,12 @@ class Dampening:
         """Helper to calculate error rankings for each day."""
         daily_ranks = {}
         for day, errors in daily_model_errors.items():
-            sorted_items = sorted(errors.items(), key=lambda x: x[1]) # sort only on errors
+            sorted_items = sorted(errors.items(), key=lambda x: x[1])  # sort only on errors
             day_rank_map = {}
             current_rank = 1
             for i, (md, error) in enumerate(sorted_items):
-                if i > 0 and error > sorted_items[i-1][1]:
-                    current_rank = i + 1 # new rank is current index+1
+                if i > 0 and error > sorted_items[i - 1][1]:
+                    current_rank = i + 1  # new rank is current index+1
                 day_rank_map[md] = current_rank
             daily_ranks[day] = day_rank_map
         return daily_ranks
@@ -725,7 +726,7 @@ class Dampening:
         rank_sums: defaultdict[tuple[int, int], float] = defaultdict(float)
         rank_counts: defaultdict[tuple[int, int], int] = defaultdict(int)
 
-        for day, ranks in daily_ranks.items():
+        for ranks in daily_ranks.values():
             for md, rank in ranks.items():
                 rank_sums[md] += rank
                 rank_counts[md] += 1

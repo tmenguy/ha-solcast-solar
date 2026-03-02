@@ -756,8 +756,6 @@ An increasing energy _or_ a power sensor (or sensors) must be supplied. An energ
 
 The integration determines the units by inspecting the `unit_of_measurement` attribute and adjusts accordingly. Where this attribute is not set it assumes values are kWh or kW. Generation history updates occur at midnight local time.
 
-The entity desired to be used must be in the Home Assistant 'entity registry'. If you are trying to use a legacy sensor defined using YAML then that entity will not be present in the entity registry unless it has a `unique_id` attribute.
-
 > [!TIP]
 >
 > In order for the integration to be able to spot anomalous PV generation, it needs the generation entities to regularly report to Home Assistant. Entities that report a latest generation value periodically or increase in regular steps are supported. If your PV generation entity does not fall into a similar generation pattern then automated dampening might not work for you.
