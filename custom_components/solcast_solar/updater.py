@@ -375,7 +375,8 @@ class Updater:
             await self._coordinator.solcast.dampening.apply_forward()
             await self._coordinator.solcast.build_forecast_data()
 
-        await self.calculate_accuracy_metrics()
+        if _LOGGER.isEnabledFor(logging.DEBUG) and self._coordinator.solcast.options.get_actuals:
+            await self.calculate_accuracy_metrics()
 
     async def calculate_accuracy_metrics(self) -> None:
         """Calculate accuracy metrics for generation vs. undampened/dampened actuals."""
