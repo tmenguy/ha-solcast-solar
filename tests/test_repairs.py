@@ -24,10 +24,7 @@ from homeassistant.components.solcast_solar.const import (
     SERVICE_CLEAR_DATA,
     SERVICE_UPDATE,
 )
-from homeassistant.components.solcast_solar.coordinator import SolcastUpdateCoordinator
 from homeassistant.components.solcast_solar.repairs import async_create_fix_flow
-from homeassistant.components.solcast_solar.solcastapi import SolcastApi
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
@@ -38,6 +35,7 @@ from . import (
     ZONE_RAW,
     async_cleanup_integration_tests,
     async_init_integration,
+    reload_integration,
     session_clear,
     session_set,
 )
@@ -45,20 +43,6 @@ from .simulator import API_KEY_SITES
 
 _LOGGER = logging.getLogger(__name__)
 
-
-async def _reload(hass: HomeAssistant, entry: ConfigEntry) -> tuple[SolcastUpdateCoordinator | None, SolcastApi | None]:
-    """Reload the integration."""
-
-    _LOGGER.warning("Reloading integration")
-    await hass.config_entries.async_reload(entry.entry_id)
-    await hass.async_block_till_done()
-    if hass.data[DOMAIN].get(entry.entry_id):
-        try:
-            coordinator = entry.runtime_data.coordinator
-            return coordinator, coordinator.solcast  # noqa: TRY300
-        except:  # noqa: E722
-            _LOGGER.error("Failed to load coordinator (or solcast), which may be expected given test conditions")
-    return None, None
 
 
 async def test_missing_data_fixable(
@@ -88,7 +72,7 @@ async def test_missing_data_fixable(
                 _LOGGER.critical("%s: %s", data_file, len(data["siteinfo"]["1111-1111-1111-1111"]["forecasts"]))
 
         remove_future_forecasts()
-        await _reload(hass, entry)
+        await reload_integration(hass, entry)
 
         # Assert the issue is present, fixable and non-persistent
         assert len(issue_registry.issues) == 1
@@ -235,20 +219,20 @@ async def test_unusual_azimuth(
                 # Fix the issue at Solcast and reload the integration
                 API_KEY_SITES["1"]["sites"][0]["latitude"] = old_latitude
                 API_KEY_SITES["1"]["sites"][0]["azimuth"] = old_azimuth
-                await _reload(hass, entry)
+                await reload_integration(hass, entry)
                 assert len(issue_registry.issues) == 0
             else:
                 assert "Re-serialising sites cache for" in caplog.text
                 caplog.clear()
                 # Dismiss the issue and reload the integration
                 ir.async_ignore_issue(hass, DOMAIN, issue.issue_id, True)
-                await _reload(hass, entry)
+                await reload_integration(hass, entry)
                 assert len(list(issue_registry.issues.values())) == 0
                 assert "Remove ignored issue for unusual_azimuth_northern" in caplog.text
                 assert f"Raise issue `{issue.issue_id}`" not in caplog.text
                 assert len(issue_registry.issues) == 0
                 caplog.clear()
-                await _reload(hass, entry)
+                await reload_integration(hass, entry)
                 assert re.search(r"DEBUG.+Unusual azimuth", caplog.text) is not None
         else:
             # Assert the issue is not present

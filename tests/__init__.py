@@ -1,5 +1,6 @@
 """Tests setup for Solcast Solar integration."""
 
+import asyncio
 import contextlib
 import copy
 from datetime import UTC, datetime as dt, timedelta
@@ -13,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from aiohttp import ClientConnectionError
 from freezegun import freeze_time
+from freezegun.api import FrozenDateTimeFactory
 import pytest
 from yarl import URL
 
@@ -42,6 +44,9 @@ from homeassistant.components.solcast_solar.const import (
     SITE_EXPORT_LIMIT,
     USE_ACTUALS,
 )
+from homeassistant.components.solcast_solar.coordinator import SolcastUpdateCoordinator
+from homeassistant.components.solcast_solar.solcastapi import SolcastApi
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -660,6 +665,91 @@ async def async_init_integration(
     await hass.async_block_till_done()
 
     return entry
+
+
+
+def no_exception(caplog: pytest.LogCaptureFixture) -> None:
+    """Assert that no exception occurred during the test."""
+    assert "Exception" not in caplog.text
+
+
+def no_error_or_exception(caplog: pytest.LogCaptureFixture) -> None:
+    """Assert that no error or exception occurred during the test."""
+    assert "Error" not in caplog.text
+    assert "Exception" not in caplog.text
+
+
+async def reload_integration(hass: HomeAssistant, entry: ConfigEntry) -> tuple[SolcastUpdateCoordinator | None, SolcastApi | None]:
+    """Reload the integration."""
+
+    _LOGGER.warning("Reloading integration")
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    if hass.data[DOMAIN].get(entry.entry_id):
+        try:
+            return entry.runtime_data.coordinator, entry.runtime_data.coordinator.solcast
+        except:  # noqa: E722
+            _LOGGER.error("Failed to load coordinator (or solcast), which may be expected given test conditions")
+    return None, None
+
+
+async def exec_update_actuals(
+    hass: HomeAssistant,
+    coordinator: SolcastUpdateCoordinator,
+    solcast: SolcastApi,
+    caplog: pytest.LogCaptureFixture,
+    freezer: FrozenDateTimeFactory,
+    action: str,
+    last_update_delta: int = 0,
+    wait: bool = True,
+) -> None:
+    """Execute an estimated actuals action and wait for completion."""
+
+    caplog.clear()
+    if last_update_delta == 0:
+        last_updated = dt(year=2020, month=1, day=1, hour=1, minute=1, second=1, tzinfo=UTC)
+    else:
+        last_updated = solcast.data_actuals["last_updated"] - timedelta(seconds=last_update_delta)
+        _LOGGER.info("Mock last updated: %s", last_updated)
+    solcast.data_actuals["last_updated"] = last_updated
+    await hass.services.async_call(DOMAIN, action, {}, blocking=True)
+    if wait:
+        await wait_for_update(hass, caplog, freezer)
+        await solcast.tasks_cancel()
+        async with asyncio.timeout(1):
+            while "Task dampening model_automated took" not in caplog.text:
+                await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+
+async def wait_for_update(hass: HomeAssistant, caplog: pytest.LogCaptureFixture, freezer: FrozenDateTimeFactory) -> None:
+    """Wait for forecast update completion."""
+
+    async with asyncio.timeout(10):
+        while (
+            "Forecast update completed successfully" not in caplog.text
+            and "Saved estimated actual cache" not in caplog.text
+            and "Not requesting a solar forecast" not in caplog.text
+            and "aborting forecast update" not in caplog.text
+            and "update already in progress" not in caplog.text
+            and "pausing" not in caplog.text
+            and "Completed task update" not in caplog.text
+            and "Completed task force_update" not in caplog.text
+            and "ConfigEntryAuthFailed" not in caplog.text
+        ):  # Wait for task to complete
+            freezer.tick(0.1)
+            await hass.async_block_till_done()
+
+
+async def wait_for_it(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, freezer: FrozenDateTimeFactory, wait_for: str, long_time: bool = False
+) -> None:
+    """Wait for a specific log message to appear."""
+
+    async with asyncio.timeout(300 if not long_time else 3000):
+        while wait_for not in caplog.text:  # Wait for task to complete
+            freezer.tick(0.1)
+            await hass.async_block_till_done()
 
 
 async def async_cleanup_integration_caches(hass: HomeAssistant, **kwargs: Any) -> bool:

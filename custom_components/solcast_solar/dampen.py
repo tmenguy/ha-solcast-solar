@@ -506,7 +506,10 @@ class Dampening:
             selected_model = result.best_model_no_delta
             selected_delta = None
             current_valid = selected_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
-            is_different = selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] or self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA
+            is_different = (
+                selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
+                or self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA
+            )
             alternative_model = result.best_model_adjusted
             if result.borda_scores:
                 selected_md = (result.best_model_no_delta, VALUE_ADAPTIVE_DAMPENING_NO_DELTA)
@@ -2275,24 +2278,26 @@ class Dampening:
                 interval_totals[interval] += gen_data[GENERATION]
                 interval_counts[interval] += 1
 
-        # Analyze dampening factors across all models to find where dampening is most applied
-        # AND where models differ significantly in their approach (variance)
-        interval_factors_by_model: list[list[float]] = [[] for _ in range(48)]
-        total_combos = 0
-        combo_dampens: list[set[tuple[int, int]]] = [set() for _ in range(48)]
+        # Analyse dampening factors using only the no-delta (raw) history entries.
+        # Delta-adjusted entries (delta 0, 1, 2 …) have been pushed toward 1.0 by the
+        # adjustment algorithm, which artificially deflates both variance and breadth.
+        # The raw no-delta factors represent what each dampening model strength genuinely
+        # computed, without post-processing bias — giving cleaner discrimination.
+        interval_active_factors: list[list[float]] = [[] for _ in range(48)]
+        total_models = 0
+        combo_dampens: list[set[int]] = [set() for _ in range(48)]
 
         for model_key, model_data in self.auto_factors_history.items():
-            for delta_key, delta_entries in model_data.items():
-                if len(delta_entries) >= min_history_days:
-                    total_combos += 1
-                    for entry in delta_entries:
-                        for i, factor in enumerate(entry["factors"]):
-                            if factor < 1.0:  # Only count where dampening is applied
-                                interval_dampen_sum[i] += factor
-                                interval_dampen_count[i] += 1
-                                combo_dampens[i].add((model_key, delta_key))
-                            # Track all factors for variance calculation
-                            interval_factors_by_model[i].append(factor)
+            no_delta_entries = model_data.get(VALUE_ADAPTIVE_DAMPENING_NO_DELTA, [])
+            if len(no_delta_entries) >= min_history_days:
+                total_models += 1
+                for entry in no_delta_entries:
+                    for i, factor in enumerate(entry["factors"]):
+                        if factor < 1.0:  # Only count where dampening is applied
+                            interval_dampen_sum[i] += factor
+                            interval_dampen_count[i] += 1
+                            combo_dampens[i].add(model_key)
+                            interval_active_factors[i].append(factor)
 
         # Calculate averages and normalize generation to peak interval (0-1 range)
         avg_generation = [interval_totals[i] / interval_counts[i] if interval_counts[i] > 0 else 0.0 for i in range(48)]
@@ -2300,37 +2305,52 @@ class Dampening:
         normalized_generation = [g / max_generation for g in avg_generation]
         avg_dampen_factor = [interval_dampen_sum[i] / interval_dampen_count[i] if interval_dampen_count[i] > 0 else 1.0 for i in range(48)]
 
-        # Calculate variance of dampening factors across models for each interval
-        # High variance = models differ significantly (good for comparison)
+        # Calculate variance of dampening factors across models for each interval,
+        # using only entries where dampening was actually applied (factor < 1.0).
         dampen_variance = []
         for i in range(48):
-            if len(interval_factors_by_model[i]) > 1:
-                factors = interval_factors_by_model[i]
-                mean = sum(factors) / len(factors)
-                variance = sum((f - mean) ** 2 for f in factors) / len(factors)
+            if len(interval_active_factors[i]) > 1:
+                active = interval_active_factors[i]
+                mean = sum(active) / len(active)
+                variance = sum((f - mean) ** 2 for f in active) / len(active)
                 dampen_variance.append(variance)
             else:
                 dampen_variance.append(0.0)
 
-        # Calculate breadth of dampening: fraction of model/delta combos that apply dampening
-        # Intervals where more configurations apply dampening are better for model comparison
-        dampening_breadth = [len(combo_dampens[i]) / total_combos if total_combos > 0 else 0.0 for i in range(48)]
+        # Calculate breadth of dampening: fraction of dampening models that apply dampening
+        # Intervals where more model strengths agree dampening is needed are better for comparison
+        dampening_breadth = [len(combo_dampens[i]) / total_models if total_models > 0 else 0.0 for i in range(48)]
 
-        # Score = normalized_generation × (1 - avg_factor) × sqrt(variance) × dampening_breadth
-        # All factors are 0-1 range, preventing high-generation intervals from dominating
-        # through raw scale when they have sparse dampening coverage
+        # Score = (1 - avg_factor) × sqrt(variance) × dampening_breadth, for intervals
+        # with adequate generation only (≥ 10% of peak to exclude pre-dawn/post-dusk).
+        # The goal here is dampening quality, not energy magnitude.
+        min_gen_fraction = 0.10
         dampening_impact = [
-            normalized_generation[i] * (1.0 - avg_dampen_factor[i]) * (dampen_variance[i] ** 0.5) * dampening_breadth[i] for i in range(48)
+            (1.0 - avg_dampen_factor[i]) * (dampen_variance[i] ** 0.5) * dampening_breadth[i]
+            if normalized_generation[i] >= min_gen_fraction
+            else 0.0
+            for i in range(48)
         ]
 
-        # When variance is zero everywhere (e.g. early training with uniform factors),
-        # the variance term collapses all scores to zero and index(0.0) returns interval 0
-        # (midnight), where no solar generation exists. Fall back progressively.
+        # Fall back progressively when history-based scoring cannot discriminate.
         if not dampening_impact or max(dampening_impact) == 0.0:
-            # First fallback: generation × dampening × breadth (no variance component)
-            dampening_impact = [normalized_generation[i] * (1.0 - avg_dampen_factor[i]) * dampening_breadth[i] for i in range(48)]
+            # First fallback: drop the variance term — (1 - dampening) × breadth, still generation-gated
+            dampening_impact = [
+                (1.0 - avg_dampen_factor[i]) * dampening_breadth[i] if normalized_generation[i] >= min_gen_fraction else 0.0
+                for i in range(48)
+            ]
         if max(dampening_impact) == 0.0:
-            # Second fallback: pure generation — ensures a daytime interval is always chosen
+            # Second fallback: use the current model factors as a proxy for where dampening
+            # matters. This handles the case where the history contains only 1.0 entries
+            # (fresh install, overcast streak, etc.).
+            current_all_factors: list[float] = self.factors.get(ALL, [])
+            if current_all_factors and any(f < 1.0 for f in current_all_factors):
+                min_gen_fraction = 0.10  # Require at least 10% of peak to exclude pre-dawn/dusk
+                dampening_impact = [
+                    (1.0 - current_all_factors[i]) if normalized_generation[i] >= min_gen_fraction else 0.0 for i in range(48)
+                ]
+        if max(dampening_impact) == 0.0:
+            # Final fallback: pure generation — ensures a daytime interval is always chosen
             dampening_impact = list(normalized_generation)
 
         # Select interval with highest weighted score

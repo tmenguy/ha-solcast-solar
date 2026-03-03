@@ -39,6 +39,7 @@ from . import (
     DEFAULT_INPUT2,
     async_cleanup_integration_tests,
     async_init_integration,
+    no_error_or_exception,
 )
 
 from tests.common import async_fire_time_changed
@@ -357,9 +358,6 @@ for day in range(
     SENSORS[f"forecast_day_{day}"]["should_be_disabled"] = True
 
 
-def _no_exception(caplog: pytest.LogCaptureFixture):
-    assert "Error" not in caplog.text
-    assert "Exception" not in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -462,7 +460,7 @@ async def test_sensor_states(  # noqa: C901
 
         # Test number of site sensors that exist.
         assert len(hass.states.async_all("sensor")) == len(sensors) + (3 if key == "2" else 5)
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         caplog.clear()
 
         # Test initial sensor values.
@@ -494,7 +492,7 @@ async def test_sensor_states(  # noqa: C901
                 assert state_attributes["unit_of_measurement"] == attrs["unit_of_measurement"]
             if "state_class" in attrs:
                 assert state_attributes["state_class"] == attrs["state_class"]
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         caplog.clear()
 
         if key == "1":
@@ -541,7 +539,7 @@ async def test_sensor_states(  # noqa: C901
         assert state.last_updated.strftime("%H:%M:%S") == "02:30:00"  # type: ignore[union-attr]
         state = hass.states.get("sensor.solcast_pv_forecast_forecast_remaining_today")  # A per-update/midnight sensor
         assert state.last_updated.strftime("%H:%M:%S") == "02:30:00"  # type: ignore[union-attr]
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         # Simulate date change
         caplog.clear()
@@ -556,7 +554,7 @@ async def test_sensor_states(  # noqa: C901
         assert coordinator.get_sensor_extra_attributes("badkey") is None
         assert coordinator.get_site_sensor_value("badroof", "badkey") is None
         assert coordinator.get_site_sensor_extra_attributes("badroof", "badkey") is None
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
     finally:
         assert await async_cleanup_integration_tests(hass)
@@ -582,7 +580,7 @@ async def test_sensor_x_hours_long(
         state = hass.states.get("sensor.solcast_pv_forecast_forecast_next_x_hours")
         assert state
         assert state.state == "86910"
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
     finally:
         assert await async_cleanup_integration_tests(hass)
@@ -651,7 +649,7 @@ async def test_sensor_unavailable(
                 assert state
                 assert state.state == STATE_UNAVAILABLE
 
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         caplog.clear()
 
         # Test when 'today' is partial (remove D3 onwards).
@@ -669,7 +667,7 @@ async def test_sensor_unavailable(
         state_attributes: ReadOnlyDict[str, Any] = state.attributes  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         assert state_attributes["dataCorrect"] is False
 
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
     finally:
         assert await async_cleanup_integration_tests(hass)

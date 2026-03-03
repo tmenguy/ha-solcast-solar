@@ -91,6 +91,7 @@ from . import (
     ZONE_RAW,
     async_cleanup_integration_tests,
     async_init_integration,
+    no_error_or_exception,
     session_clear,
     session_reset_usage,
     session_set,
@@ -312,9 +313,6 @@ async def _reload(hass: HomeAssistant, entry: ConfigEntry) -> tuple[SolcastUpdat
     return None, None
 
 
-def _no_exception(caplog: pytest.LogCaptureFixture):
-    assert "Error" not in caplog.text
-    assert "Exception" not in caplog.text
 
 
 async def five_minute_bump(hass: HomeAssistant, caplog: pytest.LogCaptureFixture):
@@ -703,7 +701,7 @@ async def test_integration(  # noqa: C901
         assert "Not requesting a solar forecast because time is within ten seconds of last update" in caplog.text
         assert "ERROR" not in caplog.text
 
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         # Test API too busy encountered for first site
         caplog.clear()
@@ -723,12 +721,12 @@ async def test_integration(  # noqa: C901
         assert "API allowed polling limit has been exceeded" in caplog.text
         assert "No data was returned for forecasts" in caplog.text
         caplog.clear()
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         await _exec_update(hass, solcast, caplog, "update_forecasts", last_update_delta=20)
         assert "API polling limit exhausted, not getting forecast" in caplog.text
         assert "No data was returned for forecasts" in caplog.text
         caplog.clear()
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         session_clear(MOCK_OVER_LIMIT)
 
         # Create a granular dampening file to be read
@@ -779,7 +777,7 @@ async def test_integration(  # noqa: C901
             assert "Granular dampening loaded" in caplog.text
             assert "Forecast update completed successfully" in caplog.text
             assert "contains all intervals" in caplog.text
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         caplog.clear()
 
@@ -941,7 +939,7 @@ async def test_remaining_actions(
         assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         # Test for creation of additional forecast day entities
         assert "Registered new sensor.solcast_solar entity: sensor.solcast_pv_forecast_forecast_day_8" in caplog.text
@@ -1274,7 +1272,7 @@ async def test_remaining_actions(
             await hass.services.async_call(DOMAIN, "update_forecasts", {}, blocking=True)
         assert "Integration not loaded" in caplog.text
 
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
     finally:
         assert await async_cleanup_integration_tests(hass)
@@ -1340,7 +1338,7 @@ async def test_scenarios(  # noqa: C901
         _LOGGER.debug("Testing good start happened")
         assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
         assert "Hard limit is set to limit peak forecast values" in caplog.text
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         caplog.clear()
 
         # Test start with stale data
@@ -1425,7 +1423,7 @@ async def test_scenarios(  # noqa: C901
         assert "is older than expected, should be" in caplog.text
         assert solcast.data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)
         assert "ERROR" not in caplog.text
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         # Get last auto-update time for a subsequent test
         last_update = ""
@@ -1448,7 +1446,7 @@ async def test_scenarios(  # noqa: C901
         assert solcast.data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)
         assert "hours of past data" in caplog.text
         assert "ERROR" not in caplog.text
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         caplog.clear()
         restore_data()
@@ -1465,7 +1463,7 @@ async def test_scenarios(  # noqa: C901
             pytest.fail("Reload failed")
         await _wait_for_frozen_update(hass, caplog, freezer)
         assert "The update automation has not been running" in caplog.text
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         caplog.clear()
         restore_data()
@@ -1481,7 +1479,7 @@ async def test_scenarios(  # noqa: C901
         assert solcast.data["last_updated"] > dt.now(datetime.UTC) - timedelta(minutes=10)
         assert "hours of past data" in caplog.text
         assert "ERROR" not in caplog.text
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
 
         caplog.clear()
         restore_data()
@@ -1543,7 +1541,7 @@ async def test_scenarios(  # noqa: C901
         assert "New site(s) have been added" in caplog.text
         assert "Site resource id 1111-1111-1111-1111 is no longer configured" in caplog.text
         assert "Site resource id 2222-2222-2222-2222 is no longer configured" in caplog.text
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         caplog.clear()
 
         sites_file = Path(f"{config_dir}/solcast-sites.json")
@@ -1707,7 +1705,7 @@ async def test_estimated_actuals(
         # Assert good start, that actuals are enabled, and that the cache is saved
         _LOGGER.debug("Testing good start happened")
         assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
         assert Path(f"{config_dir}/solcast-actuals.json").is_file()
         caplog.clear()
 
@@ -1836,6 +1834,6 @@ async def test_config_folder_migration(
         assert re.search(
             r"INFO.+Migrating config directory file.+config/solcast-test.json to .+config/solcast_solar/solcast-test.json", caplog.text
         )
-        _no_exception(caplog)
+        no_error_or_exception(caplog)
     finally:
         assert await async_cleanup_integration_tests(hass)
