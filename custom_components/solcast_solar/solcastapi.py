@@ -3361,7 +3361,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                         self.hass,
                         DOMAIN,
                         raise_issue,
-                        is_fixable=self.entry.options[AUTO_UPDATE] == AutoUpdate.NONE and any(self.data[FAILURE][LAST_14D]) == 0,
+                        is_fixable=self.entry.options[AUTO_UPDATE] == AutoUpdate.NONE and not any(self.data[FAILURE][LAST_14D]),
                         data={CONTIGUOUS: contiguous, ENTRY_ID: self.entry.entry_id if self.entry is not None else ""},
                         severity=ir.IssueSeverity.WARNING,
                         translation_key=raise_issue,

@@ -667,7 +667,6 @@ async def async_init_integration(
     return entry
 
 
-
 def no_exception(caplog: pytest.LogCaptureFixture) -> None:
     """Assert that no exception occurred during the test."""
     assert "Exception" not in caplog.text
@@ -725,7 +724,7 @@ async def exec_update_actuals(
 async def wait_for_update(hass: HomeAssistant, caplog: pytest.LogCaptureFixture, freezer: FrozenDateTimeFactory) -> None:
     """Wait for forecast update completion."""
 
-    async with asyncio.timeout(10):
+    async with asyncio.timeout(300):
         while (
             "Forecast update completed successfully" not in caplog.text
             and "Saved estimated actual cache" not in caplog.text

@@ -52,7 +52,7 @@ class Updater:
         """
         self._coordinator = coordinator
         self.divisions: int = 0
-        self.interval_just_passed: dt | None
+        self.interval_just_passed: dt | None = None
         self._intervals: list[dt] = []
         self._update_sequence: list[int] = []
         self._sunrise: dt
@@ -187,12 +187,13 @@ class Updater:
 
     def set_next_update(self) -> None:
         """Set the next forecast update message time."""
-        self._coordinator = self._coordinator
         self._coordinator.solcast.set_next_update(None)
         if len(self._intervals) > 0:
             next_update = self._intervals[0].astimezone(self._coordinator.solcast.options.tz)
             self._coordinator.solcast.set_next_update(
-                next_update.strftime(DT_TIME_FORMAT) if next_update.date() == dt.now().date() else next_update.strftime(DT_DATE_FORMAT)
+                next_update.strftime(DT_TIME_FORMAT)
+                if next_update.date() == dt.now(self._coordinator.solcast.options.tz).date()
+                else next_update.strftime(DT_DATE_FORMAT)
             )
 
     def get_auto_update_details(self) -> dict[str, Any]:
@@ -206,7 +207,7 @@ class Updater:
         }
         if self._coordinator.solcast.options.auto_update != AutoUpdate.NONE:
             return base | {
-                "next_auto_update": self._intervals[0].astimezone(self._coordinator.solcast.options.tz),
+                "next_auto_update": self._intervals[0].astimezone(self._coordinator.solcast.options.tz) if self._intervals else None,
                 "auto_update_divisions": self.divisions,
                 "auto_update_queue": [i.astimezone(self._coordinator.solcast.options.tz) for i in self._intervals[:48]],
             }
@@ -277,7 +278,7 @@ class Updater:
         finally:
             with contextlib.suppress(Exception):
                 # Clean up a task created by a service call action
-                self._coordinator.tasks.pop(TASK_FORECASTS_FETCH_IMMEDIATE)
+                self._coordinator.tasks.pop(TASK_FORECASTS_FETCH_IMMEDIATE, None)
                 await self._coordinator.solcast.build_actual_data()
 
     def _get_minute_of_day(self, time_point: dt) -> int:

@@ -538,9 +538,9 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                         if len(to_set) > api_count:
                             errors[BASE] = EXCEPTION_HARD_TOO_MANY
                             _LOGGER.debug("Options validation failed: %s", errors[BASE])
-                    else:
-                        hard_limit = ",".join(to_set)
-                        all_config_data[HARD_LIMIT_API] = hard_limit
+                        else:
+                            hard_limit = ",".join(to_set)
+                            all_config_data[HARD_LIMIT_API] = hard_limit
 
                 # Validate estimated actuals and auto-dampen.
                 all_config_data[GET_ACTUALS] = user_input.get(GET_ACTUALS, False)
