@@ -533,7 +533,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 await file.write(json.dumps(response_json, ensure_ascii=False))
 
         async def load_dismissals(cache_filename: str) -> None:
-            _LOGGER.info("Loading warning dismissals for %s", redact_api_key(api_key))
+            _LOGGER.debug("Loading warning dismissals for %s", redact_api_key(api_key))
             async with aiofiles.open(cache_filename) as file:
                 content = json.loads(await file.read())
                 sites = content.get(SITES, [])

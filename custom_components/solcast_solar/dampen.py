@@ -496,17 +496,17 @@ class Dampening:
         selected_error = result.borda_scores[selected_md]
         alternative_error = result.borda_scores[alternate_md]
 
-        _LOGGER.info(
-            "Best automated dampening settings: model %d%s with Borda score of %.3f (interval %d: %02d:%02d)",
+        _LOGGER.log(
+            logging.DEBUG if _LOGGER.isEnabledFor(logging.DEBUG) else logging.INFO,
+            "Best automated dampening settings: model %d%s%s",
             selected_model,
             f" and delta {selected_delta}" if use_delta_mode else "",
-            selected_error,
-            common_peak_interval,
-            common_peak_interval // 2,
-            (common_peak_interval % 2) * 30,
+            f" with Borda score of {selected_error:.3f} (interval {common_peak_interval}: {common_peak_interval // 2:02d}:{(common_peak_interval % 2) * 30:02d})"
+            if _LOGGER.isEnabledFor(logging.DEBUG)
+            else "",
         )
         if is_different:
-            _LOGGER.info("Updating automated dampening settings based on Borda score")
+            _LOGGER.info("Updating automated dampening settings")
             self.api.advanced_options.update(
                 {
                     ADVANCED_AUTOMATED_DAMPENING_MODEL: selected_model,
@@ -517,10 +517,10 @@ class Dampening:
             )
             await self._serialise_advanced_options()
         else:
-            _LOGGER.info("Adaptive dampening configuration unchanged")
+            _LOGGER.debug("Adaptive dampening configuration unchanged")
 
         if alternative_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED and alternative_error < selected_error:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "%s is set %s but adaptive dampening found that model %d%s had a lower Borda score of %.3f vs the selected %.3f",
                 ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT,
                 "false" if use_delta_mode else "true",
@@ -755,9 +755,9 @@ class Dampening:
         no_delta_winner = next((md for md in sorted_by_borda if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
         adjusted_winner = next((md for md in sorted_by_borda if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA), None)
         if no_delta_winner:
-            _LOGGER.info("Ranking winner (no delta): Model %d (Borda %.3f)", no_delta_winner[0], borda_scores[no_delta_winner])
+            _LOGGER.debug("Ranking winner (no delta): Model %d (Borda %.3f)", no_delta_winner[0], borda_scores[no_delta_winner])
         if adjusted_winner:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Ranking winner (adjusted): Model %d Delta %d (Borda %.3f)",
                 adjusted_winner[0],
                 adjusted_winner[1],

@@ -313,7 +313,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         original_delta = solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] = 1
         await solcast.dampening.determine_best_settings()
-        assert "Updating automated dampening settings based on Borda score" in caplog.text
+        assert "Updating automated dampening settings" in caplog.text
         # Restore original values
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] = original_model
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] = original_delta

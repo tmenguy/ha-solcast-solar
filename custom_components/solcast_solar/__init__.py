@@ -102,7 +102,7 @@ _LOGGER = logging.getLogger(__name__)
 def __log_init_message(entry: ConfigEntry, version: str, solcast: SolcastApi) -> None:
     _LOGGER.debug("UTC times are converted to %s", solcast.options.tz)
     _LOGGER.debug("Successful init")
-    _LOGGER.info("Solcast integration version %s", version)
+    _LOGGER.debug("Solcast integration version %s", version)
 
 
 async def get_version(hass: HomeAssistant) -> str:
