@@ -14,7 +14,6 @@ import logging
 import math
 from operator import itemgetter
 from pathlib import Path
-import random
 import time
 from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
@@ -29,11 +28,8 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
-    ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SELECTION,
-    ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SHIT,
     ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_CONFIGURATION,
     ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_EXCLUDE,
-    ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA,
     ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS,
     ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL,
     ADVANCED_AUTOMATED_DAMPENING_GENERATION_HISTORY_LOAD_DAYS,
@@ -113,12 +109,9 @@ class _ModelEvalResult(NamedTuple):
     daily_model_errors: dict[dt, dict[tuple[int, int], float]]
     daily_ranks: dict[dt, dict[tuple[int, int], int]]
     borda_scores: dict[tuple[int, int], float]
-    best_ape_adjusted: float
-    best_ape_no_delta: float
     best_model_adjusted: int
     best_model_no_delta: int
     best_delta_adjusted: int
-    extant_ape: float
 
 
 class Dampening:
@@ -426,12 +419,6 @@ class Dampening:
         _LOGGER.debug("Determining best automated dampening settings")
         start_time = time.time()
 
-        if not self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SHIT]:
-            use_error = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_APE_SELECTION]
-        else:
-            use_error = random.randint(-1, 100)
-            _LOGGER.debug("Adaptive dampening selection going ape shit with USE_ERROR=%d", use_error)
-
         min_history_days = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_HISTORY_DAYS]
         earliest_common = self._find_earliest_common_history(min_history_days)
 
@@ -461,11 +448,11 @@ class Dampening:
 
         included_intervals = self._build_included_intervals()
         result = await self._evaluate_model_combinations(
-            earliest_common, actuals, generation_dampening, included_intervals, common_peak_interval, use_error
+            earliest_common, actuals, generation_dampening, included_intervals, common_peak_interval
         )
 
         self._log_model_rankings(result)
-        await self._apply_best_settings(result, common_peak_interval, use_error)
+        await self._apply_best_settings(result, common_peak_interval)
 
         _LOGGER.debug("Task dampening determine_best_settings took %.3f seconds", time.time() - start_time)
 
@@ -473,16 +460,8 @@ class Dampening:
         self,
         result: _ModelEvalResult,
         common_peak_interval: int,
-        use_error: int,
     ) -> None:
         """Log and conditionally serialise the best adaptive dampening configuration."""
-        if result.borda_scores:
-            metric_desc = "Borda score"
-            metric_suffix = ""
-        else:
-            metric_desc = "single interval MAPE" if use_error == -1 else f"single interval {ordinal(use_error)} percentile APE"
-            metric_suffix = "%"
-        min_error_delta = self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_MINIMUM_ERROR_DELTA]
         use_delta_mode = not self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT]
 
         if use_delta_mode:
@@ -494,14 +473,6 @@ class Dampening:
                 self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL],
             }
             alternative_model = result.best_model_no_delta
-            if result.borda_scores:
-                selected_md = (result.best_model_adjusted, result.best_delta_adjusted)
-                alternate_md = (result.best_model_no_delta, VALUE_ADAPTIVE_DAMPENING_NO_DELTA)
-                selected_error = result.borda_scores[selected_md]
-                alternative_error = result.borda_scores[alternate_md]
-            else:
-                selected_error = result.best_ape_adjusted
-                alternative_error = result.best_ape_no_delta
         else:
             selected_model = result.best_model_no_delta
             selected_delta = None
@@ -511,69 +482,52 @@ class Dampening:
                 or self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA
             )
             alternative_model = result.best_model_adjusted
-            if result.borda_scores:
-                selected_md = (result.best_model_no_delta, VALUE_ADAPTIVE_DAMPENING_NO_DELTA)
-                alternate_md = (result.best_model_adjusted, result.best_delta_adjusted)
-                selected_error = result.borda_scores[selected_md]
-                alternative_error = result.borda_scores[alternate_md]
-            else:
-                selected_error = result.best_ape_no_delta
-                alternative_error = result.best_ape_adjusted
 
         if not current_valid:
             _LOGGER.info("Could not determine best automated dampening settings - values unmodified")
+            return
+
+        if use_delta_mode:
+            selected_md = (result.best_model_adjusted, result.best_delta_adjusted)
+            alternate_md = (result.best_model_no_delta, VALUE_ADAPTIVE_DAMPENING_NO_DELTA)
         else:
-            _LOGGER.info(
-                "Best automated dampening settings: model %d%s with %s of %.3f%s (interval %d: %02d:%02d)",
-                selected_model,
-                f" and delta {selected_delta}" if use_delta_mode else "",
-                metric_desc,
-                selected_error,
-                metric_suffix,
-                common_peak_interval,
-                common_peak_interval // 2,
-                (common_peak_interval % 2) * 30,
+            selected_md = (result.best_model_no_delta, VALUE_ADAPTIVE_DAMPENING_NO_DELTA)
+            alternate_md = (result.best_model_adjusted, result.best_delta_adjusted)
+        selected_error = result.borda_scores[selected_md]
+        alternative_error = result.borda_scores[alternate_md]
+
+        _LOGGER.info(
+            "Best automated dampening settings: model %d%s with Borda score of %.3f (interval %d: %02d:%02d)",
+            selected_model,
+            f" and delta {selected_delta}" if use_delta_mode else "",
+            selected_error,
+            common_peak_interval,
+            common_peak_interval // 2,
+            (common_peak_interval % 2) * 30,
+        )
+        if is_different:
+            _LOGGER.info("Updating automated dampening settings based on Borda score")
+            self.api.advanced_options.update(
+                {
+                    ADVANCED_AUTOMATED_DAMPENING_MODEL: selected_model,
+                    ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL: selected_delta
+                    if use_delta_mode
+                    else DEFAULT_DAMPENING_DELTA_ADJUSTMENT_MODEL,
+                }
             )
-            improvement = result.extant_ape - selected_error
-            if is_different and (result.borda_scores or improvement > min_error_delta):
-                _LOGGER.info(
-                    "Updating automated dampening settings based on %s",
-                    metric_desc if result.borda_scores else f"{improvement:.3f}% improvement over current settings",
-                )
-                self.api.advanced_options.update(
-                    {
-                        ADVANCED_AUTOMATED_DAMPENING_MODEL: selected_model,
-                        ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL: selected_delta
-                        if use_delta_mode
-                        else DEFAULT_DAMPENING_DELTA_ADJUSTMENT_MODEL,
-                    }
-                )
-                await self._serialise_advanced_options()
-            elif is_different:
-                _LOGGER.info(
-                    "Insufficient improvement of %.3f%%%s over current model %d%s %s of %.3f%%, not updating settings",
-                    improvement,
-                    f" (minimum {min_error_delta:.3f}%)" if min_error_delta != 0.0 else "",
-                    self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL],
-                    f" delta {self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]}" if use_delta_mode else "",
-                    metric_desc,
-                    result.extant_ape,
-                )
-            else:
-                _LOGGER.info("Adaptive dampening configuration unchanged")
+            await self._serialise_advanced_options()
+        else:
+            _LOGGER.info("Adaptive dampening configuration unchanged")
 
         if alternative_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED and alternative_error < selected_error:
             _LOGGER.info(
-                "%s is set %s but adaptive dampening found that model %d%s had a lower %s of %.3f%s vs the selected %.3f%s",
+                "%s is set %s but adaptive dampening found that model %d%s had a lower Borda score of %.3f vs the selected %.3f",
                 ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT,
                 "false" if use_delta_mode else "true",
                 alternative_model,
                 " with no delta adjustment" if use_delta_mode else f" and delta {result.best_delta_adjusted}",
-                metric_desc,
                 alternative_error,
-                metric_suffix,
                 selected_error,
-                metric_suffix,
             )
 
     def _build_dampened_actuals_for_model(
@@ -668,7 +622,6 @@ class Dampening:
         generation_dampening: defaultdict[dt, dict[str, Any]],
         included_intervals: defaultdict[dt, list[bool]],
         common_peak_interval: int,
-        use_error: int,
     ) -> _ModelEvalResult:
         """Evaluate all model/delta combinations and return the best-performing settings.
 
@@ -678,13 +631,9 @@ class Dampening:
         """
         ignored_days: dict[dt, bool] = {}
         daily_model_errors: dict[dt, dict[tuple[int, int], float]] = defaultdict(dict)
-        model_metrics: dict[tuple[int, int], float] = {}
-        best_ape_adjusted = math.inf
-        best_ape_no_delta = math.inf
         best_model_adjusted = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
         best_model_no_delta = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
         best_delta_adjusted = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
-        extant_ape = math.inf
 
         for model in range(
             ADVANCED_OPTIONS[ADVANCED_AUTOMATED_DAMPENING_MODEL][MINIMUM],
@@ -706,14 +655,13 @@ class Dampening:
 
                 dampened_actuals = self._build_dampened_actuals_for_model(model, delta, earliest_common, actuals, included_intervals)
                 if dampened_actuals is None:
-                    _LOGGER.debug("Skipping APE calculation for model %d and delta %d", model, delta)
+                    _LOGGER.debug("Skipping evaluation for model %d and delta %d", model, delta)
                     continue
 
-                _, error_single_interval, percentiles_single, daily_errors = await self.calculate_single_interval_error(
+                _, error_single_interval, _, daily_errors = await self.calculate_single_interval_error(
                     dampened_actuals,
                     generation_dampening,
                     common_peak_interval,
-                    percentiles=(use_error,) if use_error != -1 else (),
                     log_breakdown=self.api.advanced_options[ADVANCED_ESTIMATED_ACTUALS_LOG_MAPE_BREAKDOWN],
                     ignored_days=ignored_days,
                 )
@@ -721,27 +669,9 @@ class Dampening:
                 for day, error in daily_errors.items():
                     daily_model_errors[day][(model, delta)] = error
 
-                error_metric = percentiles_single[0] if percentiles_single else error_single_interval
-                if (
-                    model == self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
-                    and delta == self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]
-                ):
-                    extant_ape = error_metric
-
-                model_metrics[(model, delta)] = error_metric
-
-                if error_metric == math.inf:
-                    _LOGGER.debug("Skipping APE calculation for model %d and delta %d due to APE calculation issue", model, delta)
+                if error_single_interval == math.inf:
+                    _LOGGER.debug("Skipping evaluation for model %d and delta %d due to error calculation issue", model, delta)
                     continue
-
-                _LOGGER.debug(
-                    "Model %d and delta %d achieved single-interval %s of %.3f%%%s",
-                    model,
-                    delta,
-                    "MAPE" if use_error == -1 else f"{ordinal(use_error)} percentile APE",
-                    error_metric,
-                    f" (MAPE {error_single_interval:.2f}%)" if use_error != -1 else "",
-                )
 
         daily_ranks = self._get_daily_ranks(daily_model_errors)
 
@@ -756,54 +686,29 @@ class Dampening:
 
         borda_scores = {md: rank_sums[md] / rank_counts[md] for md in rank_sums}
 
-        if borda_scores:
-            # Select Borda winners.
-            no_delta_candidates = {md: s for md, s in borda_scores.items() if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA}
-            adjusted_candidates = {md: s for md, s in borda_scores.items() if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA}
+        # Select Borda winners.
+        no_delta_candidates = {md: s for md, s in borda_scores.items() if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA}
+        adjusted_candidates = {md: s for md, s in borda_scores.items() if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA}
 
-            if no_delta_candidates:
-                best_nd = min(no_delta_candidates, key=lambda md: (no_delta_candidates[md], md[0]))
-                best_model_no_delta = best_nd[0]
-                best_ape_no_delta = model_metrics.get(best_nd, math.inf)
+        if no_delta_candidates:
+            best_nd = min(no_delta_candidates, key=lambda md: (no_delta_candidates[md], md[0]))
+            best_model_no_delta = best_nd[0]
 
-            if adjusted_candidates:
-                best_adj = min(
-                    adjusted_candidates,
-                    key=lambda md: (adjusted_candidates[md], md[0], md[1] if md[1] >= 0 else float("inf")),
-                )
-                best_model_adjusted = best_adj[0]
-                best_delta_adjusted = best_adj[1]
-                best_ape_adjusted = model_metrics.get(best_adj, math.inf)
-        else:
-            # No per-day breakdown available (e.g. single-interval only); fall back to minimum APE
-            _LOGGER.debug("No per-day errors collected; using APE-based model selection")
-            valid_metrics = [(md, m) for md, m in model_metrics.items() if m != math.inf]
-            no_delta_sorted = sorted(
-                ((md, m) for md, m in valid_metrics if md[1] == VALUE_ADAPTIVE_DAMPENING_NO_DELTA),
-                key=lambda item: (item[1], item[0][0]),
+        if adjusted_candidates:
+            best_adj = min(
+                adjusted_candidates,
+                key=lambda md: (adjusted_candidates[md], md[0], md[1] if md[1] >= 0 else float("inf")),
             )
-            adjusted_sorted = sorted(
-                ((md, m) for md, m in valid_metrics if md[1] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA),
-                key=lambda item: (item[1], item[0][0], item[0][1] if item[0][1] >= 0 else float("inf")),
-            )
-            if no_delta_sorted:
-                best_nd, best_ape_no_delta = no_delta_sorted[0]
-                best_model_no_delta = best_nd[0]
-            if adjusted_sorted:
-                best_adj, best_ape_adjusted = adjusted_sorted[0]
-                best_model_adjusted = best_adj[0]
-                best_delta_adjusted = best_adj[1]
+            best_model_adjusted = best_adj[0]
+            best_delta_adjusted = best_adj[1]
 
         return _ModelEvalResult(
             daily_model_errors=daily_model_errors,
             daily_ranks=daily_ranks,
             borda_scores=borda_scores,
-            best_ape_adjusted=best_ape_adjusted,
-            best_ape_no_delta=best_ape_no_delta,
             best_model_adjusted=best_model_adjusted,
             best_model_no_delta=best_model_no_delta,
             best_delta_adjusted=best_delta_adjusted,
-            extant_ape=extant_ape,
         )
 
     def _log_model_rankings(self, result: _ModelEvalResult) -> None:
