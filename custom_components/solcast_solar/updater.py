@@ -134,24 +134,29 @@ class Updater:
                 else:
                     break
             intervals = [i for i in intervals if i > _now]
-            if log:
-                _LOGGER.debug("Auto update total seconds %d, divisions %d, interval %d seconds", seconds, self.divisions, interval)
-                if init:
-                    _LOGGER.debug(
-                        "Auto update forecasts %s",
-                        "over 24 hours"
-                        if self._coordinator.solcast.options.auto_update == AutoUpdate.ALL_DAY
-                        else "between sunrise and sunset",
-                    )
-            if sunrise == self._sunrise:
-                just_passed = "Unknown"
-                if self.interval_just_passed is not None:
-                    if self.interval_just_passed in intervals_yesterday:
-                        just_passed = self.interval_just_passed.astimezone(self._coordinator.solcast.options.tz).strftime(DT_DATE_FORMAT)
-                    else:
-                        just_passed = self.interval_just_passed.astimezone(self._coordinator.solcast.options.tz).strftime(DT_TIME_FORMAT)
-                    _LOGGER.debug("Previous auto update UTC %s", self.interval_just_passed.isoformat())
-                _LOGGER.debug("Previous auto update would have been at %s", just_passed)
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                if log:
+                    _LOGGER.debug("Auto update total seconds %d, divisions %d, interval %d seconds", seconds, self.divisions, interval)
+                    if init:
+                        _LOGGER.debug(
+                            "Auto update forecasts %s",
+                            "over 24 hours"
+                            if self._coordinator.solcast.options.auto_update == AutoUpdate.ALL_DAY
+                            else "between sunrise and sunset",
+                        )
+                if sunrise == self._sunrise:
+                    just_passed = "Unknown"
+                    if self.interval_just_passed is not None:
+                        if self.interval_just_passed in intervals_yesterday:
+                            just_passed = self.interval_just_passed.astimezone(self._coordinator.solcast.options.tz).strftime(
+                                DT_DATE_FORMAT
+                            )
+                        else:
+                            just_passed = self.interval_just_passed.astimezone(self._coordinator.solcast.options.tz).strftime(
+                                DT_TIME_FORMAT
+                            )
+                        _LOGGER.debug("Previous auto update UTC %s", self.interval_just_passed.isoformat())
+                    _LOGGER.debug("Previous auto update would have been at %s", just_passed)
             return intervals
 
         def format_intervals(intervals: list[dt]) -> list[str]:
