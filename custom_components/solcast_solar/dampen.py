@@ -2130,7 +2130,7 @@ class Dampening:
             interval = hour * 2 + minute // 30
             ignored_intervals.append(interval)
 
-        export_limited_intervals = dict.fromkeys(range(50), False)
+        export_limited_intervals = dict.fromkeys(range(48), False)
         if not self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_NO_LIMITING_CONSISTENCY]:
             for gen in self.data_generation[GENERATION][-1 * self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS] * 48 :]:
                 if gen[EXPORT_LIMITING]:
