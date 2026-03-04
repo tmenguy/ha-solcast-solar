@@ -157,6 +157,7 @@ from .util import (
     SolcastApiStatus,
     UsageStatus,
     async_trigger_automation_by_name,
+    check_unusual_azimuth,
     clear_cache,
     cubic_interp,
     forecast_entry_update,
@@ -928,24 +929,10 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                 if SITE_ATTRIBUTE_LATITUDE in v and SITE_ATTRIBUTE_AZIMUTH in v:
                     azimuth = v[SITE_ATTRIBUTE_AZIMUTH]
                     if azimuth is not None:
-                        if v[SITE_ATTRIBUTE_LATITUDE] > 0:  # pyright: ignore[reportOptionalOperand] - weird pyright warning
-                            # Northern hemisphere, so azimuth should be 90 to 180, or -90 to -180
-                            raise_issue = ISSUE_UNUSUAL_AZIMUTH_NORTHERN
-                            if azimuth > 0 and not (90 <= azimuth <= 180):
-                                unusual = True
-                                proposal = 180 - int(azimuth)
-                            if azimuth < 0 and not (-180 <= azimuth <= -90):
-                                unusual = True
-                                proposal = -180 - int(azimuth)
-                        else:
-                            # Southern hemisphere, so azimuth should be 0 to 90, or -90 to 0
-                            raise_issue = ISSUE_UNUSUAL_AZIMUTH_SOUTHERN
-                            if azimuth > 0 and not (0 <= azimuth <= 90):
-                                unusual = True
-                                proposal = 180 - int(azimuth)
-                            if azimuth < 0 and not (-90 <= azimuth <= 0):
-                                unusual = True
-                                proposal = -180 - int(azimuth)
+                        unusual, raise_issue, proposal = check_unusual_azimuth(
+                            v[SITE_ATTRIBUTE_LATITUDE],  # pyright: ignore[reportArgumentType]
+                            azimuth,  # pyright: ignore[reportArgumentType]
+                        )
                     if unusual:
                         log = (
                             _LOGGER.warning

@@ -54,6 +54,8 @@ from homeassistant.helpers import entity_registry as er
 from .aioresponses import CallbackResult, aioresponses
 from .simulator import API_KEY_SITES, GENERATION_FACTOR, SimulatedSolcast
 
+from homeassistant.components.sensor import SensorDeviceClass
+
 from tests.common import MockConfigEntry
 
 KEY1 = "1"
@@ -186,6 +188,7 @@ class ExtraSensors(Enum):
     YES_NO_UNIT = 3
     YES_UNIT_NOT_IN_HISTORY = 4
     YES_WITH_SUPPRESSION = 5
+    YES_POWER = 6
     DODGY = 9
 
 
@@ -390,10 +393,12 @@ async def async_setup_extra_sensors(  # noqa: C901
             _uom = ""
         case ExtraSensors.DODGY:
             _uom = "MJ"
+        case ExtraSensors.YES_POWER:
+            _uom = "kW"
         case _:
             _uom = "kWh"
 
-    adjustment = {"kWh": 1.0, "MWh": 1000.0, "Wh": 0.001, "MJ": 1.0, "": 1.0}
+    adjustment = {"kWh": 1.0, "MWh": 1000.0, "Wh": 0.001, "MJ": 1.0, "": 1.0, "kW": 1.0}
     entity_registry = er.async_get(hass)
 
     power: dict[int, float]
@@ -481,6 +486,9 @@ async def async_setup_extra_sensors(  # noqa: C901
         entity_id = "sensor." + entity
 
         if site != "site_export_sensor" or (extra_sensors != ExtraSensors.YES_NO_UNIT and site == "site_export_sensor"):
+            _extra_kwargs: dict[str, Any] = {}
+            if extra_sensors == ExtraSensors.YES_POWER and site != "site_export_sensor":
+                _extra_kwargs["original_device_class"] = SensorDeviceClass.POWER
             entity_registry.async_get_or_create(
                 "sensor",
                 "pytest",
@@ -488,7 +496,31 @@ async def async_setup_extra_sensors(  # noqa: C901
                 config_entry=entry,
                 suggested_object_id=entity,
                 unit_of_measurement=_uom,
+                **_extra_kwargs,
             )
+
+        # For YES_POWER + site 1111, write mostly non-numeric states so compute_power_intervals
+        # returns False (insufficient numeric readings), covering the insufficient-readings branch.
+        # Use distinct non-numeric values so each is a genuine state change for the recorder.
+        if extra_sensors == ExtraSensors.YES_POWER and site == "1111-1111-1111-1111":
+            base = (dt.now(UTC) - timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
+            non_numeric = ["unavailable", "unknown", "error", "none", "n/a"]
+            for k, state_val in enumerate(non_numeric):
+                hass.states.async_set(
+                    entity_id,
+                    state_val,
+                    {"unit_of_measurement": _uom},
+                    timestamp=dt.timestamp(base + timedelta(minutes=k * 5)),
+                )
+            hass.states.async_set(
+                entity_id,
+                "1.0",
+                {"unit_of_measurement": _uom},
+                timestamp=dt.timestamp(base + timedelta(minutes=25)),
+            )
+            await hass.async_block_till_done()
+            await hass.async_block_till_done()
+            continue
 
         gap = False
         with freeze_time(

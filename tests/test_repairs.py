@@ -8,7 +8,6 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import Any
 from zoneinfo import ZoneInfo
 
 from freezegun.api import FrozenDateTimeFactory
@@ -25,6 +24,10 @@ from homeassistant.components.solcast_solar.const import (
     SERVICE_UPDATE,
 )
 from homeassistant.components.solcast_solar.repairs import async_create_fix_flow
+from homeassistant.components.solcast_solar.util import (
+    check_unusual_azimuth,
+    redact_lat_lon_simple,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import issue_registry as ir
@@ -42,7 +45,6 @@ from . import (
 from .simulator import API_KEY_SITES
 
 _LOGGER = logging.getLogger(__name__)
-
 
 
 async def test_missing_data_fixable(
@@ -170,73 +172,132 @@ async def test_missing_data_initial(
 
 
 @pytest.mark.parametrize(
-    "scenario",
+    ("latitude", "azimuth", "expected_unusual", "expected_issue_key", "expected_proposal"),
     [
-        {"latitude": -37.8136, "azimuth": +50, "unusual": False},
-        {"latitude": -37.8136, "azimuth": -50, "unusual": False},
-        {"latitude": -37.8136, "azimuth": +150, "proposal": +30, "unusual": True},
-        {"latitude": -37.8136, "azimuth": -150, "proposal": -30, "unusual": True},
-        {"latitude": +37.8136, "azimuth": +50, "proposal": +130, "unusual": True},
-        {"latitude": +37.8136, "azimuth": -50, "proposal": -130, "unusual": True},
-        {"latitude": +37.8136, "azimuth": +150, "unusual": False},
-        {"latitude": +37.8136, "azimuth": -150, "unusual": False},
-        {"latitude": +37.8136, "azimuth": 90, "unusual": False},
-        {"latitude": -37.8136, "azimuth": -90, "unusual": False},
-        {"latitude": +37.8136, "azimuth": 180, "unusual": False},
-        {"latitude": -37.8136, "azimuth": 0, "unusual": False},
+        # Southern hemisphere — normal azimuths (0..90 or -90..0)
+        (-37.8136, 50, False, "unusual_azimuth_southern", 0),
+        (-37.8136, -50, False, "unusual_azimuth_southern", 0),
+        (-37.8136, 0, False, "unusual_azimuth_southern", 0),
+        (-37.8136, -90, False, "unusual_azimuth_southern", 0),
+        # Southern hemisphere — unusual azimuths
+        (-37.8136, 150, True, "unusual_azimuth_southern", 30),
+        (-37.8136, -150, True, "unusual_azimuth_southern", -30),
+        # Northern hemisphere — normal azimuths (90..180 or -180..-90)
+        (37.8136, 150, False, "unusual_azimuth_northern", 0),
+        (37.8136, -150, False, "unusual_azimuth_northern", 0),
+        (37.8136, 90, False, "unusual_azimuth_northern", 0),
+        (37.8136, 180, False, "unusual_azimuth_northern", 0),
+        # Northern hemisphere — unusual azimuths
+        (37.8136, 50, True, "unusual_azimuth_northern", 130),
+        (37.8136, -50, True, "unusual_azimuth_northern", -130),
     ],
 )
-async def test_unusual_azimuth(
+def test_unusual_azimuth(
+    latitude: float,
+    azimuth: int,
+    expected_unusual: bool,
+    expected_issue_key: str,
+    expected_proposal: int,
+) -> None:
+    """Test unusual azimuth classification for different hemispheres."""
+
+    unusual, issue_key, proposal = check_unusual_azimuth(latitude, azimuth)
+
+    assert unusual is expected_unusual
+    assert issue_key == expected_issue_key
+    if expected_unusual:
+        assert proposal == expected_proposal
+
+
+@pytest.mark.parametrize(
+    ("input_str", "expected"),
+    [
+        ("latitude 37.8136", "latitude 37.******"),
+        ("longitude -122.4194", "longitude -122.******"),
+        ("azimuth 150 for site abc, latitude -37.8136", "azimuth 150 for site abc, latitude -37.******"),
+        ("no decimals here", "no decimals here"),
+    ],
+)
+def test_redact_lat_lon_simple(input_str: str, expected: str) -> None:
+    """Test redaction of latitude and longitude decimal places."""
+
+    assert redact_lat_lon_simple(input_str) == expected
+
+
+async def test_unusual_azimuth_issue_creation_and_cleanup(
     recorder_mock: Recorder,
     hass: HomeAssistant,
     caplog: pytest.LogCaptureFixture,
     issue_registry: ir.IssueRegistry,
-    scenario: dict[str, Any],
 ) -> None:
-    """Test unusual azimuth."""
+    """Test unusual azimuth issue creation, dismissal and cleanup paths."""
 
     old_latitude = API_KEY_SITES["1"]["sites"][0]["latitude"]
     old_azimuth = API_KEY_SITES["1"]["sites"][0]["azimuth"]
-    API_KEY_SITES["1"]["sites"][0]["latitude"] = scenario["latitude"]
-    API_KEY_SITES["1"]["sites"][0]["azimuth"] = scenario["azimuth"]
-    entry = await async_init_integration(hass, DEFAULT_INPUT1)
-
+    API_KEY_SITES["1"]["sites"][0]["latitude"] = 37.8136
+    API_KEY_SITES["1"]["sites"][0]["azimuth"] = 50
     try:
-        if scenario["unusual"]:
-            # Assert the issue is present and persistent
-            assert len(issue_registry.issues) == 1
-            issue = list(issue_registry.issues.values())[0]
-            assert f"Raise issue `{issue.issue_id}`" in caplog.text
-            assert issue.domain == DOMAIN
-            assert issue.issue_id == "unusual_azimuth_northern" if scenario["latitude"] > 0 else "unusual_azimuth_southern"
-            assert issue.is_fixable is False
-            assert issue.is_persistent is True
-            assert issue.translation_placeholders is not None
-            assert issue.translation_placeholders.get("proposal") == str(scenario["proposal"])
-            assert re.search(r"WARNING.+Unusual azimuth", caplog.text) is not None
+        entry = await async_init_integration(hass, DEFAULT_INPUT1)
 
-            if scenario["proposal"] != -130:
-                # Fix the issue at Solcast and reload the integration
-                API_KEY_SITES["1"]["sites"][0]["latitude"] = old_latitude
-                API_KEY_SITES["1"]["sites"][0]["azimuth"] = old_azimuth
-                await reload_integration(hass, entry)
-                assert len(issue_registry.issues) == 0
-            else:
-                assert "Re-serialising sites cache for" in caplog.text
-                caplog.clear()
-                # Dismiss the issue and reload the integration
-                ir.async_ignore_issue(hass, DOMAIN, issue.issue_id, True)
-                await reload_integration(hass, entry)
-                assert len(list(issue_registry.issues.values())) == 0
-                assert "Remove ignored issue for unusual_azimuth_northern" in caplog.text
-                assert f"Raise issue `{issue.issue_id}`" not in caplog.text
-                assert len(issue_registry.issues) == 0
-                caplog.clear()
-                await reload_integration(hass, entry)
-                assert re.search(r"DEBUG.+Unusual azimuth", caplog.text) is not None
-        else:
-            # Assert the issue is not present
-            assert len(issue_registry.issues) == 0
+        # Assert the issue is present, persistent and has correct placeholders
+        assert len(issue_registry.issues) == 1
+        issue = list(issue_registry.issues.values())[0]
+        assert f"Raise issue `{issue.issue_id}`" in caplog.text
+        assert issue.domain == DOMAIN
+        assert issue.issue_id == "unusual_azimuth_northern"
+        assert issue.is_fixable is False
+        assert issue.is_persistent is True
+        assert issue.translation_placeholders is not None
+        assert issue.translation_placeholders.get("proposal") == "130"
+        assert re.search(r"WARNING.+Unusual azimuth", caplog.text) is not None
+
+        # Dismiss the issue and reload — verifies cleanup_issues and re-serialisation
+        assert "Re-serialising sites cache for" in caplog.text
+        caplog.clear()
+        ir.async_ignore_issue(hass, DOMAIN, issue.issue_id, True)
+        await reload_integration(hass, entry)
+        assert len(issue_registry.issues) == 0
+        assert "Remove ignored issue for unusual_azimuth_northern" in caplog.text
+        assert f"Raise issue `{issue.issue_id}`" not in caplog.text
+
+        # Second reload — verify the dismissed state persists (debug log, no warning)
+        caplog.clear()
+        await reload_integration(hass, entry)
+        assert re.search(r"DEBUG.+Unusual azimuth", caplog.text) is not None
+
+    finally:
+        API_KEY_SITES["1"]["sites"][0]["latitude"] = old_latitude
+        API_KEY_SITES["1"]["sites"][0]["azimuth"] = old_azimuth
+        await async_cleanup_integration_tests(hass)
+
+
+async def test_unusual_azimuth_resolved_after_fix(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    caplog: pytest.LogCaptureFixture,
+    issue_registry: ir.IssueRegistry,
+) -> None:
+    """Test that fixing the azimuth at Solcast clears the issue on reload."""
+
+    old_latitude = API_KEY_SITES["1"]["sites"][0]["latitude"]
+    old_azimuth = API_KEY_SITES["1"]["sites"][0]["azimuth"]
+    API_KEY_SITES["1"]["sites"][0]["latitude"] = -37.8136
+    API_KEY_SITES["1"]["sites"][0]["azimuth"] = 150
+    try:
+        entry = await async_init_integration(hass, DEFAULT_INPUT1)
+
+        # Issue should be raised for southern hemisphere unusual azimuth
+        assert len(issue_registry.issues) == 1
+        issue = list(issue_registry.issues.values())[0]
+        assert issue.issue_id == "unusual_azimuth_southern"
+        assert issue.translation_placeholders is not None
+        assert issue.translation_placeholders.get("proposal") == "30"
+
+        # Fix the azimuth at Solcast and reload
+        API_KEY_SITES["1"]["sites"][0]["latitude"] = old_latitude
+        API_KEY_SITES["1"]["sites"][0]["azimuth"] = old_azimuth
+        await reload_integration(hass, entry)
+        assert len(issue_registry.issues) == 0
 
     finally:
         API_KEY_SITES["1"]["sites"][0]["latitude"] = old_latitude

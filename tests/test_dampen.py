@@ -8,7 +8,6 @@ import json
 import logging
 from pathlib import Path
 import re
-from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from freezegun.api import FrozenDateTimeFactory
@@ -26,11 +25,8 @@ from homeassistant.components.solcast_solar.const import (
     CONFIG_FOLDER_DISCRETE,
     DOMAIN,
     EXCLUDE_SITES,
-    EXPORT_LIMITING,
-    GENERATION,
     GENERATION_ENTITIES,
     GET_ACTUALS,
-    PERIOD_START,
     PRESUMED_DEAD,
     SERVICE_SET_DAMPENING,
     SITE_EXPORT_ENTITY,
@@ -41,10 +37,11 @@ from homeassistant.components.solcast_solar.util import (
     DateTimeEncoder,
     JSONDecoder,
     SolcastApiStatus,
+    compute_energy_intervals,
+    compute_power_intervals,
     percentile,
 )
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT
-from homeassistant.core import HomeAssistant, State
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_registry import RegistryEntryDisabler
@@ -300,6 +297,7 @@ async def test_auto_dampen(
         ExtraSensors.YES_UNIT_NOT_IN_HISTORY,
         ExtraSensors.YES_NO_UNIT,
         ExtraSensors.DODGY,
+        ExtraSensors.YES_POWER,
     ],
 )
 async def test_auto_dampen_issues(
@@ -387,9 +385,11 @@ async def test_auto_dampen_issues(
                 assert "Interval 11:00 max generation: 0.000, []" in caplog.text  # A jump in generation should not be seen as a peak
                 assert "Interval 12:30 max generation: 3.900" in caplog.text  # Dodgy generation filtered but some valid data remains
                 assert "Auto-dampen factor for 10:00 is 0.940" in caplog.text  # A valid interval still considered
-                assert (
-                    "Ignoring excessive PV generation jump of 6.000 kWh, time delta 5406 seconds" in caplog.text
-                )  # Dodgy generation should be logged
+                assert "Ignoring excessive PV generation jump at" in caplog.text  # Dodgy generation should be logged
+            case ExtraSensors.YES_POWER:
+                # Power entity path: site 1111 has insufficient readings, site 2222 has full history.
+                assert "Insufficient power readings for entity: sensor.solar_export_sensor_1111_1111_1111_1111" in caplog.text
+                assert "Retrieved day -1 PV generation data from entity: sensor.solar_export_sensor_2222_2222_2222_2222" in caplog.text
             case _:
                 pytest.fail("Assertions missing for extra_sensors value")
 
@@ -426,412 +426,190 @@ async def test_percentile() -> None:
     assert percentile(data, 50) == 0.0
 
 
-async def test_get_pv_generation_period_edges_and_gaps(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test period start/end handling and long gaps in generation history."""
-
-    assert await async_cleanup_integration_tests(hass)
-
-    try:
-        options = copy.deepcopy(DEFAULT_INPUT2)
-        options[GENERATION_ENTITIES] = ["sensor.solar_export_sensor_1111_1111_1111_1111"]
-        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
-        solcast = entry.runtime_data.coordinator.solcast
-        entity_id = options[GENERATION_ENTITIES][0]
-
-        period_start_raw = solcast.dt_helper.day_start_utc(future=0) - timedelta(days=1)
-        period_end_raw = solcast.dt_helper.day_start_utc(future=0)
-        period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
-        period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
-
-        def _state(value: float, when: dt) -> State:
-            return State(
-                entity_id,
-                str(value),
-                {ATTR_UNIT_OF_MEASUREMENT: "kWh"},
-                last_changed=when,
-                last_updated=when,
-            )
-
-        states = [
-            _state(0.0, period_start),
-            _state(0.1, period_start + timedelta(minutes=5)),
-            _state(0.2, period_start + timedelta(minutes=10)),
-            _state(0.3, period_start + timedelta(minutes=15)),
-            _state(0.4, period_start + timedelta(minutes=20)),
-            _state(0.6, period_start + timedelta(hours=2)),
-            _state(0.7, period_end),
-        ]
-
-        solcast.dampening.data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
-
-        caplog.clear()
-        with patch(
-            "homeassistant.components.solcast_solar.dampen.state_changes_during_period",
-            return_value={entity_id: states},
-        ):
-            await solcast.dampening.get_pv_generation()
-
-        generation = {record[PERIOD_START]: record[GENERATION] for record in solcast.dampening.data_generation[GENERATION]}
-        day_start = min(generation)
-        day_end = day_start + timedelta(days=1)
-        day_generation = {k: v for k, v in generation.items() if day_start <= k < day_end}
-
-        assert "Generation-consistent increments detected" in caplog.text
-        assert sum(day_generation.values()) > 0
-    finally:
-        assert await async_cleanup_integration_tests(hass)
-
-
-async def test_get_pv_generation_uniform_increment_log(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Test uniform increment detection log in get_pv_generation."""
-
-    assert await async_cleanup_integration_tests(hass)
-
-    try:
-        options = copy.deepcopy(DEFAULT_INPUT2)
-        options[GENERATION_ENTITIES] = ["sensor.solar_export_sensor_1111_1111_1111_1111"]
-        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
-        solcast = entry.runtime_data.coordinator.solcast
-        entity_id = options[GENERATION_ENTITIES][0]
-
-        fixed_day = dt(2026, 2, 9, tzinfo=datetime.UTC)
-        period_start = fixed_day - timedelta(days=1)
-        period_end = fixed_day
-
-        monkeypatch.setattr(solcast.dt_helper, "day_start_utc", lambda future=0: fixed_day)
-
-        def _state(value: float, when: dt) -> State:
-            return State(
-                entity_id,
-                str(value),
-                {ATTR_UNIT_OF_MEASUREMENT: "kWh"},
-                last_changed=when,
-                last_updated=when,
-            )
-
-        states = [
-            _state(0.0, period_start),
-            _state(0.1, period_start + timedelta(minutes=5)),
-            _state(0.2, period_start + timedelta(minutes=10)),
-            _state(0.3, period_start + timedelta(minutes=15)),
-            _state(0.4, period_start + timedelta(minutes=20)),
-            _state(0.5, period_start + timedelta(minutes=25)),
-            _state(0.6, period_start + timedelta(minutes=30)),
-            _state(0.7, period_start + timedelta(minutes=35)),
-            _state(0.8, period_start + timedelta(minutes=40)),
-            _state(0.9, period_start + timedelta(minutes=45)),
-            _state(1.0, period_end),
-        ]
-
-        solcast.dampening.data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
-
-        with (
-            patch(
-                "homeassistant.components.solcast_solar.dampen.state_changes_during_period",
-                return_value={entity_id: states},
-            ),
-            patch("homeassistant.components.solcast_solar.dampen._LOGGER.debug") as debug_mock,
-        ):
-            await solcast.dampening.get_pv_generation()
-
-        assert any("increments detected" in call.args[0] for call in debug_mock.call_args_list)
-    finally:
-        assert await async_cleanup_integration_tests(hass)
-
-
-async def test_get_pv_generation_zero_timedelta_samples(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Test generation handling when time delta samples are all zero."""
-
-    assert await async_cleanup_integration_tests(hass)
-
-    try:
-        options = copy.deepcopy(DEFAULT_INPUT2)
-        options[GENERATION_ENTITIES] = ["sensor.solar_export_sensor_1111_1111_1111_1111"]
-        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
-        solcast = entry.runtime_data.coordinator.solcast
-        entity_id = options[GENERATION_ENTITIES][0]
-
-        fixed_day = dt(2026, 2, 9, tzinfo=datetime.UTC)
-        period_start = fixed_day - timedelta(days=1)
-
-        monkeypatch.setattr(solcast.dt_helper, "day_start_utc", lambda future=0: fixed_day)
-
-        def _state(value: float, when: dt) -> State:
-            return State(
-                entity_id,
-                str(value),
-                {ATTR_UNIT_OF_MEASUREMENT: "kWh"},
-                last_changed=when,
-                last_updated=when,
-            )
-
-        states = [
-            _state(0.0, period_start),
-            _state(0.1, period_start),
-            _state(0.2, period_start),
-            _state(0.3, period_start),
-            _state(0.4, period_start),
-            _state(0.5, period_start),
-        ]
-
-        solcast.dampening.data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
-
-        with patch(
-            "homeassistant.components.solcast_solar.dampen.state_changes_during_period",
-            return_value={entity_id: states},
-        ):
-            await solcast.dampening.get_pv_generation()
-
-        assert "increments detected" in caplog.text
-    finally:
-        assert await async_cleanup_integration_tests(hass)
-
-
-async def test_get_pv_generation_power_entity(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test power entity (kW) processing with time-weighted averaging in get_pv_generation."""
-
-    assert await async_cleanup_integration_tests(hass)
-
-    try:
-        power_entity_id = "sensor.solar_power_sensor"
-
-        options = copy.deepcopy(DEFAULT_INPUT2)
-        options[GENERATION_ENTITIES] = [power_entity_id]
-        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
-        solcast = entry.runtime_data.coordinator.solcast
-
-        # Register the entity as a power entity in the entity registry.
-        entity_registry = er.async_get(hass)
-        entity_registry.async_get_or_create(
-            "sensor",
-            "pytest",
-            "solar_power_sensor",
-            config_entry=entry,
-            suggested_object_id="solar_power_sensor",
-            unit_of_measurement="kW",
-            original_device_class=SensorDeviceClass.POWER,
-        )
-
-        period_start_raw = solcast.dt_helper.day_start_utc(future=0) - timedelta(days=1)
-        period_end_raw = solcast.dt_helper.day_start_utc(future=0)
-        period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
-        period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
-
-        def _state(value: float, when: dt) -> State:
-            return State(
-                power_entity_id,
-                str(value),
-                {ATTR_UNIT_OF_MEASUREMENT: "kW"},
-                last_changed=when,
-                last_updated=when,
-            )
-
-        # Interval 1 (00:00-00:30): 4.0 kW for 15 min, then 0.0 kW for 15 min.
-        #   weighted avg = (4.0*900 + 0.0*900) / 1800 = 2.0 kW → 2.0 * 0.5 = 1.0 kWh
-        # Interval 2 (00:30-01:00): constant 6.0 kW.
-        #   weighted avg = 6.0 kW → 6.0 * 0.5 = 3.0 kWh
-        states = [
-            _state(4.0, period_start),
-            _state(0.0, period_start + timedelta(minutes=15)),
-            _state(6.0, period_start + timedelta(minutes=30)),
-            _state(6.0, period_start + timedelta(minutes=45)),
-            _state(0.0, period_start + timedelta(minutes=60)),
-            _state(0.0, period_end),
-        ]
-
-        solcast.dampening.data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
-
-        caplog.clear()
-        with patch(
-            "homeassistant.components.solcast_solar.dampen.state_changes_during_period",
-            return_value={power_entity_id: states},
-        ):
-            await solcast.dampening.get_pv_generation()
-
-        generation = {record[PERIOD_START]: record[GENERATION] for record in solcast.dampening.data_generation[GENERATION]}
-        day_start = min(generation)
-        day_end = day_start + timedelta(days=1)
-        day_generation = {k: v for k, v in generation.items() if day_start <= k < day_end}
-
-        # First interval: time-weighted average 2.0 kW → 1.0 kWh
-        assert abs(day_generation[period_start] - 1.0) < 0.01
-        # Second interval: constant 6.0 kW → 3.0 kWh
-        second_interval = period_start + timedelta(minutes=30)
-        assert abs(day_generation[second_interval] - 3.0) < 0.01
-
-        assert "Retrieved day" in caplog.text
-    finally:
-        assert await async_cleanup_integration_tests(hass)
-
-
-async def test_get_pv_generation_power_entity_watt_conversion(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test power entity using watts with unit conversion in get_pv_generation."""
-
-    assert await async_cleanup_integration_tests(hass)
-
-    try:
-        power_entity_id = "sensor.solar_power_watts"
-
-        options = copy.deepcopy(DEFAULT_INPUT2)
-        options[GENERATION_ENTITIES] = [power_entity_id]
-        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
-        solcast = entry.runtime_data.coordinator.solcast
-
-        # Register entity with watts unit and POWER device class.
-        entity_registry = er.async_get(hass)
-        entity_registry.async_get_or_create(
-            "sensor",
-            "pytest",
-            "solar_power_watts",
-            config_entry=entry,
-            suggested_object_id="solar_power_watts",
-            unit_of_measurement="W",
-            original_device_class=SensorDeviceClass.POWER,
-        )
-
-        period_start_raw = solcast.dt_helper.day_start_utc(future=0) - timedelta(days=1)
-        period_end_raw = solcast.dt_helper.day_start_utc(future=0)
-        period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
-        period_end = dt.fromtimestamp(period_end_raw.timestamp(), datetime.UTC)
-
-        def _state(value: float, when: dt) -> State:
-            return State(
-                power_entity_id,
-                str(value),
-                {ATTR_UNIT_OF_MEASUREMENT: "W"},
-                last_changed=when,
-                last_updated=when,
-            )
-
-        # Constant 2000 W (= 2.0 kW after conversion factor 0.001) for the first 30 minutes.
-        # avg = 2.0 kW → 2.0 * 0.5 = 1.0 kWh
-        states = [
-            _state(2000.0, period_start),
-            _state(2000.0, period_start + timedelta(minutes=10)),
-            _state(2000.0, period_start + timedelta(minutes=20)),
-            _state(0.0, period_start + timedelta(minutes=30)),
-            _state(0.0, period_end),
-        ]
-
-        solcast.dampening.data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
-
-        caplog.clear()
-        with patch(
-            "homeassistant.components.solcast_solar.dampen.state_changes_during_period",
-            return_value={power_entity_id: states},
-        ):
-            await solcast.dampening.get_pv_generation()
-
-        generation = {record[PERIOD_START]: record[GENERATION] for record in solcast.dampening.data_generation[GENERATION]}
-
-        # First interval: 2000 W = 2.0 kW → 1.0 kWh
-        assert abs(generation[period_start] - 1.0) < 0.01
-
-        # Verify the W → kW conversion log was emitted.
-        assert "applying conversion factor" in caplog.text
-    finally:
-        assert await async_cleanup_integration_tests(hass)
-
-
-async def test_get_pv_generation_power_entity_insufficient_readings(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Test power entity with insufficient numeric readings in get_pv_generation."""
-
-    assert await async_cleanup_integration_tests(hass)
-
-    try:
-        power_entity_id = "sensor.solar_power_sensor"
-
-        options = copy.deepcopy(DEFAULT_INPUT2)
-        options[GENERATION_ENTITIES] = [power_entity_id]
-        entry = await async_init_integration(hass, options, extra_sensors=ExtraSensors.YES)
-        solcast = entry.runtime_data.coordinator.solcast
-
-        # Register entity as a power entity.
-        entity_registry = er.async_get(hass)
-        entity_registry.async_get_or_create(
-            "sensor",
-            "pytest",
-            "solar_power_sensor",
-            config_entry=entry,
-            suggested_object_id="solar_power_sensor",
-            unit_of_measurement="kW",
-            original_device_class=SensorDeviceClass.POWER,
-        )
-
-        period_start_raw = solcast.dt_helper.day_start_utc(future=0) - timedelta(days=1)
-        period_start = dt.fromtimestamp(period_start_raw.timestamp(), datetime.UTC)
-
-        # 5 states total (passes the >4 check) but only 1 numeric reading.
-        states = [
-            State(power_entity_id, "2.0", {ATTR_UNIT_OF_MEASUREMENT: "kW"}, last_changed=period_start, last_updated=period_start),
-            State(
-                power_entity_id,
-                "unavailable",
-                {},
-                last_changed=period_start + timedelta(minutes=5),
-                last_updated=period_start + timedelta(minutes=5),
-            ),
-            State(
-                power_entity_id,
-                "unknown",
-                {},
-                last_changed=period_start + timedelta(minutes=10),
-                last_updated=period_start + timedelta(minutes=10),
-            ),
-            State(
-                power_entity_id,
-                "unavailable",
-                {},
-                last_changed=period_start + timedelta(minutes=15),
-                last_updated=period_start + timedelta(minutes=15),
-            ),
-            State(
-                power_entity_id,
-                "unknown",
-                {},
-                last_changed=period_start + timedelta(minutes=20),
-                last_updated=period_start + timedelta(minutes=20),
-            ),
-        ]
-
-        solcast.dampening.data_generation[GENERATION] = [{PERIOD_START: period_start, GENERATION: 0.0, EXPORT_LIMITING: False}]
-
-        caplog.clear()
-        with patch(
-            "homeassistant.components.solcast_solar.dampen.state_changes_during_period",
-            return_value={power_entity_id: states},
-        ):
-            await solcast.dampening.get_pv_generation()
-
-        assert "Insufficient power readings for entity" in caplog.text
-    finally:
-        assert await async_cleanup_integration_tests(hass)
+# --- Unit tests for compute_power_intervals and compute_energy_intervals ---
+
+
+def _make_intervals(period_start: dt) -> dict[dt, float]:
+    """Build empty 30-minute generation interval dict for one day."""
+    return {period_start + timedelta(minutes=m): 0.0 for m in range(0, 1440, 30)}
+
+
+def test_compute_power_intervals_time_weighted_averaging() -> None:
+    """Test time-weighted average power per 30-min interval converts to kWh."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # Interval 1 (00:00-00:30): 4.0 kW for 15 min, then 0.0 kW for 15 min.
+    #   weighted avg = (4.0*900 + 0.0*900) / 1800 = 2.0 kW → 2.0 * 0.5 = 1.0 kWh
+    # Interval 2 (00:30-01:00): constant 6.0 kW.
+    #   weighted avg = 6.0 kW → 6.0 * 0.5 = 3.0 kWh
+    power_readings: list[tuple[dt, float]] = [
+        (period_start, 4.0),
+        (period_start + timedelta(minutes=15), 0.0),
+        (period_start + timedelta(minutes=30), 6.0),
+        (period_start + timedelta(minutes=45), 6.0),
+        (period_start + timedelta(minutes=60), 0.0),
+        (period_start + timedelta(days=1), 0.0),
+    ]
+
+    result = compute_power_intervals(power_readings, intervals)
+
+    assert result is True
+    assert abs(intervals[period_start] - 1.0) < 0.01
+    assert abs(intervals[period_start + timedelta(minutes=30)] - 3.0) < 0.01
+
+
+def test_compute_power_intervals_watt_conversion() -> None:
+    """Test power intervals with pre-converted W→kW values (factor 0.001)."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # 2000 W * 0.001 = 2.0 kW constant for 30 min → 2.0 * 0.5 = 1.0 kWh
+    conversion_factor = 0.001
+    power_readings: list[tuple[dt, float]] = [
+        (period_start, 2000.0 * conversion_factor),
+        (period_start + timedelta(minutes=10), 2000.0 * conversion_factor),
+        (period_start + timedelta(minutes=20), 2000.0 * conversion_factor),
+        (period_start + timedelta(minutes=30), 0.0),
+        (period_start + timedelta(days=1), 0.0),
+    ]
+
+    result = compute_power_intervals(power_readings, intervals)
+
+    assert result is True
+    assert abs(intervals[period_start] - 1.0) < 0.01
+
+
+def test_compute_power_intervals_insufficient_readings() -> None:
+    """Test that ≤1 power reading returns False."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # Single reading
+    assert compute_power_intervals([(period_start, 2.0)], intervals) is False
+    # Empty
+    assert compute_power_intervals([], intervals) is False
+    # All intervals should remain zero
+    assert all(v == 0.0 for v in intervals.values())
+
+
+def test_compute_energy_intervals_period_edges_and_gaps() -> None:
+    """Test energy distribution with period start/end boundaries and long gaps."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    period_end = dt(2026, 2, 9, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # Simulate 7 states: regular 5-min increments then a 2h gap, then period end.
+    times = [
+        period_start,
+        period_start + timedelta(minutes=5),
+        period_start + timedelta(minutes=10),
+        period_start + timedelta(minutes=15),
+        period_start + timedelta(minutes=20),
+        period_start + timedelta(hours=2),
+        period_end,
+    ]
+    values = [0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.7]
+
+    sample_time = [t.replace(minute=t.minute // 30 * 30, second=0, microsecond=0) for t in times]
+    sample_generation = [0.0] + [max(0, values[i + 1] - values[i]) for i in range(len(values) - 1)]
+    sample_generation_time = list(times)
+    sample_timedelta = [0] + [
+        max(0, int((times[i + 1] - period_start).total_seconds() - (times[i] - period_start).total_seconds()))
+        for i in range(len(times) - 1)
+    ]
+    # Reset first sample if at period_start.
+    sample_generation[0] = 0.0
+    sample_timedelta[0] = 0
+
+    result = compute_energy_intervals(
+        sample_time,
+        sample_generation,
+        sample_generation_time,
+        sample_timedelta,
+        intervals,
+        period_start,
+        period_end,
+    )
+
+    assert result.uniform_increment is True
+    day_total = sum(intervals.values())
+    assert day_total > 0
+
+
+def test_compute_energy_intervals_uniform_increment() -> None:
+    """Test uniform increment detection with equal-step generation deltas."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    period_end = dt(2026, 2, 9, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # 11 states with perfectly uniform 0.1 kWh increments every 5 minutes.
+    times = [period_start + timedelta(minutes=5 * i) for i in range(11)]
+    times[-1] = period_end  # Last state at period end.
+    values = [0.1 * i for i in range(11)]
+
+    sample_time = [t.replace(minute=t.minute // 30 * 30, second=0, microsecond=0) for t in times]
+    sample_generation = [0.0] + [max(0, values[i + 1] - values[i]) for i in range(len(values) - 1)]
+    sample_generation_time = list(times)
+    sample_timedelta = [0] + [
+        max(0, int((times[i + 1] - period_start).total_seconds() - (times[i] - period_start).total_seconds()))
+        for i in range(len(times) - 1)
+    ]
+    sample_generation[0] = 0.0
+    sample_timedelta[0] = 0
+
+    result = compute_energy_intervals(
+        sample_time,
+        sample_generation,
+        sample_generation_time,
+        sample_timedelta,
+        intervals,
+        period_start,
+        period_end,
+    )
+
+    assert result.uniform_increment is True
+    assert result.upper > 0
+
+
+def test_compute_energy_intervals_zero_timedelta() -> None:
+    """Test energy intervals when all samples share the same timestamp."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    period_end = dt(2026, 2, 9, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # 6 states all at period_start (zero time deltas).
+    times = [period_start] * 6
+    values = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+
+    sample_time = [t.replace(minute=t.minute // 30 * 30, second=0, microsecond=0) for t in times]
+    sample_generation = [0.0] + [max(0, values[i + 1] - values[i]) for i in range(len(values) - 1)]
+    sample_generation_time = list(times)
+    sample_timedelta = [0] + [
+        max(0, int((times[i + 1] - period_start).total_seconds() - (times[i] - period_start).total_seconds()))
+        for i in range(len(times) - 1)
+    ]
+    sample_generation[0] = 0.0
+    sample_timedelta[0] = 0
+
+    result = compute_energy_intervals(
+        sample_time,
+        sample_generation,
+        sample_generation_time,
+        sample_timedelta,
+        intervals,
+        period_start,
+        period_end,
+    )
+
+    # With all zero time deltas, time_upper will be 0 (no non-zero samples).
+    assert result.uniform_increment is True
 
 
 async def test_config_flow_mixed_generation_entity_types(
