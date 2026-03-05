@@ -197,7 +197,7 @@ async def validate_sites(hass: HomeAssistant, user_input: dict[str, Any]) -> tup
     await solcast.advanced_opt.read_advanced_options()
     solcast.headers = get_session_headers(solcast, await get_version(hass))
 
-    status, message, api_key_in_error = await solcast.get_sites_and_usage(prior_crash=False, use_cache=False)
+    status, message, api_key_in_error = await solcast.sites_cache.get_sites_and_usage(prior_crash=False, use_cache=False)
     if status != 200:
         if status in (401, 403):
             return status, f"Bad API key, {message} returned for {api_key_in_error}"

@@ -236,7 +236,7 @@ class Dampening:
                             round(forecast[ESTIMATE90], 4),
                         )
 
-                await self.api.sort_and_prune(
+                await self.api.fetcher.sort_and_prune(
                     site[RESOURCE_ID], self.api.data, self.api.advanced_options[ADVANCED_HISTORY_MAX_DAYS], forecasts
                 )
 
@@ -283,7 +283,7 @@ class Dampening:
                         dampened,
                     )
 
-                await self.api.sort_and_prune(
+                await self.api.fetcher.sort_and_prune(
                     site[RESOURCE_ID],
                     self.api.data_actuals_dampened,
                     self.api.advanced_options[ADVANCED_HISTORY_MAX_DAYS],
@@ -1148,7 +1148,7 @@ class Dampening:
                 key=itemgetter(PERIOD_START),
             ),
         }
-        await self.api.serialise_data(self.data_generation, self.filename_generation)
+        await self.api.sites_cache.serialise_data(self.data_generation, self.filename_generation)
         _LOGGER.debug("Task get_pv_generation took %.3f seconds", time.time() - start_time)
 
     async def granular_data(self) -> bool:
@@ -1348,11 +1348,11 @@ class Dampening:
 
         if len(apply_dampening) > 0:
             self.api.data_undampened[LAST_UPDATED] = dt.now(UTC).replace(microsecond=0)
-            await self.api.serialise_data(self.api.data_undampened, self.api.filename_undampened)
+            await self.api.sites_cache.serialise_data(self.api.data_undampened, self.api.filename_undampened)
 
         if len(apply_dampening) > 0:
             await self.apply_forward(applicable_sites=apply_dampening)
-            await self.api.serialise_data(self.api.data, self.api.filename)
+            await self.api.sites_cache.serialise_data(self.api.data, self.api.filename)
 
     async def model_automated(self, force: bool = False) -> None:
         """Model the automated dampening of the forecast data.
@@ -1634,7 +1634,7 @@ class Dampening:
                 _LOGGER.debug("Dampening history actuals suppressed site %s", site[RESOURCE_ID])
                 continue
 
-            start, end = self.api.get_list_slice(
+            start, end = self.api.query.get_list_slice(
                 self.api.data_actuals[SITE_INFO][site[RESOURCE_ID]][FORECASTS],
                 earliest_common,
                 self.api.dt_helper.day_start_utc() - timedelta(minutes=30),
@@ -1974,7 +1974,7 @@ class Dampening:
                 if site[RESOURCE_ID] in self.api.options.exclude_sites:
                     _LOGGER.debug("Auto-dampening suppressed: Excluded site for %s", site[RESOURCE_ID])
                     continue
-                start, end = self.api.get_list_slice(
+                start, end = self.api.query.get_list_slice(
                     self.api.data_actuals[SITE_INFO][site[RESOURCE_ID]][FORECASTS],
                     self.api.dt_helper.day_start_utc() - timedelta(days=self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS]),
                     self.api.dt_helper.day_start_utc(),

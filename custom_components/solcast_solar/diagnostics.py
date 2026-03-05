@@ -35,7 +35,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
                 hard_set = True
         return hard_set
 
-    energy_data = coordinator.solcast.get_energy_data()
+    energy_data = coordinator.solcast.query.get_energy_data()
 
     return {
         "tz_conversion": coordinator.solcast.options.tz,

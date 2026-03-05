@@ -187,10 +187,10 @@ class Updater:
 
     def set_next_update(self) -> None:
         """Set the next forecast update message time."""
-        self._coordinator.solcast.set_next_update(None)
+        self._coordinator.solcast.fetcher.set_next_update(None)
         if len(self._intervals) > 0:
             next_update = self._intervals[0].astimezone(self._coordinator.solcast.options.tz)
-            self._coordinator.solcast.set_next_update(
+            self._coordinator.solcast.fetcher.set_next_update(
                 next_update.strftime(DT_TIME_FORMAT)
                 if next_update.date() == dt.now(self._coordinator.solcast.options.tz).date()
                 else next_update.strftime(DT_DATE_FORMAT)
@@ -262,12 +262,12 @@ class Updater:
         try:
             _LOGGER.debug("Started task %s", "update" if completion == "" else completion.replace("Completed task ", ""))
             _LOGGER.debug("Checking for stale usage cache")
-            if self._coordinator.solcast.stale_usage_cache:
+            if self._coordinator.solcast.sites_cache.stale_usage_cache:
                 _LOGGER.warning("Usage cache reset time is stale, last reset was more than 24-hours ago, resetting API usage")
-                await self._coordinator.solcast.reset_usage_cache()
+                await self._coordinator.solcast.sites_cache.reset_usage_cache()
                 await self._coordinator.restart_time_track_midnight_update()
 
-            await self._coordinator.solcast.get_forecast_update(do_past_hours=need_history_hours, force=force)
+            await self._coordinator.solcast.fetcher.get_forecast_update(do_past_hours=need_history_hours, force=force)
 
             self._coordinator.set_data_updated(True)
             await self._coordinator.update_integration_listeners()
@@ -362,7 +362,7 @@ class Updater:
         """Update estimated actuals using the API."""
 
         _LOGGER.debug("Started task actuals")
-        await self._coordinator.solcast.update_estimated_actuals(dampen_yesterday=dampen_yesterday)
+        await self._coordinator.solcast.fetcher.update_estimated_actuals(dampen_yesterday=dampen_yesterday)
         await self._coordinator.solcast.build_actual_data()
         _LOGGER.debug("Completed task actuals")
         task = TASK_ACTUALS_FETCH if not new_day else TASK_NEW_DAY_ACTUALS
@@ -420,7 +420,7 @@ class Updater:
             inf_d, error_dampened, error_dampened_percentiles = await self._coordinator.solcast.dampening.calculate_error(
                 generation_dampening_day,
                 generation_dampening,
-                await self._coordinator.solcast.get_estimate_list(
+                await self._coordinator.solcast.query.get_estimate_list(
                     earliest_dampened_start,
                     self._coordinator.solcast.dt_helper.day_start_utc() - timedelta(minutes=30),
                     False,  # Undampened = False
@@ -442,7 +442,7 @@ class Updater:
         inf_u, error_undampened, error_undampened_percentiles = await self._coordinator.solcast.dampening.calculate_error(
             generation_dampening_day,
             generation_dampening,
-            await self._coordinator.solcast.get_estimate_list(
+            await self._coordinator.solcast.query.get_estimate_list(
                 earliest_undampened_start,
                 self._coordinator.solcast.dt_helper.day_start_utc() - timedelta(minutes=30),
                 True,  # Undampened = True

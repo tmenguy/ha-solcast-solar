@@ -102,18 +102,18 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
         # First list item is the sensor value method, additional items are only used for sensor attributes.
         self.__get_value: dict[str, list[dict[str, Any]]] = {
-            ENTITY_FORECAST_THIS_HOUR: [{METHOD: self.solcast.get_forecast_n_hour, VALUE: 0}],
-            ENTITY_FORECAST_NEXT_HOUR: [{METHOD: self.solcast.get_forecast_n_hour, VALUE: 1}],
-            ENTITY_FORECAST_CUSTOM_HOURS: [{METHOD: self.solcast.get_forecast_custom_hours, VALUE: self.solcast.custom_hour_sensor}],
-            ENTITY_FORECAST_REMAINING_TODAY: [{METHOD: self.solcast.get_forecast_remaining_today}],
-            ENTITY_FORECAST_REMAINING_TODAY_OLD: [{METHOD: self.solcast.get_forecast_remaining_today}],
-            ENTITY_POWER_NOW: [{METHOD: self.solcast.get_power_n_minutes, VALUE: 0}],
-            ENTITY_POWER_NOW_30M: [{METHOD: self.solcast.get_power_n_minutes, VALUE: 30}],
-            ENTITY_POWER_NOW_1HR: [{METHOD: self.solcast.get_power_n_minutes, VALUE: 60}],
-            ENTITY_PEAK_W_TIME_TODAY: [{METHOD: self.solcast.get_peak_time_day, VALUE: 0}],
-            ENTITY_PEAK_W_TIME_TOMORROW: [{METHOD: self.solcast.get_peak_time_day, VALUE: 1}],
-            ENTITY_PEAK_W_TODAY: [{METHOD: self.solcast.get_peak_power_day, VALUE: 0}],
-            ENTITY_PEAK_W_TOMORROW: [{METHOD: self.solcast.get_peak_power_day, VALUE: 1}],
+            ENTITY_FORECAST_THIS_HOUR: [{METHOD: self.solcast.query.get_forecast_n_hour, VALUE: 0}],
+            ENTITY_FORECAST_NEXT_HOUR: [{METHOD: self.solcast.query.get_forecast_n_hour, VALUE: 1}],
+            ENTITY_FORECAST_CUSTOM_HOURS: [{METHOD: self.solcast.query.get_forecast_custom_hours, VALUE: self.solcast.custom_hour_sensor}],
+            ENTITY_FORECAST_REMAINING_TODAY: [{METHOD: self.solcast.query.get_forecast_remaining_today}],
+            ENTITY_FORECAST_REMAINING_TODAY_OLD: [{METHOD: self.solcast.query.get_forecast_remaining_today}],
+            ENTITY_POWER_NOW: [{METHOD: self.solcast.query.get_power_n_minutes, VALUE: 0}],
+            ENTITY_POWER_NOW_30M: [{METHOD: self.solcast.query.get_power_n_minutes, VALUE: 30}],
+            ENTITY_POWER_NOW_1HR: [{METHOD: self.solcast.query.get_power_n_minutes, VALUE: 60}],
+            ENTITY_PEAK_W_TIME_TODAY: [{METHOD: self.solcast.query.get_peak_time_day, VALUE: 0}],
+            ENTITY_PEAK_W_TIME_TOMORROW: [{METHOD: self.solcast.query.get_peak_time_day, VALUE: 1}],
+            ENTITY_PEAK_W_TODAY: [{METHOD: self.solcast.query.get_peak_power_day, VALUE: 0}],
+            ENTITY_PEAK_W_TOMORROW: [{METHOD: self.solcast.query.get_peak_power_day, VALUE: 1}],
             ENTITY_API_COUNTER: [{METHOD: lambda: self.solcast.api_used_count}],
             ENTITY_API_LIMIT: [{METHOD: lambda: self.solcast.api_limit}],
             ENTITY_LAST_UPDATED: [{METHOD: lambda: self.solcast.last_updated}],
@@ -125,8 +125,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         ]
         self.__get_value |= {
             day: [
-                {METHOD: self.solcast.get_total_energy_forecast_day, VALUE: ahead},
-                {METHOD: self.solcast.get_forecast_day, VALUE: ahead},
+                {METHOD: self.solcast.query.get_total_energy_forecast_day, VALUE: ahead},
+                {METHOD: self.solcast.query.get_forecast_day, VALUE: ahead},
             ]
             for ahead, day in enumerate(days)
         }
@@ -205,7 +205,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
                 await self._updater.check_generation_fetch()
             await self._updater.check_estimated_actuals_fetch()
 
-        await self.solcast.cleanup_issues()
+        await self.solcast.sites_cache.cleanup_issues()
         self.async_update_listeners()
 
     async def restart_time_track_midnight_update(self) -> None:
@@ -221,16 +221,16 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
 
     async def _update_utc_midnight_usage_sensor_data(self, _: dt | None = None) -> None:
         """Reset tracked API usage at midnight UTC."""
-        await self.solcast.reset_api_usage()
+        await self.solcast.sites_cache.reset_api_usage()
         self._data_updated = True
         await self.update_integration_listeners()
         self._data_updated = False
 
     async def _update_midnight_spline_recalculate(self) -> None:
         """Re-calculates splines at midnight local time."""
-        await self.solcast.reset_failure_stats()
+        await self.solcast.fetcher.reset_failure_stats()
         await self.solcast.check_data_records()
-        await self.solcast.recalculate_splines()
+        await self.solcast.query.recalculate_splines()
 
     async def service_event_update(self, **kwargs: dict[str, Any]) -> None:
         """Get updated forecast data when requested by a service call.
@@ -296,18 +296,18 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         await self.solcast.tasks_cancel()
         await self.tasks_cancel_specific(TASK_FORECASTS_FETCH_IMMEDIATE)
         await self.hass.async_block_till_done()
-        await self.solcast.delete_solcast_file()
+        await self.solcast.sites_cache.delete_solcast_file()
         self._data_updated = True
         await self.update_integration_listeners()
         self._data_updated = False
 
     async def service_query_forecast_data(self, *args: Any) -> tuple[dict[str, Any], ...]:
         """Return forecast data requested by a service call."""
-        return await self.solcast.get_forecast_list(*args)
+        return await self.solcast.query.get_forecast_list(*args)
 
     async def service_query_estimate_data(self, *args: Any) -> tuple[dict[str, Any], ...]:
         """Return estimated actual data requested by a service call."""
-        return await self.solcast.get_estimate_list(*args)
+        return await self.solcast.query.get_estimate_list(*args)
 
     def get_solcast_sites(self) -> list[Any]:
         """Return the active solcast sites.
@@ -325,7 +325,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
             dict: A Home Assistant energy dashboard compatible data set.
 
         """
-        return self.solcast.get_energy_data()
+        return self.solcast.query.get_energy_data()
 
     def get_data_updated(self) -> bool:
         """Whether data has been updated, which will trigger all sensor values to update.
@@ -399,8 +399,8 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         ret: dict[str, Any] = {}
         for fetch in self.__get_value[key] if key not in NO_ATTRIBUTES else []:
             ret |= (
-                self.solcast.get_forecast_attributes(fetch[METHOD], fetch.get(VALUE, 0))
-                if fetch[METHOD] != self.solcast.get_forecast_day
+                self.solcast.query.get_forecast_attributes(fetch[METHOD], fetch.get(VALUE, 0))
+                if fetch[METHOD] != self.solcast.query.get_forecast_day
                 else fetch[METHOD](fetch[VALUE])
             )
 
@@ -470,7 +470,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Get the site total for today."""
         match key:
             case "site_data":
-                return self.solcast.get_rooftop_site_total_today(roof_id)
+                return self.solcast.query.get_rooftop_site_total_today(roof_id)
             case _:
                 return None
 
@@ -478,7 +478,7 @@ class SolcastUpdateCoordinator(DataUpdateCoordinator):
         """Get the attributes for a sensor."""
         match key:
             case "site_data":
-                return self.solcast.get_rooftop_site_extra_data(roof_id)
+                return self.solcast.query.get_rooftop_site_extra_data(roof_id)
             case _:
                 return None
 

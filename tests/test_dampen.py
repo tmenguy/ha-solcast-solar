@@ -257,7 +257,7 @@ async def test_auto_dampen(
         old_data = copy.deepcopy(solcast.data_actuals)  # pyright: ignore[reportOptionalMemberAccess]
         solcast.data_actuals["siteinfo"]["1111-1111-1111-1111"] = None  # pyright: ignore[reportOptionalMemberAccess]
         with pytest.raises(ConfigEntryNotReady):
-            await solcast.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
+            await solcast.fetcher.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
         assert solcast.status == SolcastApiStatus.BUILD_FAILED_ACTUALS
         await solcast.dampening.model_automated()  # pyright: ignore[reportOptionalMemberAccess] # Hit an actuals missing deal-breaker
         assert "Auto-dampening suppressed: No estimated actuals yet for 1111-1111-1111-1111" in caplog.text
@@ -270,7 +270,7 @@ async def test_auto_dampen(
         old_data = copy.deepcopy(solcast.data)  # pyright: ignore[reportOptionalMemberAccess]
         solcast.data["siteinfo"]["1111-1111-1111-1111"] = None  # pyright: ignore[reportOptionalMemberAccess]
         with pytest.raises(ConfigEntryNotReady):
-            await solcast.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
+            await solcast.fetcher.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
         assert solcast.status == SolcastApiStatus.BUILD_FAILED_FORECASTS
         solcast.data = old_data  # pyright: ignore[reportOptionalMemberAccess]
 

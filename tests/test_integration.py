@@ -587,7 +587,7 @@ async def test_integration(  # noqa: C901
         coordinator._updater.set_next_update()
 
         assert solcast.sites_status is SitesStatus.OK
-        assert solcast._loaded_data is True  # pyright: ignore[reportPrivateUsage]
+        assert solcast.loaded_data is True
         assert "Dampening factors corrupt or not found, setting to 1.0" not in caplog.text
         assert solcast.tz == ZONE
 
@@ -707,7 +707,7 @@ async def test_integration(  # noqa: C901
         # Test update beyond ten seconds of prior update, also with stale usage cache and dodgy dampening file
         session_reset_usage()
         for api_key in options["api_key"].split(","):
-            solcast._api_used_reset[api_key] = dt.now(datetime.UTC) - timedelta(days=5)  # pyright: ignore[reportPrivateUsage]
+            solcast.sites_cache._api_used_reset[api_key] = dt.now(datetime.UTC) - timedelta(days=5)
         solcast.options.auto_update = AutoUpdate.NONE
         await _exec_update(hass, solcast, caplog, "update_forecasts", last_update_delta=20)
         assert "Not requesting a solar forecast because time is within ten seconds of last update" not in caplog.text
@@ -833,10 +833,10 @@ async def test_integration(  # noqa: C901
 
         # Test reset usage cache when fresh
         for api_key in options["api_key"].split(","):
-            solcast._api_used_reset[api_key] = solcast._api_used_reset[api_key] - timedelta(hours=24)  # type: ignore[assignment, operator]
-        await solcast.reset_api_usage()
+            solcast.sites_cache._api_used_reset[api_key] = solcast.sites_cache._api_used_reset[api_key] - timedelta(hours=24)  # type: ignore[assignment, operator]
+        await solcast.sites_cache.reset_api_usage()
         assert "Reset API usage" in caplog.text
-        await solcast.reset_api_usage()
+        await solcast.sites_cache.reset_api_usage()
         assert "Usage cache is fresh, so not resetting" in caplog.text
 
         # Test clear data action when no solcast.json exists
@@ -1048,8 +1048,8 @@ async def test_remaining_actions(
         assert "Build hard limit period values from scratch for forecast" in caplog.text
         assert "Build hard limit period values from scratch for undampened forecast" in caplog.text
         for estimate in ["pv_estimate", "pv_estimate10", "pv_estimate90"]:
-            assert len(solcast._sites_hard_limit["all"][estimate]) > 0  # pyright: ignore[reportPrivateUsage]
-            assert len(solcast._sites_hard_limit_undampened["all"][estimate]) > 0  # pyright: ignore[reportPrivateUsage]
+            assert len(solcast._sites_hard_limit["all"][estimate]) > 0
+            assert len(solcast._sites_hard_limit_undampened["all"][estimate]) > 0
         assert re.search("Build hard limit processing took.+seconds for forecast", caplog.text)
         assert re.search("Build hard limit processing took.+seconds for undampened forecast", caplog.text)
 
@@ -1095,8 +1095,8 @@ async def test_remaining_actions(
         assert "Build hard limit period values from scratch for undampened forecast" in caplog.text
         for api_key in entry.options["api_key"].split(","):
             for estimate in ["pv_estimate", "pv_estimate10", "pv_estimate90"]:
-                assert len(solcast._sites_hard_limit[api_key][estimate]) > 0  # pyright: ignore[reportPrivateUsage]
-                assert len(solcast._sites_hard_limit_undampened[api_key][estimate]) > 0  # pyright: ignore[reportPrivateUsage]
+                assert len(solcast._sites_hard_limit[api_key][estimate]) > 0
+                assert len(solcast._sites_hard_limit_undampened[api_key][estimate]) > 0
         assert re.search("Build hard limit processing took.+seconds for forecast", caplog.text)
         assert re.search("Build hard limit processing took.+seconds for undampened forecast", caplog.text)
 
@@ -1105,8 +1105,8 @@ async def test_remaining_actions(
         solcast = await _remove_hard_limit()
         assert solcast.hard_limit == "100.0"
         for estimate in ["pv_estimate", "pv_estimate10", "pv_estimate90"]:
-            assert len(solcast._sites_hard_limit["all"][estimate]) == 0  # pyright: ignore[reportPrivateUsage]
-            assert len(solcast._sites_hard_limit_undampened["all"][estimate]) == 0  # pyright: ignore[reportPrivateUsage]
+            assert len(solcast._sites_hard_limit["all"][estimate]) == 0
+            assert len(solcast._sites_hard_limit_undampened["all"][estimate]) == 0
         assert re.search("Build hard limit processing took.+seconds for forecast", caplog.text) is None
         assert re.search("Build hard limit processing took.+seconds for undampened forecast", caplog.text) is None
 
@@ -1277,7 +1277,7 @@ async def test_scenarios(  # noqa: C901
                 DEFAULT_INPUT1[AUTO_DAMPEN],
             )
             solcast_bad: SolcastApi = SolcastApi(session, connection_options, hass, entry)
-            await solcast_bad.serialise_data(solcast_bad.data, str(Path(f"{config_dir}/solcast.json")))
+            await solcast_bad.sites_cache.serialise_data(solcast_bad.data, str(Path(f"{config_dir}/solcast.json")))
             assert "Not serialising empty data" in caplog.text
 
         # Assert good start
@@ -1293,8 +1293,8 @@ async def test_scenarios(  # noqa: C901
         original_data = json.loads(data_file.read_text(encoding="utf-8"))
 
         def alter_in_memory_as_stale():
-            extant_data = copy.deepcopy(solcast._data_forecasts)  # pyright: ignore[reportOptionalMemberAccess]
-            solcast._data_forecasts = [f for f in extant_data if f["period_start"] >= dt.now(datetime.UTC).replace(second=0, microsecond=0)]  # pyright: ignore[reportOptionalMemberAccess]
+            extant_data = copy.deepcopy(solcast.data_forecasts)  # pyright: ignore[reportOptionalMemberAccess]
+            solcast.data_forecasts = [f for f in extant_data if f["period_start"] >= dt.now(datetime.UTC).replace(second=0, microsecond=0)]  # pyright: ignore[reportOptionalMemberAccess]
 
         def alter_last_updated_as_stale():
             data = json.loads(data_file.read_text(encoding="utf-8"))
@@ -1354,7 +1354,7 @@ async def test_scenarios(  # noqa: C901
 
         assert_state_assertions("pre-update")
         alter_in_memory_as_stale()
-        await solcast.recalculate_splines()
+        await solcast.query.recalculate_splines()
         await coordinator.update_integration_listeners()
         assert_state_assertions("post-update")
 
@@ -1713,7 +1713,7 @@ async def test_estimated_actuals(
         hass.config_entries.async_update_entry(entry, options=opt)
         await hass.async_block_till_done()
         assert "Recalculate forecasts and refresh sensors" in caplog.text
-        energy_dashboard = solcast.get_energy_data()
+        energy_dashboard = solcast.query.get_energy_data()
         if energy_dashboard is None:
             pytest.fail("Energy dashboard data is None")
         else:
@@ -1727,7 +1727,7 @@ async def test_estimated_actuals(
         hass.config_entries.async_update_entry(entry, options=opt)
         await hass.async_block_till_done()
         assert "Recalculate forecasts and refresh sensors" in caplog.text
-        energy_dashboard = solcast.get_energy_data()
+        energy_dashboard = solcast.query.get_energy_data()
         session_clear(MOCK_ALTER_HISTORY)
         if energy_dashboard is None:
             pytest.fail("Energy dashboard data is None")

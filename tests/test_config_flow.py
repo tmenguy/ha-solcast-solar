@@ -763,7 +763,7 @@ async def test_presumed_dead_and_full_flow(
         coordinator: SolcastUpdateCoordinator = entry.runtime_data.coordinator
         solcast: SolcastApi = coordinator.solcast
         assert solcast.sites_status is SitesStatus.OK
-        assert solcast._loaded_data is True  # pyright: ignore[reportPrivateUsage]
+        assert solcast.loaded_data is True
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()

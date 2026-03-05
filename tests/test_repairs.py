@@ -152,7 +152,7 @@ async def test_missing_data_initial(
 
         caplog.clear()
         session_clear(MOCK_OVER_LIMIT)
-        await solcast.reset_api_usage(force=True)
+        await solcast.sites_cache.reset_api_usage(force=True)
         assert "Reset API usage" in caplog.text
         await update_forecast()
         assert_issue_present()

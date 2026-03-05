@@ -229,7 +229,7 @@ async def __check_stale_start(coordinator: SolcastUpdateCoordinator) -> bool:
     """Check whether the integration has been failed for some time and then is restarted, and if so update forecast."""
     _LOGGER.debug("Checking for stale start")
     stale = False
-    if coordinator.solcast.stale_data:
+    if coordinator.solcast.sites_cache.stale_data:
         _LOGGER.warning("The update automation has not been running, updating forecast")
         kwargs: dict[str, Any] = {
             "ignore_auto_enabled": True,
@@ -338,7 +338,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await solcast.advanced_opt.read_advanced_options()
 
     solcast.headers = get_session_headers(solcast, version)
-    await solcast.get_sites_and_usage(prior_crash=prior_crash)
+    await solcast.sites_cache.get_sites_and_usage(prior_crash=prior_crash)
     match solcast.sites_status:
         case SitesStatus.BAD_KEY:
             raise_and_record(hass, ConfigEntryAuthFailed, EXCEPTION_INIT_KEY_INVALID)
@@ -364,10 +364,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][SOLCAST] = solcast
     hass.data[DOMAIN][ENTRY_OPTIONS] = {**entry.options}
 
-    if await solcast.load_saved_data():
+    if await solcast.sites_cache.load_saved_data():
         await solcast.dampening.model_automated()
         await solcast.dampening.apply_forward()
-        await solcast.build_forecast_and_actuals(raise_exc=True)
+        await solcast.fetcher.build_forecast_and_actuals(raise_exc=True)
 
     coordinator = SolcastUpdateCoordinator(hass, entry, solcast, version)
     entry.runtime_data = SolcastData(coordinator=coordinator)
@@ -568,7 +568,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
             if entry.options.get(GET_ACTUALS):
                 await coordinator.solcast.build_actual_data()
         elif recalculate_splines:
-            await coordinator.solcast.recalculate_splines()
+            await coordinator.solcast.query.recalculate_splines()
         coordinator.set_data_updated(True)
         await coordinator.update_integration_listeners()
         coordinator.set_data_updated(False)
