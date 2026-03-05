@@ -18,6 +18,7 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 from yarl import URL
 
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.solcast_solar.const import (
     API_QUOTA,
     AUTO_DAMPEN,
@@ -53,8 +54,6 @@ from homeassistant.helpers import entity_registry as er
 
 from .aioresponses import CallbackResult, aioresponses
 from .simulator import API_KEY_SITES, GENERATION_FACTOR, SimulatedSolcast
-
-from homeassistant.components.sensor import SensorDeviceClass
 
 from tests.common import MockConfigEntry
 

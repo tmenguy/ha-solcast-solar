@@ -20,15 +20,23 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    AUTO_UPDATED,
     DOMAIN,
     DT_DATE_ONLY_FORMAT,
     ESTIMATE,
     ESTIMATE10,
     ESTIMATE90,
+    FAILURE,
+    FORECASTS,
     ISSUE_ADVANCED_DEPRECATED,
     ISSUE_ADVANCED_PROBLEM,
     ISSUE_UNUSUAL_AZIMUTH_NORTHERN,
     ISSUE_UNUSUAL_AZIMUTH_SOUTHERN,
+    LAST_7D,
+    LAST_14D,
+    LAST_24H,
+    LAST_ATTEMPT,
+    LAST_UPDATED,
     LEARN_MORE_ADVANCED,
     NEW_OPTION,
     OPTION,
@@ -37,7 +45,9 @@ from .const import (
     PRIOR_CRASH_PLACEHOLDERS,
     PRIOR_CRASH_TRANSLATION_KEY,
     PROBLEMS,
+    SITE_INFO,
     STOPS_WORKING,
+    VERSION,
     WINTER_TIME,
 )
 
@@ -324,6 +334,81 @@ def check_unusual_azimuth(latitude: float, azimuth: float) -> tuple[bool, str, i
             unusual = True
             proposal = -180 - int(azimuth)
     return unusual, issue_key, proposal
+
+
+class SchemaIncompatibleError(Exception):
+    """Raised when cache data cannot be upgraded due to incompatible structure."""
+
+
+def upgrade_cache_schema(
+    data: dict[str, Any],
+    from_version: int,
+    first_site_id: str | None,
+    auto_update_enabled: bool,
+) -> int:
+    """Upgrade a cache data dict from *from_version* to the current JSON_VERSION.
+
+    The dict is mutated in-place. Returns the version after upgrade.
+
+    Raises:
+        SchemaIncompatibleError: If the data structure is incompatible and
+            cannot be upgraded.
+    """
+
+    json_version = from_version
+
+    # Test for incompatible data.
+    if data.get(SITE_INFO) is None and data.get(FORECASTS) is None:
+        raise SchemaIncompatibleError("Neither siteinfo nor forecasts present")
+    if data.get(SITE_INFO) is not None:
+        site_info = data.get(SITE_INFO, {})
+        site_entry = site_info.get(first_site_id, {}) if first_site_id else {}
+        if not isinstance(site_entry.get(FORECASTS), list):
+            raise SchemaIncompatibleError("siteinfo forecasts is not a list")
+    if data.get(FORECASTS) is not None:
+        if not isinstance(data.get(FORECASTS), list):
+            raise SchemaIncompatibleError("Top-level forecasts is not a list")
+
+    # V3 and prior versions did not have a version key.
+    if json_version < 4:
+        data[VERSION] = 4
+        json_version = 4
+
+    # Add LAST_ATTEMPT and AUTO_UPDATED as of v5.
+    # Ancient v3 versions did not have the SITE_INFO key.
+    if json_version < 5:
+        _LOGGER.debug("Upgrading to v5 cache structure")
+        data[VERSION] = 5
+        data[LAST_ATTEMPT] = data[LAST_UPDATED]
+        data[AUTO_UPDATED] = auto_update_enabled
+        if data.get(SITE_INFO) is None:
+            if data.get(FORECASTS) is not None and first_site_id is not None:
+                data[SITE_INFO] = {first_site_id: {FORECASTS: data.get(FORECASTS)}}
+                data.pop(FORECASTS, None)
+                data.pop("energy", None)
+        json_version = 5
+
+    # Alter AUTO_UPDATED boolean flag to int, introduced v4.3.0.
+    if json_version < 6:
+        _LOGGER.debug("Upgrading to v6 cache structure")
+        data[VERSION] = 6
+        data[AUTO_UPDATED] = 99999 if auto_update_enabled else 0
+        json_version = 6
+
+    # Add failure statistics, introduced v4.3.5.
+    if json_version < 7:
+        _LOGGER.debug("Upgrading to v7 cache structure")
+        data[VERSION] = 7
+        data[FAILURE] = {LAST_24H: 0, LAST_7D: [0] * 7}
+        json_version = 7
+
+    if json_version < 8:
+        _LOGGER.debug("Upgrading to v8 cache structure")
+        data[VERSION] = 8
+        data[FAILURE][LAST_14D] = data[FAILURE][LAST_7D] + [0] * 7
+        json_version = 8
+
+    return json_version
 
 
 def forecast_entry_update(forecasts: dict[dt, Any], period_start: dt, pv: float, pv10: float | None = None, pv90: float | None = None):

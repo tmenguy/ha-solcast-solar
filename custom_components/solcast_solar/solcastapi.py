@@ -153,6 +153,7 @@ from .util import (
     DateTimeHelper,
     HistoryType,
     JSONDecoder,
+    SchemaIncompatibleError,
     SitesStatus,
     SolcastApiStatus,
     UsageStatus,
@@ -167,6 +168,7 @@ from .util import (
     redact_lat_lon,
     redact_lat_lon_simple,
     redact_msg_api_key,
+    upgrade_cache_schema,
 )
 
 FRESH_DATA: Final[dict[str, Any]] = {
@@ -1145,62 +1147,20 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
                                     json_version,
                                     JSON_VERSION,
                                 )
-                                # If the file structure must change then upgrade it
                                 current_version = json_version
 
-                                # Test for incompatible data
-                                if data.get(SITE_INFO) is None and data.get(FORECASTS) is None:
-                                    # Need one or the other to be able to upgrade.
+                                first_site_id = self.sites[0][RESOURCE_ID] if len(self.sites) > 0 else None
+                                try:
+                                    json_version = upgrade_cache_schema(
+                                        data,
+                                        json_version,
+                                        first_site_id,
+                                        self.options.auto_update != AutoUpdate.NONE,
+                                    )
+                                except SchemaIncompatibleError:
                                     self.status = SolcastApiStatus.DATA_INCOMPATIBLE
-                                if data.get(SITE_INFO) is not None:
-                                    if not isinstance(data.get(SITE_INFO, {}).get(self.sites[0][RESOURCE_ID], {}).get(FORECASTS), list):
-                                        self.status = SolcastApiStatus.DATA_INCOMPATIBLE
-                                if data.get(FORECASTS) is not None:
-                                    if not isinstance(data.get(FORECASTS), list):
-                                        self.status = SolcastApiStatus.DATA_INCOMPATIBLE
-                                if self.status == SolcastApiStatus.DATA_INCOMPATIBLE:
                                     _LOGGER.critical("The %s appears incompatible, so cannot upgrade it", filename)
                                     raise_and_record(self.hass, ConfigEntryError, EXCEPTION_INIT_INCOMPATIBLE, {"file": file})
-
-                                # What happened before v4 stays before v4. BJReplay has no visibility of ancient.
-                                # V3 and prior versions of the solcast.json file did not have a version key.
-                                if json_version < 4:
-                                    data[VERSION] = 4
-                                    json_version = 4
-                                # Add LAST_ATTEMPT and AUTO_UPDATED to cache structure as of v5, introduced v4.2.5.
-                                # Ancient v3 versions of this code did not have the SITE_INFO key to contain forecasts, so fix that.
-                                if json_version < 5:
-                                    _LOGGER.debug("Upgrading to v5 cache structure")
-                                    data[VERSION] = 5
-                                    data[LAST_ATTEMPT] = data[LAST_UPDATED]
-                                    data[AUTO_UPDATED] = self.options.auto_update != AutoUpdate.NONE
-                                    if data.get(SITE_INFO) is None:
-                                        if (
-                                            data.get(FORECASTS) is not None
-                                            and len(self.sites) > 0
-                                            and self.sites[0].get(RESOURCE_ID) is not None
-                                        ):
-                                            data[SITE_INFO] = {self.sites[0][RESOURCE_ID]: {FORECASTS: data.get(FORECASTS)}}
-                                            data.pop(FORECASTS, None)
-                                            data.pop("energy", None)
-                                    json_version = 5
-                                # Alter AUTO_UPDATED boolean flag to be the integer number of auto-update divisions, introduced v4.3.0.
-                                if json_version < 6:
-                                    _LOGGER.debug("Upgrading to v6 cache structure")
-                                    data[VERSION] = 6
-                                    data[AUTO_UPDATED] = 99999 if self.options.auto_update != AutoUpdate.NONE else 0
-                                    json_version = 6
-                                # Add failure statistics to cache structure, introduced v4.3.5.
-                                if json_version < 7:
-                                    _LOGGER.debug("Upgrading to v7 cache structure")
-                                    data[VERSION] = 7
-                                    data[FAILURE] = {LAST_24H: 0, LAST_7D: [0] * 7}
-                                    json_version = 7
-                                if json_version < 8:
-                                    _LOGGER.debug("Upgrading to v8 cache structure")
-                                    data[VERSION] = 8
-                                    data[FAILURE][LAST_14D] = data[FAILURE][LAST_7D] + [0] * 7
-                                    json_version = 8
 
                                 if json_version > current_version:
                                     await self.serialise_data(data, filename)

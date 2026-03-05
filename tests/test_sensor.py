@@ -358,8 +358,6 @@ for day in range(
     SENSORS[f"forecast_day_{day}"]["should_be_disabled"] = True
 
 
-
-
 @pytest.mark.parametrize(
     ("key", "settings"),
     [
@@ -673,22 +671,7 @@ async def test_sensor_unavailable(
         assert await async_cleanup_integration_tests(hass)
 
 
-def get_sensor_value(self: Any, key: str):
-    """Raise an exception getting the value of a sensor."""
-    return 1 / 0
-
-
-def get_site_sensor_value(self: Any, rooftop: str, key: str):
-    """Raise an exception getting the value of a sensor."""
-    return 1 / 0
-
-
-def get_sensor_extra_attributes(self: Any, key: str):
-    """Raise an exception getting the value of a sensor."""
-    return 1 / 0
-
-
-def get_site_sensor_extra_attributes(self: Any, rooftop: str, key: str):
+def _raise_zero_division(*_args: Any, **_kwargs: Any):
     """Raise an exception getting the value of a sensor."""
     return 1 / 0
 
@@ -698,18 +681,15 @@ async def test_sensor_unavailable_exception(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test state of sensors when exceptions occur."""
 
-    old_get_sensor_value = SolcastUpdateCoordinator.get_sensor_value
-    old_get_sensor_extra_attributes = SolcastUpdateCoordinator.get_sensor_extra_attributes
-    old_get_site_sensor_value = SolcastUpdateCoordinator.get_site_sensor_value
-    old_get_site_sensor_extra_attributes = SolcastUpdateCoordinator.get_site_sensor_extra_attributes
+    monkeypatch.setattr(SolcastUpdateCoordinator, "get_sensor_value", _raise_zero_division)
+    monkeypatch.setattr(SolcastUpdateCoordinator, "get_sensor_extra_attributes", _raise_zero_division)
+    monkeypatch.setattr(SolcastUpdateCoordinator, "get_site_sensor_value", _raise_zero_division)
+    monkeypatch.setattr(SolcastUpdateCoordinator, "get_site_sensor_extra_attributes", _raise_zero_division)
 
-    SolcastUpdateCoordinator.get_sensor_value = get_sensor_value  # type: ignore[method-assign, assignment]
-    SolcastUpdateCoordinator.get_sensor_extra_attributes = get_sensor_extra_attributes  # type: ignore[method-assign, assignment]
-    SolcastUpdateCoordinator.get_site_sensor_value = get_site_sensor_value  # type: ignore[method-assign, assignment]
-    SolcastUpdateCoordinator.get_site_sensor_extra_attributes = get_site_sensor_extra_attributes  # type: ignore[method-assign, assignment]
     try:
         entry = await async_init_integration(hass, DEFAULT_INPUT1)
         async with asyncio.timeout(10):
@@ -738,7 +718,3 @@ async def test_sensor_unavailable_exception(
 
     finally:
         assert await async_cleanup_integration_tests(hass)
-        SolcastUpdateCoordinator.get_sensor_value = old_get_sensor_value  # type: ignore[method-assign]
-        SolcastUpdateCoordinator.get_sensor_extra_attributes = old_get_sensor_extra_attributes  # type: ignore[method-assign]
-        SolcastUpdateCoordinator.get_site_sensor_value = old_get_site_sensor_value  # type: ignore[method-assign]
-        SolcastUpdateCoordinator.get_site_sensor_extra_attributes = old_get_site_sensor_extra_attributes  # type: ignore[method-assign]

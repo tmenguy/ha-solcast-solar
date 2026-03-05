@@ -313,8 +313,6 @@ async def _reload(hass: HomeAssistant, entry: ConfigEntry) -> tuple[SolcastUpdat
     return None, None
 
 
-
-
 async def five_minute_bump(hass: HomeAssistant, caplog: pytest.LogCaptureFixture):
     """Move to a sensor update done."""
     async with asyncio.timeout(1):
@@ -473,101 +471,49 @@ async def test_api_failure(
         assert await async_cleanup_integration_tests(hass)
 
 
-async def test_schema_upgrade(
+async def test_schema_upgrade_caller(
     recorder_mock: Recorder,
     hass: HomeAssistant,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test schema upgrade."""
+    """Test the schema upgrade calling code and undampened history migration."""
 
     config_dir = f"{hass.config.config_dir}/{CONFIG_DISCRETE_NAME}" if CONFIG_FOLDER_DISCRETE else hass.config.config_dir
 
     options = copy.deepcopy(DEFAULT_INPUT1)
     options[CONF_API_KEY] = "2"
     entry: ConfigEntry = await async_init_integration(hass, options)
-    coordinator = entry.runtime_data.coordinator
-    solcast = patch_solcast_api(coordinator.solcast)
     try:
         data_file = Path(f"{config_dir}/solcast.json")
         undampened_file = Path(f"{config_dir}/solcast-undampened.json")
         original_data = json.loads(data_file.read_text(encoding="utf-8"))
 
-        def set_old_solcast_schema(data_file: Path):
-            data = copy.deepcopy(original_data)
-            data["version"] = 4
-            data.pop("last_attempt")
-            data.pop("auto_updated")
-            data_file.write_text(json.dumps(data), encoding="utf-8")
-
-        def set_ancient_solcast_schema(data_file: Path):
-            data = copy.deepcopy(original_data)
-            data.pop("version")
-            data.pop("last_attempt")
-            data.pop("auto_updated")
-            data["forecasts"] = data["siteinfo"]["3333-3333-3333-3333"]["forecasts"].copy()
-            data.pop("siteinfo")
-            data_file.write_text(json.dumps(data), encoding="utf-8")
-
-        def set_incompatible_schema1(data_file: Path):
-            data = copy.deepcopy(original_data)
-            data.pop("version")
-            data.pop("siteinfo")
-            data.pop("last_attempt")
-            data.pop("auto_updated")
-            data["some_stuff"] = {"fraggle": "rock"}
-            data_file.write_text(json.dumps(data), encoding="utf-8")
-
-        def set_incompatible_schema2(data_file: Path):
-            data = copy.deepcopy(original_data)
-            data.pop("version")
-            data["siteinfo"] = {"weird": "stuff"}
-            data["forecasts"] = "favourable"
-            data.pop("last_attempt")
-            data.pop("auto_updated")
-            data_file.write_text(json.dumps(data), encoding="utf-8")
-
-        def verify_new_solcast_schema(data_file: Path):
-            data = json.loads(data_file.read_text(encoding="utf-8"))
-            assert data["version"] == 8
-            assert "last_attempt" in data
-            assert "auto_updated" in data
-
-        def kill_undampened_cache():
-            with contextlib.suppress(FileNotFoundError):
-                undampened_file.unlink()
-
-        # Test upgrade schema version
-        kill_undampened_cache()
-        set_old_solcast_schema(data_file)
-        coordinator, solcast = await _reload(hass, entry)
+        # Successful upgrade from v4 (exercises solcastapi.py caller + migrate_undampened_history).
+        with contextlib.suppress(FileNotFoundError):
+            undampened_file.unlink()
+        data = copy.deepcopy(original_data)
+        data["version"] = 4
+        data.pop("last_attempt")
+        data.pop("auto_updated")
+        data_file.write_text(json.dumps(data), encoding="utf-8")
+        await _reload(hass, entry)
         assert "version from v4 to v8" in caplog.text
         assert "Migrating un-dampened history" in caplog.text
-        verify_new_solcast_schema(data_file)
-        verify_new_solcast_schema(undampened_file)
+        upgraded = json.loads(data_file.read_text(encoding="utf-8"))
+        assert upgraded["version"] == 8
         caplog.clear()
 
-        # Test upgrade from v3 schema
-        kill_undampened_cache()
-        set_ancient_solcast_schema(data_file)
-        coordinator, solcast = await _reload(hass, entry)
-        assert "version from v1 to v8" in caplog.text
-        assert "Migrating un-dampened history" in caplog.text
-        verify_new_solcast_schema(data_file)
-        verify_new_solcast_schema(undampened_file)
-        caplog.clear()
-
-        # Test upgrade from incompatible schema 1
-        kill_undampened_cache()
-        set_incompatible_schema1(data_file)
-        coordinator, solcast = await _reload(hass, entry)
-        assert "CRITICAL" in caplog.text
-        assert solcast is None
-        caplog.clear()
-
-        # Test upgrade from incompatible schema 2
-        kill_undampened_cache()
-        set_incompatible_schema2(data_file)
-        coordinator, solcast = await _reload(hass, entry)
+        # Incompatible schema (exercises the SchemaIncompatibleError except branch).
+        with contextlib.suppress(FileNotFoundError):
+            undampened_file.unlink()
+        data = copy.deepcopy(original_data)
+        data.pop("version")
+        data.pop("siteinfo")
+        data.pop("last_attempt")
+        data.pop("auto_updated")
+        data["some_stuff"] = {"fraggle": "rock"}
+        data_file.write_text(json.dumps(data), encoding="utf-8")
+        _coordinator, solcast = await _reload(hass, entry)
         assert "CRITICAL" in caplog.text
         assert solcast is None
 
