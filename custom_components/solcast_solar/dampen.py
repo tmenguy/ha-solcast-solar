@@ -1257,11 +1257,13 @@ class Dampening:
                 try:
                     raw = json.loads(await file.read(), cls=JSONDecoder)
                 except json.decoder.JSONDecodeError:
-                    _LOGGER.warning("Dampening history file is corrupt - could not decode JSON - adaptive model configuration failed")
+                    _LOGGER.warning(
+                        "Dampening history file is corrupt - could not decode JSON - adaptive dampening model configuration failed"
+                    )
                     valid = False
         else:
             valid = False
-            _LOGGER.warning("No dampening history file found: Adaptive dampening configuration is yet to be built")
+            _LOGGER.warning("No dampening history file found, adaptive dampening configuration has not yet been built")
         if valid:
             # --- Parse and add history ---
             for model_str, deltas in raw.items():
