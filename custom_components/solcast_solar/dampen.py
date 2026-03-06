@@ -471,10 +471,7 @@ class Dampening:
             selected_model = result.best_model_no_delta
             selected_delta = None
             current_valid = selected_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
-            is_different = (
-                selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
-                or self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA
-            )
+            is_different = selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
             alternative_model = result.best_model_adjusted
 
         if not current_valid:
