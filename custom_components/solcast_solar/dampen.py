@@ -1261,8 +1261,7 @@ class Dampening:
                     valid = False
         else:
             valid = False
-            _LOGGER.warning("No dampening history file found - adaptive model configuration failed")
-
+            _LOGGER.warning("No dampening history file found: Adaptive dampening configuration is yet to be built")
         if valid:
             # --- Parse and add history ---
             for model_str, deltas in raw.items():
