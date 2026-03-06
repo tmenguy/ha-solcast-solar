@@ -112,6 +112,8 @@ Configure your rooftop sites correctly at `solcast.com`.
 
 Remove any sample sites from your Solcast dashboard (see [Known issues](#known-issues) for examples of sample sites and the issue that might occur if you don't remove them.)
 
+If you don't remove sample sites from your Solcast dashboard, **you may not be able to configure the integration** - you may receive an `Error Exception in __sites_data(): 'azimuth' for API key` error during configuration.
+
 Copy the API key for use with this integration (See [Configuration](#Configuration) below).
 
 Note the importance of getting your Solcast site configuration correct. Use the "Site is facing" hint to ensure the azimuth is signed correctly, as if this is incorrect then forecasts will appear shifted, possibly by up to an hour during the day.
@@ -1236,7 +1238,9 @@ Expect API usage issues, which will clear within 24 hours.
 
 ### Sample sites
 
-If you see sample sites (such as these [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png)) remove them from your Solcast dashboard.
+If you see sample sites (such as these) [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png) remove them from your Solcast dashboard.
+
+If you don't remove sample sites from your Solcast dashboard, you may not be able to configure the integration - you may receive an `Error Exception in __sites_data(): 'azimuth' for API key` during configuration: [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSitesException.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSitesException.png)
 
 ## Troubleshooting
 
