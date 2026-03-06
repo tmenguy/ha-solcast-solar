@@ -1309,6 +1309,7 @@ The code itself resides at `/config/custom_components/solcast_solar`, and removi
 v4.5.0
 
 * Add adaptive automated dampening as advanced options by @Nilogax and @autoSteve
+* Add ability to utilise energy or power generation entity for automated dampening by @autoSteve
 * Add advanced dampening settings as attributes of dampening sensor by @Nilogax
 * Add set_custom_hours service action for entity by @autoSteve
 * Add missing translation, ES, FR, PL, SK, UR by @GitLocalize
