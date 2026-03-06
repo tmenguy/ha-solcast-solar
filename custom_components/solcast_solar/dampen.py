@@ -446,9 +446,8 @@ class Dampening:
             variance,
         )
 
-        included_intervals = self._build_included_intervals()
         result = await self._evaluate_model_combinations(
-            earliest_common, actuals, generation_dampening, included_intervals, common_peak_interval
+            earliest_common, actuals, generation_dampening, common_peak_interval
         )
 
         self._log_model_rankings(result)
@@ -536,7 +535,6 @@ class Dampening:
         delta: int,
         earliest_common: dt,
         actuals: defaultdict[dt, list[float]],
-        included_intervals: defaultdict[dt, list[bool]],
     ) -> defaultdict[dt, list[float]] | None:
         """Build dampened actuals for a single model/delta combination.
 
@@ -575,32 +573,6 @@ class Dampening:
 
         return dampened_actuals
 
-    def _build_included_intervals(self) -> defaultdict[dt, list[bool]]:
-        """Build a per-day map of which intervals had dampening applied by any model.
-
-        Uses the delta=-1 (no-delta) history entries as the reference for whether
-        dampening was active at each interval on each day.
-        """
-        return defaultdict(
-            lambda: [False] * 48,
-            {
-                day_start: [
-                    any(
-                        entry["factors"][i] != 1.0
-                        for deltas in self.auto_factors_history.values()
-                        for entry in deltas[-1]
-                        if self.api.dt_helper.day_start(entry["period_start"]) == day_start
-                    )
-                    for i in range(48)
-                ]
-                for day_start in {
-                    self.api.dt_helper.day_start(entry["period_start"])
-                    for deltas in self.auto_factors_history.values()
-                    for entry in deltas[-1]
-                }
-            },
-        )
-
     def _get_daily_ranks(self, daily_model_errors: dict[dt, dict[tuple[int, int], float]]) -> dict[dt, dict[tuple[int, int], int]]:
         """Helper to calculate error rankings for each day."""
         daily_ranks = {}
@@ -620,7 +592,6 @@ class Dampening:
         earliest_common: dt,
         actuals: defaultdict[dt, list[float]],
         generation_dampening: defaultdict[dt, dict[str, Any]],
-        included_intervals: defaultdict[dt, list[bool]],
         common_peak_interval: int,
     ) -> _ModelEvalResult:
         """Evaluate all model/delta combinations and return the best-performing settings.
@@ -653,7 +624,7 @@ class Dampening:
                 await asyncio.sleep(0)  # Be nice to HA
                 _LOGGER.debug("Evaluating model %d and delta %d", model, delta)
 
-                dampened_actuals = self._build_dampened_actuals_for_model(model, delta, earliest_common, actuals, included_intervals)
+                dampened_actuals = self._build_dampened_actuals_for_model(model, delta, earliest_common, actuals)
                 if dampened_actuals is None:
                     _LOGGER.debug("Skipping evaluation for model %d and delta %d", model, delta)
                     continue
