@@ -297,7 +297,6 @@ class Dampening:
         values: tuple[dict[str, Any], ...],
         percentiles: tuple[int, ...] = (50,),
         log_breakdown: bool = False,
-        ignored_days: dict[dt, bool] | None = None,
     ) -> tuple[bool, float, list[float]]:
         """Calculate mean and percentile absolute percentage error."""
         value_day: defaultdict[dt, float] = defaultdict(float)
@@ -313,10 +312,8 @@ class Dampening:
                 value_day[i] += interval[ESTIMATE] / 2  # 30 minute intervals
 
         for day, value in value_day.items():
-            if (ignored_days is not None and ignored_days.get(day, False)) or generation_day[day] <= 0:
-                error[day] = math.inf
-            else:
-                error[day] = abs(generation_day[day] - value) / generation_day[day] * 100.0
+
+            error[day] = abs(generation_day[day] - value) / generation_day[day] * 100.0 if generation_day[day] > 0 else math.inf
 
             if log_breakdown:
                 _LOGGER.debug(
@@ -346,7 +343,6 @@ class Dampening:
         peak_interval: int,
         percentiles: tuple[int, ...] = (50,),
         log_breakdown: bool = False,
-        ignored_days: dict[dt, bool] | None = None,
     ) -> tuple[bool, float, list[float], dict[dt, float]]:
         """Calculate error for a single common peak interval across all days.
 
@@ -371,8 +367,7 @@ class Dampening:
             if interval_idx != peak_interval:
                 continue
             day_start = self.api.dt_helper.day_start(timestamp)
-            if ignored_days is not None and ignored_days.get(day_start, False):
-                continue
+
             if day_start not in dampened_actuals:
                 continue
 
@@ -600,7 +595,6 @@ class Dampening:
         undampened actuals, then computes single-interval error at the selected comparison
         interval. Returns per-day error rankings and the best model/delta for each mode.
         """
-        ignored_days: dict[dt, bool] = {}
         daily_model_errors: dict[dt, dict[tuple[int, int], float]] = defaultdict(dict)
         best_model_adjusted = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
         best_model_no_delta = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
@@ -634,7 +628,6 @@ class Dampening:
                     generation_dampening,
                     common_peak_interval,
                     log_breakdown=self.api.advanced_options[ADVANCED_ESTIMATED_ACTUALS_LOG_MAPE_BREAKDOWN],
-                    ignored_days=ignored_days,
                 )
 
                 for day, error in daily_errors.items():
