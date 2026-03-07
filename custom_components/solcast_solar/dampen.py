@@ -297,7 +297,6 @@ class Dampening:
         values: tuple[dict[str, Any], ...],
         percentiles: tuple[int, ...] = (50,),
         log_breakdown: bool = False,
-        ignored_days: dict[dt, bool] | None = None,
     ) -> tuple[bool, float, list[float]]:
         """Calculate mean and percentile absolute percentage error."""
         value_day: defaultdict[dt, float] = defaultdict(float)
@@ -313,10 +312,8 @@ class Dampening:
                 value_day[i] += interval[ESTIMATE] / 2  # 30 minute intervals
 
         for day, value in value_day.items():
-            if (ignored_days is not None and ignored_days.get(day, False)) or generation_day[day] <= 0:
-                error[day] = math.inf
-            else:
-                error[day] = abs(generation_day[day] - value) / generation_day[day] * 100.0
+
+            error[day] = abs(generation_day[day] - value) / generation_day[day] * 100.0 if generation_day[day] > 0 else math.inf
 
             if log_breakdown:
                 _LOGGER.debug(
@@ -346,7 +343,6 @@ class Dampening:
         peak_interval: int,
         percentiles: tuple[int, ...] = (50,),
         log_breakdown: bool = False,
-        ignored_days: dict[dt, bool] | None = None,
     ) -> tuple[bool, float, list[float], dict[dt, float]]:
         """Calculate error for a single common peak interval across all days.
 
@@ -371,8 +367,7 @@ class Dampening:
             if interval_idx != peak_interval:
                 continue
             day_start = self.api.dt_helper.day_start(timestamp)
-            if ignored_days is not None and ignored_days.get(day_start, False):
-                continue
+
             if day_start not in dampened_actuals:
                 continue
 
@@ -446,9 +441,8 @@ class Dampening:
             variance,
         )
 
-        included_intervals = self._build_included_intervals()
         result = await self._evaluate_model_combinations(
-            earliest_common, actuals, generation_dampening, included_intervals, common_peak_interval
+            earliest_common, actuals, generation_dampening, common_peak_interval
         )
 
         self._log_model_rankings(result)
@@ -477,10 +471,7 @@ class Dampening:
             selected_model = result.best_model_no_delta
             selected_delta = None
             current_valid = selected_model != VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
-            is_different = (
-                selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
-                or self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] != VALUE_ADAPTIVE_DAMPENING_NO_DELTA
-            )
+            is_different = selected_model != self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL]
             alternative_model = result.best_model_adjusted
 
         if not current_valid:
@@ -536,7 +527,6 @@ class Dampening:
         delta: int,
         earliest_common: dt,
         actuals: defaultdict[dt, list[float]],
-        included_intervals: defaultdict[dt, list[bool]],
     ) -> defaultdict[dt, list[float]] | None:
         """Build dampened actuals for a single model/delta combination.
 
@@ -575,32 +565,6 @@ class Dampening:
 
         return dampened_actuals
 
-    def _build_included_intervals(self) -> defaultdict[dt, list[bool]]:
-        """Build a per-day map of which intervals had dampening applied by any model.
-
-        Uses the delta=-1 (no-delta) history entries as the reference for whether
-        dampening was active at each interval on each day.
-        """
-        return defaultdict(
-            lambda: [False] * 48,
-            {
-                day_start: [
-                    any(
-                        entry["factors"][i] != 1.0
-                        for deltas in self.auto_factors_history.values()
-                        for entry in deltas[-1]
-                        if self.api.dt_helper.day_start(entry["period_start"]) == day_start
-                    )
-                    for i in range(48)
-                ]
-                for day_start in {
-                    self.api.dt_helper.day_start(entry["period_start"])
-                    for deltas in self.auto_factors_history.values()
-                    for entry in deltas[-1]
-                }
-            },
-        )
-
     def _get_daily_ranks(self, daily_model_errors: dict[dt, dict[tuple[int, int], float]]) -> dict[dt, dict[tuple[int, int], int]]:
         """Helper to calculate error rankings for each day."""
         daily_ranks = {}
@@ -620,7 +584,6 @@ class Dampening:
         earliest_common: dt,
         actuals: defaultdict[dt, list[float]],
         generation_dampening: defaultdict[dt, dict[str, Any]],
-        included_intervals: defaultdict[dt, list[bool]],
         common_peak_interval: int,
     ) -> _ModelEvalResult:
         """Evaluate all model/delta combinations and return the best-performing settings.
@@ -629,7 +592,6 @@ class Dampening:
         undampened actuals, then computes single-interval error at the selected comparison
         interval. Returns per-day error rankings and the best model/delta for each mode.
         """
-        ignored_days: dict[dt, bool] = {}
         daily_model_errors: dict[dt, dict[tuple[int, int], float]] = defaultdict(dict)
         best_model_adjusted = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
         best_model_no_delta = VALUE_ADAPTIVE_DAMPENING_CONFIG_UNCHANGED
@@ -653,7 +615,7 @@ class Dampening:
                 await asyncio.sleep(0)  # Be nice to HA
                 _LOGGER.debug("Evaluating model %d and delta %d", model, delta)
 
-                dampened_actuals = self._build_dampened_actuals_for_model(model, delta, earliest_common, actuals, included_intervals)
+                dampened_actuals = self._build_dampened_actuals_for_model(model, delta, earliest_common, actuals)
                 if dampened_actuals is None:
                     _LOGGER.debug("Skipping evaluation for model %d and delta %d", model, delta)
                     continue
@@ -663,7 +625,6 @@ class Dampening:
                     generation_dampening,
                     common_peak_interval,
                     log_breakdown=self.api.advanced_options[ADVANCED_ESTIMATED_ACTUALS_LOG_MAPE_BREAKDOWN],
-                    ignored_days=ignored_days,
                 )
 
                 for day, error in daily_errors.items():
