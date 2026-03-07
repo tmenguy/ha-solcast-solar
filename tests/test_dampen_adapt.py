@@ -638,10 +638,8 @@ async def test_build_dampened_actuals_count_mismatch(
         actuals[day1] = [1.0] * 48
         actuals[day2] = [1.0] * 48
 
-        included_intervals: defaultdict[dt, list[bool]] = defaultdict(lambda: [False] * 48)
-
         caplog.clear()
-        result = solcast.dampening._build_dampened_actuals_for_model(0, 0, day1, actuals, included_intervals)
+        result = solcast.dampening._build_dampened_actuals_for_model(0, 0, day1, actuals)
 
         assert result is None
         assert "mismatched actuals count" in caplog.text
@@ -722,11 +720,11 @@ async def test_calculate_single_interval_error_no_generation(
         assert await async_cleanup_integration_tests(hass)
 
 
-async def test_calculate_single_interval_error_skips_ignored_and_missing(
+async def test_calculate_single_interval_error_skips_missing(
     recorder_mock: Recorder,
     hass: HomeAssistant,
 ) -> None:
-    """Test single-interval error skips ignored days and missing actuals."""
+    """Test single-interval error skips days with missing dampened actuals."""
 
     assert await async_cleanup_integration_tests(hass)
 
@@ -747,11 +745,8 @@ async def test_calculate_single_interval_error_skips_ignored_and_missing(
             },
         )
 
-        dampened_actuals = defaultdict(lambda: [1.0] * 48)
-        day_start_key = solcast.dt_helper.day_start(day_start)
-        dampened_actuals[day_start_key] = [1.0] * 48
-
-        ignored_days = {day_start_key: True}
+        # Neither day is in dampened_actuals, so both are skipped as missing.
+        dampened_actuals: defaultdict[dt, list[float]] = defaultdict(lambda: [1.0] * 48)
 
         monkeypatch.setattr(solcast.dampening, "adjusted_interval_dt", lambda _ts: 0)
 
@@ -760,7 +755,6 @@ async def test_calculate_single_interval_error_skips_ignored_and_missing(
             generation_dampening,
             0,
             percentiles=(50,),
-            ignored_days=ignored_days,
         )
 
         assert has_inf is False

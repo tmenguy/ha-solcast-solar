@@ -312,7 +312,6 @@ class Dampening:
                 value_day[i] += interval[ESTIMATE] / 2  # 30 minute intervals
 
         for day, value in value_day.items():
-
             error[day] = abs(generation_day[day] - value) / generation_day[day] * 100.0 if generation_day[day] > 0 else math.inf
 
             if log_breakdown:
@@ -441,9 +440,7 @@ class Dampening:
             variance,
         )
 
-        result = await self._evaluate_model_combinations(
-            earliest_common, actuals, generation_dampening, common_peak_interval
-        )
+        result = await self._evaluate_model_combinations(earliest_common, actuals, generation_dampening, common_peak_interval)
 
         self._log_model_rankings(result)
         await self._apply_best_settings(result, common_peak_interval)
