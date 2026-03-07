@@ -373,8 +373,8 @@ class Updater:
             self._coordinator.solcast.options.auto_dampen
             and self._coordinator.solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_CONFIGURATION]
         ):
-            await self._coordinator.solcast.dampening.update_history()
-            await self._coordinator.solcast.dampening.determine_best_settings()
+            await self._coordinator.solcast.dampening.adaptive.update_history()
+            await self._coordinator.solcast.dampening.adaptive.determine_best_settings()
 
         await self._coordinator.solcast.dampening.model_automated()
         if self._coordinator.solcast.options.auto_dampen:

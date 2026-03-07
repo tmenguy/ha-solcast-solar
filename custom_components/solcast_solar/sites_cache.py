@@ -557,7 +557,7 @@ class SitesCache:
                         self.api.options.auto_dampen
                         and self.api.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_CONFIGURATION]
                     ):
-                        await self.api.dampening.load_history()
+                        await self.api.dampening.adaptive.load_history()
 
                     # If configured to get generation but there is no cached data, then get it.
                     if (

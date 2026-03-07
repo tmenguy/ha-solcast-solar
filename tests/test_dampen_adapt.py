@@ -185,12 +185,12 @@ async def test_adaptive_auto_dampen(  # noqa: C901
                     assert re.search(r"Advanced options file .+ exists", caplog.text) is None
 
                     solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_EXCLUDE] = [{"model": 2, "delta": -1}]
-                    await solcast.dampening.determine_best_settings()
+                    await solcast.dampening.adaptive.determine_best_settings()
                     assert "Skipping model 2 and delta -1 as in automated_dampening_adaptive_model_exclude" in caplog.text
                     solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_ADAPTIVE_MODEL_EXCLUDE] = []
 
                     solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT] = True
-                    await solcast.dampening.determine_best_settings()
+                    await solcast.dampening.adaptive.determine_best_settings()
                     solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_NO_DELTA_ADJUSTMENT] = False
 
                     # Remove the 2nd day from all model/deltas
@@ -243,7 +243,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         # Re-add dampening history for today
         caplog.clear()
         _LOGGER.debug("Re-adding dampening history for today")
-        await solcast.dampening.update_history()
+        await solcast.dampening.adaptive.update_history()
 
         # Test valid and full history
         solcast.dampening.auto_factors_history[2][1] = solcast.dampening.auto_factors_history[2][1] + list(now_missing_2_1)
@@ -255,7 +255,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         )
         caplog.clear()
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS] = 4
-        await solcast.dampening.load_history()
+        await solcast.dampening.adaptive.load_history()
         assert "Automated dampening adaptive model configuration may be sub-optimal" not in caplog.text
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL_DAYS] = 14
 
@@ -279,7 +279,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         for delta in range(-1, 2):
             if len(solcast.dampening.auto_factors_history[3][delta]) >= 4:
                 solcast.dampening.auto_factors_history[3][delta].pop(0)
-        await solcast.dampening.determine_best_settings()  # Should skip early entries for models 0, 1, 3
+        await solcast.dampening.adaptive.determine_best_settings()  # Should skip early entries for models 0, 1, 3
         # Should complete successfully despite staggered dates
         assert "Determining best automated dampening settings" in caplog.text
         assert "Earliest date with complete dampening history" in caplog.text
@@ -296,7 +296,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         # Set all generation to zero to trigger infinity APE
         for gen_entry in solcast.dampening.data_generation[GENERATION]:
             gen_entry[GENERATION] = 0.0
-        await solcast.dampening.determine_best_settings()
+        await solcast.dampening.adaptive.determine_best_settings()
         # Should log the defensive check message for skipping APE calculation
         assert "Determining best automated dampening settings" in caplog.text
         assert "Skipping evaluation for model" in caplog.text
@@ -312,7 +312,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] = 1
         original_delta = solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL]
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] = 1
-        await solcast.dampening.determine_best_settings()
+        await solcast.dampening.adaptive.determine_best_settings()
         assert "Updating automated dampening settings" in caplog.text
         # Restore original values
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] = original_model
@@ -341,7 +341,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
                     remaining_actuals.append(actual)
 
             solcast.data_actuals[SITE_INFO][site_id][FORECASTS] = remaining_actuals
-        await solcast.dampening.determine_best_settings()
+        await solcast.dampening.adaptive.determine_best_settings()
         assert "Determining best automated dampening settings" in caplog.text
         assert "skipped due to missing actuals for dampening history entry" in caplog.text
 
@@ -353,7 +353,7 @@ async def test_adaptive_auto_dampen(  # noqa: C901
         caplog.clear()
         _LOGGER.debug("Corrupting dampening history and reloading it")
         Path(f"{config_dir}/solcast-dampening-history.json").write_text("having a bad day", encoding="utf-8")
-        await solcast.dampening.load_history()
+        await solcast.dampening.adaptive.load_history()
         assert "Dampening history file is corrupt" in caplog.text
 
     finally:
@@ -406,7 +406,7 @@ async def test_update_history_deal_breaker(
         _LOGGER.debug("Testing update_history with no generation data")
         # Clear generation data to trigger the "No generation yet" deal breaker
         solcast.dampening.data_generation[GENERATION] = []
-        await solcast.dampening.update_history()
+        await solcast.dampening.adaptive.update_history()
         assert "Auto-dampening suppressed: No generation yet" in caplog.text
 
     finally:
@@ -452,7 +452,7 @@ async def test_select_comparison_interval_variance(
             },
         }
 
-        selected_interval, avg_gen, avg_factor, variance = solcast.dampening._select_comparison_interval(generation_dampening, 1)
+        selected_interval, avg_gen, avg_factor, variance = solcast.dampening.adaptive._select_comparison_interval(generation_dampening, 1)
 
         assert selected_interval == 0
         assert avg_gen > 0
@@ -482,7 +482,7 @@ async def test_select_comparison_interval_single_factor(
 
         solcast.dampening.auto_factors_history = {0: {VALUE_ADAPTIVE_DAMPENING_NO_DELTA: [{"period_start": day_start, "factors": factors}]}}
 
-        selected_interval, avg_gen, avg_factor, variance = solcast.dampening._select_comparison_interval(generation_dampening, 1)
+        selected_interval, avg_gen, avg_factor, variance = solcast.dampening.adaptive._select_comparison_interval(generation_dampening, 1)
 
         assert selected_interval == 0
         assert avg_gen > 0
@@ -532,7 +532,7 @@ async def test_select_comparison_interval_diluted_variance(
             1: {VALUE_ADAPTIVE_DAMPENING_NO_DELTA: history_b},
         }
 
-        selected_interval, _, avg_factor, variance = solcast.dampening._select_comparison_interval(generation_dampening, 1)
+        selected_interval, _, avg_factor, variance = solcast.dampening.adaptive._select_comparison_interval(generation_dampening, 1)
 
         # Interval 0 should still be selected — it is the only interval with dampening
         assert selected_interval == 0
@@ -595,7 +595,7 @@ async def test_select_comparison_interval_current_factors_fallback(
         current_factors[21] = 0.80  # 20% dampening — weaker discriminator
         solcast.dampening.factors = {ALL: current_factors}
 
-        selected_interval, _avg_gen, avg_factor, _variance = solcast.dampening._select_comparison_interval(generation_dampening, 1)
+        selected_interval, _avg_gen, avg_factor, _variance = solcast.dampening.adaptive._select_comparison_interval(generation_dampening, 1)
 
         # Interval 15 must win: (1 − 0.55) = 0.45 > (1 − 0.80) = 0.20.
         # A generation-weighted formula would pick interval 21:
@@ -639,7 +639,7 @@ async def test_build_dampened_actuals_count_mismatch(
         actuals[day2] = [1.0] * 48
 
         caplog.clear()
-        result = solcast.dampening._build_dampened_actuals_for_model(0, 0, day1, actuals)
+        result = solcast.dampening.adaptive._build_dampened_actuals_for_model(0, 0, day1, actuals)
 
         assert result is None
         assert "mismatched actuals count" in caplog.text
@@ -669,17 +669,14 @@ async def test_calculate_single_interval_error_with_generation(
         monkeypatch = pytest.MonkeyPatch()
         monkeypatch.setattr(solcast.dampening, "adjusted_interval_dt", lambda _ts: 0)
 
-        has_inf, mean_ape, percentiles, _ = await solcast.dampening.calculate_single_interval_error(
+        mean_ape, _ = await solcast.dampening.adaptive.calculate_single_interval_error(
             dampened_actuals,
             generation_dampening,
             peak_interval,
-            percentiles=(50,),
             log_breakdown=True,
         )
 
-        assert has_inf is False
         assert mean_ape > 0
-        assert percentiles[0] > 0
         assert "Single interval APE for day" in caplog.text
     finally:
         monkeypatch.undo()
@@ -704,17 +701,14 @@ async def test_calculate_single_interval_error_no_generation(
         dampened_actuals[solcast.dt_helper.day_start(day_start)] = [1.0] * 48
         generation_dampening = defaultdict(dict, {day_start: {GENERATION: 0.0, EXPORT_LIMITING: False}})
 
-        has_inf, mean_ape, percentiles, _ = await solcast.dampening.calculate_single_interval_error(
+        mean_ape, _ = await solcast.dampening.adaptive.calculate_single_interval_error(
             dampened_actuals,
             generation_dampening,
             0,
-            percentiles=(50,),
             log_breakdown=True,
         )
 
-        assert has_inf is False
         assert mean_ape == math.inf
-        assert percentiles == [math.inf]
         assert "Single interval APE for day" in caplog.text
     finally:
         assert await async_cleanup_integration_tests(hass)
@@ -750,16 +744,13 @@ async def test_calculate_single_interval_error_skips_missing(
 
         monkeypatch.setattr(solcast.dampening, "adjusted_interval_dt", lambda _ts: 0)
 
-        has_inf, mean_ape, percentiles, _ = await solcast.dampening.calculate_single_interval_error(
+        mean_ape, _ = await solcast.dampening.adaptive.calculate_single_interval_error(
             dampened_actuals,
             generation_dampening,
             0,
-            percentiles=(50,),
         )
 
-        assert has_inf is False
         assert mean_ape == math.inf
-        assert percentiles == [math.inf]
     finally:
         monkeypatch.undo()
         assert await async_cleanup_integration_tests(hass)
@@ -801,8 +792,8 @@ async def test_determine_best_settings_alternative_issue(
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_MODEL] = max_model
         solcast.advanced_options[ADVANCED_AUTOMATED_DAMPENING_DELTA_ADJUSTMENT_MODEL] = max_delta
 
-        monkeypatch.setattr(solcast.dampening, "_find_earliest_common_history", lambda _days: day_start)
-        monkeypatch.setattr(solcast.dampening, "_build_actuals_from_sites", lambda _start: {day_start: [1.0] * 48})
+        monkeypatch.setattr(solcast.dampening.adaptive, "_find_earliest_common_history", lambda _days: day_start)
+        monkeypatch.setattr(solcast.dampening.adaptive, "_build_actuals_from_sites", lambda _start: {day_start: [1.0] * 48})
 
         async def _fake_prepare_generation_data(_earliest: dt):
             generation_dampening = defaultdict(dict)
@@ -818,7 +809,7 @@ async def test_determine_best_settings_alternative_issue(
             solcast._test_current_delta = delta  # pyright: ignore[reportPrivateUsage]
             return False, ""
 
-        monkeypatch.setattr(solcast.dampening, "_should_skip_model_delta", _record_should_skip)
+        monkeypatch.setattr(solcast.dampening.adaptive, "_should_skip_model_delta", _record_should_skip)
 
         alternate_better = True
         fake_day = solcast.dt_helper.day_start(day_start)
@@ -828,18 +819,18 @@ async def test_determine_best_settings_alternative_issue(
             delta = solcast._test_current_delta  # pyright: ignore[reportPrivateUsage]
             if delta == VALUE_ADAPTIVE_DAMPENING_NO_DELTA:
                 error = 5.0 if alternate_better and model == min_model else 15.0
-                return False, error, [error], {fake_day: error}
-            return True, 10.0, [10.0], {fake_day: 10.0}
+                return error, {fake_day: error}
+            return 10.0, {fake_day: 10.0}
 
-        monkeypatch.setattr(solcast.dampening, "calculate_single_interval_error", _fake_calculate_single_interval_error)
+        monkeypatch.setattr(solcast.dampening.adaptive, "calculate_single_interval_error", _fake_calculate_single_interval_error)
 
         caplog.clear()
-        await solcast.dampening.determine_best_settings()
+        await solcast.dampening.adaptive.determine_best_settings()
         assert "but adaptive dampening found that model" in caplog.text
 
         alternate_better = False
         caplog.clear()
-        await solcast.dampening.determine_best_settings()
+        await solcast.dampening.adaptive.determine_best_settings()
         assert "but adaptive dampening found that model" not in caplog.text
     finally:
         assert await async_cleanup_integration_tests(hass)

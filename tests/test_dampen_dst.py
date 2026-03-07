@@ -134,7 +134,7 @@ class TestCalculateFactorComputation:
 
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, gen_values, act_values)
 
-        result = await dampening._calculate(matching_intervals, generation, actuals, [], dampening_model)
+        result = await dampening.calculate(matching_intervals, generation, actuals, [], dampening_model)
 
         assert len(result) == 48
         assert result[interval] == expected_factor
@@ -153,7 +153,7 @@ class TestCalculateFactorComputation:
         ]
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.819, 0.819], [1.0, 1.0])
 
-        result = await dampening._calculate(matching_intervals, generation, actuals, [], 0)
+        result = await dampening.calculate(matching_intervals, generation, actuals, [], 0)
 
         # All intervals except 20 should remain 1.0
         for i in range(48):
@@ -174,7 +174,7 @@ class TestCalculateFactorComputation:
         ]
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.5, 0.5], [1.0, 1.0])
 
-        result = await dampening._calculate(matching_intervals, generation, actuals, [interval], 0)
+        result = await dampening.calculate(matching_intervals, generation, actuals, [interval], 0)
 
         assert result[interval] == 1.0
 
@@ -200,7 +200,7 @@ class TestCalculateDSTLabels:
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.819, 0.819], [1.0, 1.0])
 
         with caplog.at_level("DEBUG"):
-            await dampening._calculate(matching_intervals, generation, actuals, [], 0)
+            await dampening.calculate(matching_intervals, generation, actuals, [], 0)
 
         assert "Auto-dampen factor for 11:00 is 0.819" in caplog.text
 
@@ -222,7 +222,7 @@ class TestCalculateDSTLabels:
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.819, 0.819], [1.0, 1.0])
 
         with caplog.at_level("DEBUG"):
-            await dampening._calculate(matching_intervals, generation, actuals, [], 0)
+            await dampening.calculate(matching_intervals, generation, actuals, [], 0)
 
         assert "Auto-dampen factor for 10:00 is 0.819" in caplog.text
 
@@ -244,7 +244,7 @@ class TestCalculateDSTLabels:
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.819, 0.819], [1.0, 1.0])
 
         with caplog.at_level("DEBUG"):
-            await dampening._calculate(matching_intervals, generation, actuals, [], 0)
+            await dampening.calculate(matching_intervals, generation, actuals, [], 0)
 
         assert "Auto-dampen factor for 10:00 is 0.819" in caplog.text
 
@@ -266,7 +266,7 @@ class TestCalculateDSTLabels:
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.819, 0.819], [1.0, 1.0])
 
         with caplog.at_level("DEBUG"):
-            await dampening._calculate(matching_intervals, generation, actuals, [], 0)
+            await dampening.calculate(matching_intervals, generation, actuals, [], 0)
 
         assert "Auto-dampen factor for 11:00 is 0.819" in caplog.text
 
@@ -456,7 +456,7 @@ class TestDSTTransitionScenarios:
             ]
             matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, gen_values, act_values)
             with caplog.at_level("DEBUG"):
-                result = await dampening_obj._calculate(matching_intervals, generation, actuals, [], dampening_model)
+                result = await dampening_obj.calculate(matching_intervals, generation, actuals, [], dampening_model)
             assert result[interval] == 0.819
             assert f"Auto-dampen factor for {label_before} is 0.819" in caplog.text
             caplog.clear()
@@ -466,7 +466,7 @@ class TestDSTTransitionScenarios:
             api = _make_mock_api(tz)
             dampening_obj = Dampening(api)
             with caplog.at_level("DEBUG"):
-                result = await dampening_obj._calculate(matching_intervals, generation, actuals, [], dampening_model)
+                result = await dampening_obj.calculate(matching_intervals, generation, actuals, [], dampening_model)
             assert result[interval] == 0.819
             assert f"Auto-dampen factor for {label_after} is 0.819" in caplog.text
 
@@ -499,7 +499,7 @@ class TestDSTTransitionScenarios:
         ]
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, gen_values, act_values)
 
-        result = await dampening_obj._calculate(matching_intervals, generation, actuals, [], dampening_model)
+        result = await dampening_obj.calculate(matching_intervals, generation, actuals, [], dampening_model)
 
         assert result[interval] == expected_factor
         # Display label is shifted but factor is at raw index
@@ -582,7 +582,7 @@ class TestWinterTimeDSTLabels:
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.819, 0.819], [1.0, 1.0])
 
         with caplog.at_level("DEBUG"):
-            await dampening_obj._calculate(matching_intervals, generation, actuals, [], 0)
+            await dampening_obj.calculate(matching_intervals, generation, actuals, [], 0)
 
         # Dublin summer: IST, dst() helper returns True → offset 1 → label "11:00"
         assert "Auto-dampen factor for 11:00 is 0.819" in caplog.text
@@ -602,7 +602,7 @@ class TestWinterTimeDSTLabels:
         matching_intervals, generation, actuals = _build_matching_data(interval, timestamps, [0.819, 0.819], [1.0, 1.0])
 
         with caplog.at_level("DEBUG"):
-            await dampening_obj._calculate(matching_intervals, generation, actuals, [], 0)
+            await dampening_obj.calculate(matching_intervals, generation, actuals, [], 0)
 
         # Dublin winter: GMT, dst() helper returns False → offset 0 → label "10:00"
         assert "Auto-dampen factor for 10:00 is 0.819" in caplog.text
