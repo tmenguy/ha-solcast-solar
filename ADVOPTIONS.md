@@ -40,7 +40,7 @@ You are free to raise an issue should a code exception occur after setting an ad
 
 **Key: "automated_dampening_delta_adjustment_model"**
 
-Possible values: integer `0`,`1` (default `0`)
+Possible values: integer `0`, `1` (default `0`)
 
 Allows the selection of different calculations to nudge the base dampening factors closer to 1.0 when forecast generation for an interval is below the recent peak.
 
@@ -212,7 +212,7 @@ Can only be defined when `automated_dampening_adaptive_model_configuration` is `
 
 **Key: "automated_dampening_adaptive_model_minimum_history_days"**
 
-Possible values: integer `1`,,`21` (default `3`)
+Possible values: integer `1`..`21` (default `3`)
 
 Defines the minimum number of days of dampening history required before adaptive model configuration will set values for `automated_dampening_model` and `automated_dampening_delta_adjustment_model`.  
 
