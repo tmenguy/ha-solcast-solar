@@ -219,6 +219,12 @@
     "integration_prior_crash": {
       "message": "Integration failed to load previously, trying again after a delay."
     },
+    "invalid_custom_hours_format": {
+      "message": "The hours value must be a whole number."
+    },
+    "invalid_custom_hours_range": {
+      "message": "The hours value must be between 1 and 144."
+    },
     "remove_cache_failed": {
       "message": "Clear all Solcast data failed."
     }
@@ -290,7 +296,8 @@
       "api_looks_like_site": "API key looks like a site ID",
       "custom_invalid": "Custom sensor not between 1 and 144",
       "dampen_without_actuals": "Estimated actuals must be selected to use auto-dampening",
-      "dampen_without_generation": "At least one PV generation Wh/kWh/MWh sensor must be specified to use auto-dampening",
+      "dampen_without_generation": "At least one PV generation sensor must be specified to use auto-dampening (energy or power)",
+      "generation_mixed_types": "PV generation entities must all be the same type (all energy or all power, not a mix)",
       "export_multiple_entities": "Site export entity must be a single entity, not multiple entities",
       "export_no_entity": "Site export entity must be specified if site export limit is set",
       "hard_not_number": "Hard limit is not a positive number",
@@ -345,7 +352,7 @@
           "config_damp": "Modify the hourly dampening factors (after clicking submit)",
           "customhoursensor": "Custom next X hours sensor (min=1, max=144)",
           "exclude_sites": "Site(s) to exclude from the Energy dashboard and sensor totals",
-          "generation_entities": "PV generation entity/entities for automated dampening (Wh/kWh/MWh, total increasing)",
+          "generation_entities": "PV generation entity/entities for automated dampening (energy: Wh/kWh/MWh total increasing, or power: W/kW/MW instantaneous)",
           "get_actuals": "Estimated actuals updated at midnight (see integration documentation, uses one API call per site per day, so a reduced API limit is needed with this option enabled)",
           "hard_limit_api": "Inverter hard limit in kW (see integration documentation, comma separate multiple values for each key)",
           "key_estimate": "Preferred forecast likelihood to use for sensors",
@@ -443,6 +450,16 @@
     "remove_hard_limit": {
       "description": "Remove set limit.",
       "name": "Remove inverter forecast hard limit"
+    },
+    "set_custom_hours": {
+      "description": "Set the custom X hours sensor number of hours.",
+      "fields": {
+        "hours": {
+          "description": "Number of hours to set (1-144).",
+          "name": "Hours"
+        }
+      },
+      "name": "Set custom hours sensor"
     },
     "set_dampening": {
       "description": "Set forecast dampening factors.",

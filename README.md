@@ -112,6 +112,8 @@ Configure your rooftop sites correctly at `solcast.com`.
 
 Remove any sample sites from your Solcast dashboard (see [Known issues](#known-issues) for examples of sample sites and the issue that might occur if you don't remove them.)
 
+If you don't remove sample sites from your Solcast dashboard, **you may not be able to configure the integration** - you may receive an `Error Exception in __sites_data(): 'azimuth' for API key` error during configuration.
+
 Copy the API key for use with this integration (See [Configuration](#Configuration) below).
 
 Note the importance of getting your Solcast site configuration correct. Use the "Site is facing" hint to ensure the azimuth is signed correctly, as if this is incorrect then forecasts will appear shifted, possibly by up to an hour during the day.
@@ -532,6 +534,7 @@ YAML:
 | `solcast_solar.clear_all_solcast_data` | Deletes cached data, and initiates an immediate fetch of new past actual and forecast values. |
 | `solcast_solar.query_forecast_data` | Return a list of forecast data using a datetime range start - end. |
 | `solcast_solar.query_estimate_data` | Return a list of estimated actual data using a datetime range start - end. |
+| `solcast_solar.set_custom_hours` | Set the custom X hours sensor number of hours. |
 | `solcast_solar.set_dampening` | Update the dampening factors. |
 | `solcast_solar.get_dampening` | Get the currently set dampening factors. |
 | `solcast_solar.set_hard_limit` | Set inverter forecast hard limit. |
@@ -562,6 +565,12 @@ action: solcast_solar.set_dampening
 data:
   damp_factor: 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
   site: 1234-5678-9012-3456 (optional)
+```
+
+```yaml
+action: solcast_solar.set_custom_hours
+data:
+  hours: 2
 ```
 
 ```yaml
@@ -613,6 +622,7 @@ If dampening is active then the Dampening sensor also features these attributes:
 * `integration_automated`: Boolean. Whether automated dampening is enabled.
 * `last_updated`: Datetime. The date and time that the dampening factors were last set.
 * `factors`: Dict. The `interval` start hour:minute, and `factor` as a floating point number.
+* Attributes for each advanced option related to dampening.  See the documentation at [Advanced options](https://github.com/BJReplay/ha-solcast-solar/blob/main/ADVOPTIONS.md).
 
 Example dampening sensor attributes:
 
@@ -627,6 +637,25 @@ factors:
 - interval: '01:00'
   factor: 1
 ...
+automated_dampening_generation_fetch_delay: 0
+automated_dampening_adaptive_model_minimum_history_days: 3
+automated_dampening_delta_adjustment_model: 1
+automated_dampening_generation_history_load_days: 7
+automated_dampening_ignore_intervals: []
+automated_dampening_insignificant_factor: 0.95
+automated_dampening_insignificant_factor_adjusted: 0.95
+automated_dampening_minimum_matching_generation: 2
+automated_dampening_minimum_matching_intervals: 2
+automated_dampening_model: 2
+automated_dampening_model_days: 14
+automated_dampening_no_delta_adjustment: false
+automated_dampening_no_limiting_consistency: false
+automated_dampening_preserve_unmatched_factors: true
+automated_dampening_adaptive_model_configuration: true
+automated_dampening_similar_peak: 0.9
+automated_dampening_suppression_entity: solcast_suppress_auto_dampening
+granular_dampening_delta_adjustment: false
+automated_dampening_no_delta_corrections: false
 ```
 
 `Rooftop site name` attributes include:
@@ -725,9 +754,9 @@ Past estimated actual data is acquired just after midnight each day local time, 
 
 Generation is gathered from history data of a sensor entity (or entities). A single PV solar inverter installation will likely have a single "total increasing" sensor that provides a "PV generation" or "PV export" value (_not_ export to grid, but export off your roof from the sun). Multiple inverters will have a value for each, and all sensor entities may be supplied, which will then be totalled for all rooftops.
 
-An increasing energy sensor (or sensors) must be supplied. This increasing sensor may reset at midnight, or may be a "total increasing" type; of importance is that it is increasing throughout the day.
+An increasing energy _or_ a power sensor (or sensors) must be supplied. An energy sensor may reset at midnight, or may be a "total increasing" type; of importance is that it is increasing throughout the day.
 
-The integration determines the units by inspecting the `unit_of_measurement` attribute and adjusts accordingly. Where this attribute is not set it assumes values are kWh. Generation history updates occur at midnight local time.
+The integration determines the units by inspecting the `unit_of_measurement` attribute and adjusts accordingly. Where this attribute is not set it assumes values are kWh or kW. Generation history updates occur at midnight local time.
 
 > [!TIP]
 >
@@ -1209,7 +1238,9 @@ Expect API usage issues, which will clear within 24 hours.
 
 ### Sample sites
 
-If you see sample sites (such as these [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png)) remove them from your Solcast dashboard.
+If you see sample sites (such as these) [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSites.png) remove them from your Solcast dashboard.
+
+If you don't remove sample sites from your Solcast dashboard, you may not be able to configure the integration - you may receive an `Error Exception in __sites_data(): 'azimuth' for API key` during configuration: [<img src="https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSitesException.png">](https://github.com/BJReplay/ha-solcast-solar/blob/main/.github/SCREENSHOTS/SampleSitesException.png)
 
 ## Troubleshooting
 
@@ -1275,17 +1306,19 @@ The code itself resides at `/config/custom_components/solcast_solar`, and removi
 
 ## Changes
 
-v4.4.11
+v4.5.0
 
-* Fix advanced option validation for `not_set_if` by @autoSteve
+* Add adaptive automated dampening as advanced options by @Nilogax and @autoSteve
+* Add ability to utilise energy or power generation entity for automated dampening by @autoSteve
+* Add advanced dampening settings as attributes of dampening sensor by @Nilogax
+* Add set_custom_hours service action for entity by @autoSteve
 * Add missing translation, ES, FR, PL, SK, UR by @GitLocalize
-* Consistent strings file spacing by @autoSteve
-* Add advanced option automated_dampening_adaptive_model_configuration by @Nilogax
-* Add advanced option automated_dampening_adaptive_model_minimum_history_days by @Nilogax
-* Add advanced option automated_dampening_adaptive_model_exclude by @Nilogax
-* Expose advanced dampening settings as attributes of dampening sensor by @Nilogax
+* Fix an issue with determining generation for half-hourly intervals by @autoSteve
+* Fix an issue with config location naming on reconfigure by @autoSteve
+* Fix an issue where config file migration was a blocking call by @miguelangel-nubla
+* Fix advanced option validation for `not_set_if` (#435) by @autoSteve
 
-Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.4.10...v4.4.11
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.4.10...v4.5.0
 
 v4.4.10
 

@@ -14,6 +14,10 @@ from freezegun.api import FrozenDateTimeFactory
 import pytest
 
 from homeassistant.components.recorder import Recorder
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.solcast_solar.config_flow import (
+    SolcastSolarOptionFlowHandler,
+)
 from homeassistant.components.solcast_solar.const import (
     AUTO_DAMPEN,
     AUTO_UPDATE,
@@ -29,15 +33,14 @@ from homeassistant.components.solcast_solar.const import (
     SITE_EXPORT_LIMIT,
     USE_ACTUALS,
 )
-from homeassistant.components.solcast_solar.coordinator import SolcastUpdateCoordinator
-from homeassistant.components.solcast_solar.solcastapi import SolcastApi
 from homeassistant.components.solcast_solar.util import (
     DateTimeEncoder,
     JSONDecoder,
     SolcastApiStatus,
+    compute_energy_intervals,
+    compute_power_intervals,
     percentile,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
@@ -50,91 +53,20 @@ from . import (
     ExtraSensors,
     async_cleanup_integration_tests,
     async_init_integration,
+    exec_update_actuals,
+    no_exception,
+    reload_integration,
     session_clear,
     session_set,
+    wait_for_it,
 )
+
+from tests.common import MockConfigEntry
 
 ZONE = ZoneInfo(ZONE_RAW)
 NOW = dt.now(ZONE)
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _no_exception(caplog: pytest.LogCaptureFixture):
-    assert "Exception" not in caplog.text
-
-
-async def _reload(hass: HomeAssistant, entry: ConfigEntry) -> tuple[SolcastUpdateCoordinator | None, SolcastApi | None]:
-    """Reload the integration."""
-
-    _LOGGER.warning("Reloading integration")
-    await hass.config_entries.async_reload(entry.entry_id)
-    await hass.async_block_till_done()
-    if hass.data[DOMAIN].get(entry.entry_id):
-        try:
-            return entry.runtime_data.coordinator, entry.runtime_data.coordinator.solcast
-        except:  # noqa: E722
-            _LOGGER.error("Failed to load coordinator (or solcast), which may be expected given test conditions")
-    return None, None
-
-
-async def _exec_update_actuals(
-    hass: HomeAssistant,
-    coordinator: SolcastUpdateCoordinator,
-    solcast: SolcastApi,
-    caplog: pytest.LogCaptureFixture,
-    freezer: FrozenDateTimeFactory,
-    action: str,
-    last_update_delta: int = 0,
-    wait: bool = True,
-) -> None:
-    """Execute an estimated actuals action and wait for completion."""
-
-    caplog.clear()
-    if last_update_delta == 0:
-        last_updated = dt(year=2020, month=1, day=1, hour=1, minute=1, second=1, tzinfo=datetime.UTC)
-    else:
-        last_updated = solcast._data_actuals["last_updated"] - timedelta(seconds=last_update_delta)  # pyright: ignore[reportPrivateUsage]
-        _LOGGER.info("Mock last updated: %s", last_updated)
-    solcast._data_actuals["last_updated"] = last_updated  # pyright: ignore[reportPrivateUsage]
-    await hass.services.async_call(DOMAIN, action, {}, blocking=True)
-    if wait:
-        await _wait_for_update(hass, caplog, freezer)
-        await solcast.tasks_cancel()
-        async with asyncio.timeout(1):
-            while "Task model_automated_dampening took" not in caplog.text:
-                await hass.async_block_till_done()
-    await hass.async_block_till_done()
-
-
-async def _wait_for_update(hass: HomeAssistant, caplog: pytest.LogCaptureFixture, freezer: FrozenDateTimeFactory) -> None:
-    """Wait for forecast update completion."""
-
-    async with asyncio.timeout(10):
-        while (
-            "Forecast update completed successfully" not in caplog.text
-            and "Saved estimated actual cache" not in caplog.text
-            and "Not requesting a solar forecast" not in caplog.text
-            and "aborting forecast update" not in caplog.text
-            and "update already in progress" not in caplog.text
-            and "pausing" not in caplog.text
-            and "Completed task update" not in caplog.text
-            and "Completed task force_update" not in caplog.text
-            and "ConfigEntryAuthFailed" not in caplog.text
-        ):  # Wait for task to complete
-            freezer.tick(0.1)
-            await hass.async_block_till_done()
-
-
-async def _wait_for_it(
-    hass: HomeAssistant, caplog: pytest.LogCaptureFixture, freezer: FrozenDateTimeFactory, wait_for: str, long_time: bool = False
-) -> None:
-    """Wait for forecast update completion."""
-
-    async with asyncio.timeout(300 if not long_time else 3000):
-        while wait_for not in caplog.text:  # Wait for task to complete
-            freezer.tick(0.1)
-            await hass.async_block_till_done()
 
 
 async def test_auto_dampen(
@@ -144,6 +76,8 @@ async def test_auto_dampen(
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test automated dampening."""
+
+    assert await async_cleanup_integration_tests(hass)
 
     try:
         config_dir = f"{hass.config.config_dir}/{CONFIG_DISCRETE_NAME}" if CONFIG_FOLDER_DISCRETE else hass.config.config_dir
@@ -199,7 +133,7 @@ async def test_auto_dampen(
 
         # Reload to load saved data and prime initial generation
         caplog.clear()
-        coordinator, solcast = await _reload(hass, entry)
+        coordinator, solcast = await reload_integration(hass, entry)
         if coordinator is None or solcast is None:
             pytest.fail("Reload failed")
 
@@ -209,20 +143,19 @@ async def test_auto_dampen(
             await hass.async_block_till_done()
             freezer.tick(0.1)
         assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
-        _no_exception(caplog)
+        no_exception(caplog)
 
         assert "Auto-dampening suppressed: Excluded site for 3333-3333-3333-3333" in caplog.text
         assert "Interval 08:30 has peak estimated actual 0.936" in caplog.text
-        assert "Interval 08:30 max generation: 0.755" in caplog.text
-        assert "Auto-dampen factor for 08:30 is 0.807" in caplog.text
+        assert "Interval 08:30 max generation: 0.777" in caplog.text
+        assert "Auto-dampen factor for 08:30 is 0.830" in caplog.text
         # assert "Auto-dampen factor for 11:00" not in caplog.text
-        assert "Ignoring insignificant factor for 10:30" in caplog.text
-        assert re.search(r"Ignoring insignificant adjusted granular dampening factor.+11:00:00.+0\.990.+0\.988", caplog.text)
+        assert "Ignoring insignificant factor for 11:00 of 0.993" in caplog.text
         assert "Ignoring excessive PV generation" not in caplog.text
 
         # Reload to load saved generation data
         caplog.clear()
-        coordinator, solcast = await _reload(hass, entry)
+        coordinator, solcast = await reload_integration(hass, entry)
         if coordinator is None or solcast is None:
             pytest.fail("Reload failed")
         assert Path(f"{config_dir}/solcast-actuals.json").is_file()
@@ -237,24 +170,24 @@ async def test_auto_dampen(
         # Test service action to force update actuals
         caplog.clear()
         _LOGGER.debug("Testing force update actuals with dampening enabled")
-        await _exec_update_actuals(hass, coordinator, solcast, caplog, freezer, "force_update_estimates")
-        await _wait_for_it(hass, caplog, freezer, "Estimated actual mean APE", long_time=True)
+        await exec_update_actuals(hass, coordinator, solcast, caplog, freezer, "force_update_estimates")
+        await wait_for_it(hass, caplog, freezer, "Estimated actual mean APE", long_time=True)
         assert "Estimated actuals dictionary for site 1111-1111-1111-1111" in caplog.text
         assert "Estimated actuals dictionary for site 2222-2222-2222-2222" in caplog.text
         assert "Estimated actuals dictionary for site 3333-3333-3333-3333" in caplog.text
-        assert "Task model_automated_dampening took" in caplog.text
+        assert "Task dampening model_automated took" in caplog.text
         assert "Apply dampening to previous day estimated actuals" not in caplog.text
 
         # Roll over to tomorrow.
         _LOGGER.debug("Rolling over to tomorrow")
         caplog.clear()
         removed = -5
-        value_removed = solcast._data_actuals["siteinfo"]["1111-1111-1111-1111"]["forecasts"].pop(removed)  # pyright: ignore[reportPrivateUsage]
-        freezer.move_to((dt.now(solcast._tz) + timedelta(hours=12)).replace(minute=0, second=0, microsecond=0))  # pyright: ignore[reportPrivateUsage]
+        value_removed = solcast.data_actuals["siteinfo"]["1111-1111-1111-1111"]["forecasts"].pop(removed)
+        freezer.move_to((dt.now(solcast.tz) + timedelta(hours=12)).replace(minute=0, second=0, microsecond=0))
         await hass.async_block_till_done()
-        await _wait_for_it(hass, caplog, freezer, "Update generation data", long_time=True)
-        await _wait_for_it(hass, caplog, freezer, "Estimated actual mean APE", long_time=True)
-        _no_exception(caplog)
+        await wait_for_it(hass, caplog, freezer, "Update generation data", long_time=True)
+        await wait_for_it(hass, caplog, freezer, "Estimated actual mean APE", long_time=True)
+        no_exception(caplog)
         assert "Advanced option set automated_dampening_ignore_intervals: ['17:00']" in caplog.text
         assert "Calculating dampened estimated actual MAPE" in caplog.text
         assert "Calculating undampened estimated actual MAPE" in caplog.text
@@ -262,31 +195,31 @@ async def test_auto_dampen(
         assert "Estimated actual mean APE" in caplog.text
         assert "Getting estimated actuals update for site" in caplog.text
         assert "Apply dampening to previous day estimated actuals" in caplog.text
-        assert "Task model_automated_dampening took" in caplog.text
+        assert "Task dampening model_automated took" in caplog.text
         assert (
-            solcast._data_actuals["siteinfo"]["1111-1111-1111-1111"]["forecasts"][removed - 24]["period_start"]  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
+            solcast.data_actuals["siteinfo"]["1111-1111-1111-1111"]["forecasts"][removed - 24]["period_start"]  # pyright: ignore[reportOptionalMemberAccess]
             == value_removed["period_start"]
-        )  # pyright: ignore[reportPrivateUsage]
-        assert "Auto-dampen factor for 08:30 is 0.807" in caplog.text
+        )
+        assert "Auto-dampen factor for 08:30 is 0.830" in caplog.text
 
         ADVANCED_CHECKS = {
-            0: {"base": 0.807, "adjusted": [0.838, 0.811]},
-            1: {"base": 0.807, "adjusted": [0.838, 0.811]},
-            2: {"base": 0.629, "adjusted": [0.689, 0.637]},
-            3: {"base": 0.272, "adjusted": [0.390, 0.288]},
+            0: {"base": 0.830, "adjusted": [0.858, 0.834]},
+            1: {"base": 0.830, "adjusted": [0.858, 0.834]},
+            2: {"base": 0.652, "adjusted": [0.709, 0.660]},
+            3: {"base": 0.296, "adjusted": [0.410, 0.312]},
         }
         for preseve in (False, True):
             solcast.advanced_options["automated_dampening_preserve_unmatched_factors"] = preseve
             for model in (0, 1, 2, 3):
                 caplog.clear()
                 solcast.advanced_options["automated_dampening_model"] = model
-                await solcast.model_automated_dampening()
+                await solcast.dampening.model_automated()
                 assert "Auto-dampen factor for 08:30 is {:.3f}".format(ADVANCED_CHECKS[model]["base"]) in caplog.text
 
                 for adjustment_model in (0, 1):
                     caplog.clear()
                     solcast.advanced_options["automated_dampening_delta_adjustment_model"] = adjustment_model
-                    await solcast.apply_forward_dampening()
+                    await solcast.dampening.apply_forward()
                     _LOGGER.critical("Model %d/%d tested", model, adjustment_model)
                     assert (
                         re.search(
@@ -311,8 +244,8 @@ async def test_auto_dampen(
         _LOGGER.debug("Rolling over to another tomorrow")
         caplog.clear()
         session_set(MOCK_CORRUPT_ACTUALS)
-        freezer.move_to((dt.now(solcast._tz) + timedelta(days=1)).replace(minute=0, second=0, microsecond=0))  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
-        await _wait_for_it(hass, caplog, freezer, "Update estimated actuals failed: No valid json returned", long_time=True)
+        freezer.move_to((dt.now(solcast.tz) + timedelta(days=1)).replace(minute=0, second=0, microsecond=0))  # pyright: ignore[reportOptionalMemberAccess]
+        await wait_for_it(hass, caplog, freezer, "Update estimated actuals failed: No valid json returned", long_time=True)
         session_clear(MOCK_CORRUPT_ACTUALS)
         for _ in range(300):  # Extra time needed for get_generation to complete
             freezer.tick(0.1)
@@ -321,25 +254,25 @@ async def test_auto_dampen(
         # Cause an actual build exception
         _LOGGER.debug("Causing an actual build exception")
         caplog.clear()
-        old_data = copy.deepcopy(solcast._data_actuals)  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
-        solcast._data_actuals["siteinfo"]["1111-1111-1111-1111"] = None  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
+        old_data = copy.deepcopy(solcast.data_actuals)  # pyright: ignore[reportOptionalMemberAccess]
+        solcast.data_actuals["siteinfo"]["1111-1111-1111-1111"] = None  # pyright: ignore[reportOptionalMemberAccess]
         with pytest.raises(ConfigEntryNotReady):
-            await solcast.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
+            await solcast.fetcher.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
         assert solcast.status == SolcastApiStatus.BUILD_FAILED_ACTUALS
-        await solcast.model_automated_dampening()  # pyright: ignore[reportOptionalMemberAccess] # Hit an actuals missing deal-breaker
+        await solcast.dampening.model_automated()  # pyright: ignore[reportOptionalMemberAccess] # Hit an actuals missing deal-breaker
         assert "Auto-dampening suppressed: No estimated actuals yet for 1111-1111-1111-1111" in caplog.text
-        solcast._data_actuals = old_data  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
+        solcast.data_actuals = old_data  # pyright: ignore[reportOptionalMemberAccess]
         solcast.status = SolcastApiStatus.OK
 
         # Cause a forecast build exception
         _LOGGER.debug("Causing a forecast build exception")
         caplog.clear()
-        old_data = copy.deepcopy(solcast._data)  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
-        solcast._data["siteinfo"]["1111-1111-1111-1111"] = None  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess,reportOptionalMemberAccess]
+        old_data = copy.deepcopy(solcast.data)  # pyright: ignore[reportOptionalMemberAccess]
+        solcast.data["siteinfo"]["1111-1111-1111-1111"] = None  # pyright: ignore[reportOptionalMemberAccess]
         with pytest.raises(ConfigEntryNotReady):
-            await solcast.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
+            await solcast.fetcher.build_forecast_and_actuals(raise_exc=True)  # pyright: ignore[reportOptionalMemberAccess]
         assert solcast.status == SolcastApiStatus.BUILD_FAILED_FORECASTS
-        solcast._data = old_data  # pyright: ignore[reportPrivateUsage,reportOptionalMemberAccess]
+        solcast.data = old_data  # pyright: ignore[reportOptionalMemberAccess]
 
         # Turn off auto-dampen.
         caplog.clear()
@@ -364,6 +297,7 @@ async def test_auto_dampen(
         ExtraSensors.YES_UNIT_NOT_IN_HISTORY,
         ExtraSensors.YES_NO_UNIT,
         ExtraSensors.DODGY,
+        ExtraSensors.YES_POWER,
     ],
 )
 async def test_auto_dampen_issues(
@@ -415,7 +349,7 @@ async def test_auto_dampen_issues(
 
         # Reload to load saved data and prime initial generation
         caplog.clear()
-        coordinator, solcast = await _reload(hass, entry)
+        coordinator, solcast = await reload_integration(hass, entry)
         if coordinator is None or solcast is None:
             pytest.fail("Reload failed")
 
@@ -425,7 +359,7 @@ async def test_auto_dampen_issues(
             freezer.tick(0.1)
             await hass.async_block_till_done()
         assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
-        _no_exception(caplog)
+        no_exception(caplog)
         assert "Calculating dampened estimated actual MAPE" not in caplog.text
         assert "Estimated actual mean APE" in caplog.text
         if extra_sensors not in [ExtraSensors.YES_UNIT_NOT_IN_HISTORY, ExtraSensors.YES_NO_UNIT]:
@@ -449,9 +383,13 @@ async def test_auto_dampen_issues(
                 assert "has an unsupported unit_of_measurement 'MJ'" in caplog.text  # A dodgy unit should be logged
                 assert f"Site export entity {options[SITE_EXPORT_ENTITY]} is not a valid entity" in caplog.text
                 assert "Interval 11:00 max generation: 0.000, []" in caplog.text  # A jump in generation should not be seen as a peak
-                assert "Interval 13:00 max generation: 0.000, []" in caplog.text  # Dodgy generation should prevent interval consideration
+                assert "Interval 12:30 max generation: 3.900" in caplog.text  # Dodgy generation filtered but some valid data remains
                 assert "Auto-dampen factor for 10:00 is 0.940" in caplog.text  # A valid interval still considered
-                assert "Ignoring excessive PV generation jump of 6.000 kWh" in caplog.text  # Dodgy generation should be logged
+                assert "Ignoring excessive PV generation jump at" in caplog.text  # Dodgy generation should be logged
+            case ExtraSensors.YES_POWER:
+                # Power entity path: site 1111 has insufficient readings, site 2222 has full history.
+                assert "Insufficient power readings for entity: sensor.solar_export_sensor_1111_1111_1111_1111" in caplog.text
+                assert "Retrieved day -1 PV generation data from entity: sensor.solar_export_sensor_2222_2222_2222_2222" in caplog.text
             case _:
                 pytest.fail("Assertions missing for extra_sensors value")
 
@@ -486,3 +424,233 @@ async def test_percentile() -> None:
 
     data = []
     assert percentile(data, 50) == 0.0
+
+
+# --- Unit tests for compute_power_intervals and compute_energy_intervals ---
+
+
+def _make_intervals(period_start: dt) -> dict[dt, float]:
+    """Build empty 30-minute generation interval dict for one day."""
+    return {period_start + timedelta(minutes=m): 0.0 for m in range(0, 1440, 30)}
+
+
+def test_compute_power_intervals_time_weighted_averaging() -> None:
+    """Test time-weighted average power per 30-min interval converts to kWh."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # Interval 1 (00:00-00:30): 4.0 kW for 15 min, then 0.0 kW for 15 min.
+    #   weighted avg = (4.0*900 + 0.0*900) / 1800 = 2.0 kW → 2.0 * 0.5 = 1.0 kWh
+    # Interval 2 (00:30-01:00): constant 6.0 kW.
+    #   weighted avg = 6.0 kW → 6.0 * 0.5 = 3.0 kWh
+    power_readings: list[tuple[dt, float]] = [
+        (period_start, 4.0),
+        (period_start + timedelta(minutes=15), 0.0),
+        (period_start + timedelta(minutes=30), 6.0),
+        (period_start + timedelta(minutes=45), 6.0),
+        (period_start + timedelta(minutes=60), 0.0),
+        (period_start + timedelta(days=1), 0.0),
+    ]
+
+    result = compute_power_intervals(power_readings, intervals)
+
+    assert result is True
+    assert abs(intervals[period_start] - 1.0) < 0.01
+    assert abs(intervals[period_start + timedelta(minutes=30)] - 3.0) < 0.01
+
+
+def test_compute_power_intervals_watt_conversion() -> None:
+    """Test power intervals with pre-converted W→kW values (factor 0.001)."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # 2000 W * 0.001 = 2.0 kW constant for 30 min → 2.0 * 0.5 = 1.0 kWh
+    conversion_factor = 0.001
+    power_readings: list[tuple[dt, float]] = [
+        (period_start, 2000.0 * conversion_factor),
+        (period_start + timedelta(minutes=10), 2000.0 * conversion_factor),
+        (period_start + timedelta(minutes=20), 2000.0 * conversion_factor),
+        (period_start + timedelta(minutes=30), 0.0),
+        (period_start + timedelta(days=1), 0.0),
+    ]
+
+    result = compute_power_intervals(power_readings, intervals)
+
+    assert result is True
+    assert abs(intervals[period_start] - 1.0) < 0.01
+
+
+def test_compute_power_intervals_insufficient_readings() -> None:
+    """Test that ≤1 power reading returns False."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # Single reading
+    assert compute_power_intervals([(period_start, 2.0)], intervals) is False
+    # Empty
+    assert compute_power_intervals([], intervals) is False
+    # All intervals should remain zero
+    assert all(v == 0.0 for v in intervals.values())
+
+
+def test_compute_energy_intervals_period_edges_and_gaps() -> None:
+    """Test energy distribution with period start/end boundaries and long gaps."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    period_end = dt(2026, 2, 9, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # Simulate 7 states: regular 5-min increments then a 2h gap, then period end.
+    times = [
+        period_start,
+        period_start + timedelta(minutes=5),
+        period_start + timedelta(minutes=10),
+        period_start + timedelta(minutes=15),
+        period_start + timedelta(minutes=20),
+        period_start + timedelta(hours=2),
+        period_end,
+    ]
+    values = [0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.7]
+
+    sample_time = [t.replace(minute=t.minute // 30 * 30, second=0, microsecond=0) for t in times]
+    sample_generation = [0.0] + [max(0, values[i + 1] - values[i]) for i in range(len(values) - 1)]
+    sample_generation_time = list(times)
+    sample_timedelta = [0] + [
+        max(0, int((times[i + 1] - period_start).total_seconds() - (times[i] - period_start).total_seconds()))
+        for i in range(len(times) - 1)
+    ]
+    # Reset first sample if at period_start.
+    sample_generation[0] = 0.0
+    sample_timedelta[0] = 0
+
+    result = compute_energy_intervals(
+        sample_time,
+        sample_generation,
+        sample_generation_time,
+        sample_timedelta,
+        intervals,
+        period_start,
+        period_end,
+    )
+
+    assert result.uniform_increment is True
+    day_total = sum(intervals.values())
+    assert day_total > 0
+
+
+def test_compute_energy_intervals_uniform_increment() -> None:
+    """Test uniform increment detection with equal-step generation deltas."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    period_end = dt(2026, 2, 9, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # 11 states with perfectly uniform 0.1 kWh increments every 5 minutes.
+    times = [period_start + timedelta(minutes=5 * i) for i in range(11)]
+    times[-1] = period_end  # Last state at period end.
+    values = [0.1 * i for i in range(11)]
+
+    sample_time = [t.replace(minute=t.minute // 30 * 30, second=0, microsecond=0) for t in times]
+    sample_generation = [0.0] + [max(0, values[i + 1] - values[i]) for i in range(len(values) - 1)]
+    sample_generation_time = list(times)
+    sample_timedelta = [0] + [
+        max(0, int((times[i + 1] - period_start).total_seconds() - (times[i] - period_start).total_seconds()))
+        for i in range(len(times) - 1)
+    ]
+    sample_generation[0] = 0.0
+    sample_timedelta[0] = 0
+
+    result = compute_energy_intervals(
+        sample_time,
+        sample_generation,
+        sample_generation_time,
+        sample_timedelta,
+        intervals,
+        period_start,
+        period_end,
+    )
+
+    assert result.uniform_increment is True
+    assert result.upper > 0
+
+
+def test_compute_energy_intervals_zero_timedelta() -> None:
+    """Test energy intervals when all samples share the same timestamp."""
+
+    period_start = dt(2026, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    period_end = dt(2026, 2, 9, 0, 0, tzinfo=datetime.UTC)
+    intervals = _make_intervals(period_start)
+
+    # 6 states all at period_start (zero time deltas).
+    times = [period_start] * 6
+    values = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+
+    sample_time = [t.replace(minute=t.minute // 30 * 30, second=0, microsecond=0) for t in times]
+    sample_generation = [0.0] + [max(0, values[i + 1] - values[i]) for i in range(len(values) - 1)]
+    sample_generation_time = list(times)
+    sample_timedelta = [0] + [
+        max(0, int((times[i + 1] - period_start).total_seconds() - (times[i] - period_start).total_seconds()))
+        for i in range(len(times) - 1)
+    ]
+    sample_generation[0] = 0.0
+    sample_timedelta[0] = 0
+
+    result = compute_energy_intervals(
+        sample_time,
+        sample_generation,
+        sample_generation_time,
+        sample_timedelta,
+        intervals,
+        period_start,
+        period_end,
+    )
+
+    # With all zero time deltas, time_upper will be 0 (no non-zero samples).
+    assert result.uniform_increment is True
+
+
+async def test_config_flow_mixed_generation_entity_types(
+    hass: HomeAssistant,
+) -> None:
+    """Test config flow rejects mixed energy and power generation entities."""
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="solcast_pv_solar",
+        title="Solcast PV Forecast",
+        data=copy.deepcopy(DEFAULT_INPUT2),
+        options=copy.deepcopy(DEFAULT_INPUT2),
+    )
+    entry.add_to_hass(hass)
+
+    # Register one ENERGY and one POWER entity.
+    entity_registry = er.async_get(hass)
+    entity_registry.async_get_or_create(
+        "sensor",
+        "pytest",
+        "energy_sensor",
+        config_entry=entry,
+        suggested_object_id="energy_sensor",
+        unit_of_measurement="kWh",
+        original_device_class=SensorDeviceClass.ENERGY,
+    )
+    entity_registry.async_get_or_create(
+        "sensor",
+        "pytest",
+        "power_sensor",
+        config_entry=entry,
+        suggested_object_id="power_sensor",
+        unit_of_measurement="kW",
+        original_device_class=SensorDeviceClass.POWER,
+    )
+
+    flow = SolcastSolarOptionFlowHandler(entry)
+    flow.hass = hass
+    user_input = copy.deepcopy(DEFAULT_INPUT2)
+    user_input[GENERATION_ENTITIES] = ["sensor.energy_sensor", "sensor.power_sensor"]
+    user_input[SITE_EXPORT_ENTITY] = []
+    result = await flow.async_step_init(user_input)
+    assert result["errors"]["base"] == "generation_mixed_types"  # type: ignore[index]

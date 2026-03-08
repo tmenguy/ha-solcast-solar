@@ -1,23 +1,24 @@
 # Troubleshooting FAQ
 
 ## Contents
-* Q: When should I change my API key, and will this help fix problems?
-* Q: I've just got **lots of 429 errors reported**, and I'm not getting forecasts.  Should I raise an issue, or continue one of the long running discussions?
-* Q: I'm trying to set up (or re-set up) the integration, and **I'm getting 429 errors** and can't get any further.  What's happening?
-* Solcast's API status page at [https://status.solcast.com/](https://status.solcast.com/) says that the API status is all green, but **I'm getting 429 errors**.  What should I do?
-* Q: You asked for DEBUG logs to be provided when raising issues. How do I get these?
-* Q: The Solcast Toolkit site will not allow me to add a new rooftop site. I get a minus one error. Why?
-* Q: I don't understand the README, and it's too long. Can it be simplified?
-* Q: Is submitting debug logging going to expose my API key or location to the world?
-* Q: I get a timeout connecting to api.solcast.com.au!!! What the heck is happening? (...raises issue...)
-* Q: I've just had a shiny new PV string attached to my inverter, and I've gone to Solcast, added the new rooftop site details, but it's not being included in the forecast results. What's up?
-* Q: I just restored Home Assistant from backup, and when it started the Solcast integration updated the forecast! Why?
-* Q: Does the integration cope with daylight savings time / Summer time transitions?
-* Q: Why are certain sensors Watt, while others are Watt-hour or kilo-Watt-hour? Shouldn't these be the same? Why?
-* Q: Why have my historical forecasts disappeared from the energy dashboard? I now only see 10/14 days!
-* Q: I have a Solcast API limit of 50 calls. Why is the integration now limiting me to 10?
-* Q: What polls to Solcast happen, when do they happen, and are they important?
-* Q: A follow-up question: If I restart the integration will it use API quota?
+* [Q: When should I change my API key, and will this help fix problems?](#q-when-should-i-change-my-api-key-and-will-this-help-fix-problems)
+* [Q: I've just got **lots of 429 errors reported**, and I'm not getting forecasts.  Should I raise an issue, or continue one of the long running discussions?](#q-ive-just-got-lots-of-429-errors-reported-and-im-not-getting-forecasts--should-i-raise-an-issue-or-continue-one-of-the-long-running-discussions)
+* [Q: I'm trying to set up (or re-set up) the integration, and **I'm getting 429 errors** and can't get any further.  What's happening?](#q-im-trying-to-set-up-or-re-set-up-the-integration-and-im-getting-429-errors-and-cant-get-any-further--whats-happening)
+* [Q: Solcast's API status page at https://status.solcast.com/ says that the API status is all green, but **I'm getting 429 errors**.  What should I do?](#solcasts-api-status-page-at-httpsstatussolcastcom-says-that-the-api-status-is-all-green-but-im-getting-429-errors--what-should-i-do)
+* [Q: You asked for DEBUG logs to be provided when raising issues. How do I get these?](#q-you-asked-for-debug-logs-to-be-provided-when-raising-issues-how-do-i-get-these)
+* [Q: The Solcast Toolkit site will not allow me to add a new rooftop site. I get a minus one error. Why?](#q-the-solcast-toolkit-site-will-not-allow-me-to-add-a-new-rooftop-site-i-get-a-minus-one-error-why)
+* [Q: I don't understand the README, and it's too long. Can it be simplified?](#q-i-dont-understand-the-readme-and-its-too-long-can-it-be-simplified)
+* [Q: Is submitting debug logging going to expose my API key or location to the world?](#q-is-submitting-debug-logging-going-to-expose-my-api-key-or-location-to-the-world)
+* [Q: I get a timeout connecting to api.solcast.com.au!!! What the heck is happening? (...raises issue...)](#q-i-get-a-timeout-connecting-to-apisolcastcomau-what-the-heck-is-happening-raises-issue)
+* [Q: I've just had a shiny new PV string attached to my inverter, and I've gone to Solcast, added the new rooftop site details, but it's not being included in the forecast results. What's up?](#q-ive-just-had-a-shiny-new-pv-string-attached-to-my-inverter-and-ive-gone-to-solcast-added-the-new-rooftop-site-details-but-its-not-being-included-in-the-forecast-results-whats-up)
+* [Q: I just restored Home Assistant from backup, and when it started the Solcast integration updated the forecast! Why?](#q-i-just-restored-home-assistant-from-backup-and-when-it-started-the-solcast-integration-updated-the-forecast-why)
+* [Q: Does the integration cope with daylight savings time / Summer time transitions?](#q-does-the-integration-cope-with-daylight-savings--summer--winter-time-transitions)
+* [Q: My forecasts are out by an hour, and I've ignored the Unusual Azimuth repair. Why is Solcast / the integration wrong?](#q-my-forecasts-are-out-by-an-hour-and-ive-ignored-the-unusual-azimuth-issue-why-is-solcast--the-integration-wrong)
+* [Q: Why are certain sensors Watt, while others are Watt-hour or kilo-Watt-hour? Shouldn't these be the same? Why?](#q-why-are-certain-sensors-watt-while-others-are-watt-hour-or-kilo-watt-hour-shouldnt-these-be-the-same-why)
+* [Q: Why have my historical forecasts disappeared from the energy dashboard? I now only see 10/14 days!](#q-why-have-my-historical-forecasts-disappeared-from-the-energy-dashboard-i-now-only-see-1014-days)
+* [Q: I have a Solcast API limit of 50 calls. Why is the integration now limiting me to 10?](#q-i-have-a-solcast-api-limit-of-50-calls-why-is-the-integration-now-limiting-me-to-10)
+* [Q: What polls to Solcast happen, when do they happen, and are they important?](#q-what-polls-to-solcast-happen-when-do-they-happen-and-are-they-important)
+* [Q: A follow-up question: If I restart the integration will it use API quota?](#q-a-follow-up-question-if-i-restart-the-integration-will-it-use-api-quota)
 
 ### Q: When should I change my API key, and will this help fix problems?
 
@@ -169,6 +170,10 @@ The transition to daylight time results in Solcast varying the number of half-ho
 The integration was messing up the UTC time of period start and end, and using a fixed number of 48 intervals. Now it does not.
 
 More recently "Winter time" transition support was added for Ireland (their Summer period is considered "standard" time, and the net time shift is the same, but this gets treated differently by Python code, which the integration is written in).
+
+### Q: My forecasts are out by an hour, and I've ignored the unusual azimuth issue. Why is Solcast / the integration wrong?
+
+Read the [Pinned Discussion](https://github.com/BJReplay/ha-solcast-solar/discussions/334).
 
 ### Q: Why are certain sensors Watt, while others are Watt-hour or kilo-Watt-hour? Shouldn't these be the same? Why?
 

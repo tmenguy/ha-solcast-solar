@@ -57,9 +57,9 @@ async def test_midnight(
         assert hass.states.get("sensor.solcast_pv_forecast_api_used").state == "4"  # type: ignore[union-attr]
         assert "Transitioning between summer/standard time" not in caplog.text
 
-        coordinator._intervals = [  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
+        coordinator._updater._intervals = [  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
             dt.fromisoformat("2025-01-10T00:59:30+00:00"),
-            *coordinator._intervals,  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
+            *coordinator._updater._intervals,  # Inject expired interval  # pyright: ignore[reportPrivateUsage]
         ]
         caplog.clear()
         coordinator._data_updated = False  # Improve test coverage  # pyright: ignore[reportPrivateUsage]
@@ -126,7 +126,7 @@ async def test_timezone_transition(
         freezer.move_to(scenario["start_date"] + " 00:00:00")
         entry = await async_init_integration(hass, DEFAULT_INPUT1, timezone=scenario["timezone"])
         coordinator: SolcastUpdateCoordinator = entry.runtime_data.coordinator
-        assert coordinator.solcast.dst(dt.now())
+        assert coordinator.solcast.dt_helper.dst(dt.now())
 
         assert (
             f"Transitioning between {'standard/Summer' if scenario['timezone'] == 'Australia/Sydney' else 'standard/Winter'} time"
@@ -147,7 +147,7 @@ async def test_timezone_transition(
         freezer.move_to(scenario["end_date"] + " 00:00:00")
         entry = await async_init_integration(hass, DEFAULT_INPUT1, timezone=scenario["timezone"])
         coordinator: SolcastUpdateCoordinator = entry.runtime_data.coordinator
-        assert not coordinator.solcast.dst(dt.now())
+        assert not coordinator.solcast.dt_helper.dst(dt.now())
 
         assert (
             f"Transitioning between {'standard/Summer' if scenario['timezone'] == 'Australia/Sydney' else 'standard/Winter'} time"
