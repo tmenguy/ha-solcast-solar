@@ -1163,9 +1163,9 @@ async def test_remaining_actions(
         with pytest.raises(ServiceValidationError):
             await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "0"}, blocking=True)
 
-        _LOGGER.debug("Test set_options with invalid auto update")
+        _LOGGER.debug("Test set_options with invalid auto update (boolean coerced to string)")
         with pytest.raises(ServiceValidationError):
-            await hass.services.async_call(DOMAIN, "set_options", {"auto_update": "3"}, blocking=True)
+            await hass.services.async_call(DOMAIN, "set_options", {"auto_update": "True"}, blocking=True)
 
         _LOGGER.debug("Test set_options with invalid key estimate")
         with pytest.raises(ServiceValidationError):
@@ -1186,10 +1186,6 @@ async def test_remaining_actions(
         _LOGGER.debug("Test set_options with invalid api_limit")
         with pytest.raises(ServiceValidationError):
             await hass.services.async_call(DOMAIN, "set_options", {"api_limit": "abc"}, blocking=True)
-
-        _LOGGER.debug("Test set_options with invalid auto_update (boolean coerced to string)")
-        with pytest.raises(ServiceValidationError):
-            await hass.services.async_call(DOMAIN, "set_options", {"auto_update": "True"}, blocking=True)
 
         _LOGGER.debug("Test set_options with invalid auto_update (out of range)")
         with pytest.raises(ServiceValidationError):
