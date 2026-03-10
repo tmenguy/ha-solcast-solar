@@ -542,9 +542,9 @@
           "description": "API key(s), comma separated for multiple.",
           "name": "API key"
         },
-        "api_quota": {
-          "description": "API quota(s), comma separated for multiple keys.",
-          "name": "API quota"
+        "api_limit": {
+          "description": "API limit(s), comma separated for multiple keys.",
+          "name": "API limit"
         },
         "attr_brk_detailed": {
           "description": "Enable site breakdown for half-hourly and hourly detail attributes.",

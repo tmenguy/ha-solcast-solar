@@ -542,7 +542,7 @@
           "description": "Clave(s) API, separadas por comas para múltiples valores.",
           "name": "Clave API"
         },
-        "api_quota": {
+        "api_limit": {
           "description": "Cuota(s) API, separadas por comas para múltiples claves.",
           "name": "Cuota API"
         },

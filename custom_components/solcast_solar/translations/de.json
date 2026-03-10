@@ -541,7 +541,7 @@
           "description": "API-Schlüssel, mehrere Werte durch Kommas getrennt.",
           "name": "API-Schlüssel"
         },
-        "api_quota": {
+        "api_limit": {
           "description": "API-Kontingent, mehrere Werte durch Kommas getrennt.",
           "name": "API-Kontingent"
         },

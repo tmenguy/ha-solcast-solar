@@ -542,7 +542,7 @@
           "description": "Chiave/i API, separate da virgola per più valori.",
           "name": "Chiave API"
         },
-        "api_quota": {
+        "api_limit": {
           "description": "Quota/e API, separate da virgola per più chiavi.",
           "name": "Quota API"
         },

@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     ACTION,
     API_KEY,
+    API_LIMIT,
     API_QUOTA,
     AUTO_DAMPEN,
     AUTO_UPDATE,
@@ -129,7 +130,7 @@ SERVICE_QUERY_ESTIMATE_SCHEMA: Final = vol.All(
 SERVICE_SET_OPTIONS_SCHEMA: Final = vol.All(
     {
         vol.Optional(API_KEY): cv.string,
-        vol.Optional(API_QUOTA): cv.string,
+        vol.Optional(API_LIMIT): cv.string,
         vol.Optional(AUTO_UPDATE): cv.string,
         vol.Optional(KEY_ESTIMATE): cv.string,
         vol.Optional(CUSTOM_HOURS): cv.string,
@@ -457,7 +458,7 @@ class ServiceActions:
         return {
             "data": {
                 API_KEY: opt.get(API_KEY, ""),
-                API_QUOTA: opt.get(API_QUOTA, ""),
+                API_LIMIT: opt.get(API_QUOTA, ""),
                 AUTO_UPDATE: opt.get(AUTO_UPDATE, 0),
                 KEY_ESTIMATE: opt.get(KEY_ESTIMATE, "estimate"),
                 CUSTOM_HOURS: opt.get(CUSTOM_HOUR_SENSOR, 24),
@@ -584,9 +585,9 @@ class ServiceActions:
         else:
             api_count = len(opt[API_KEY].split(","))
 
-        # Validate and apply API quota.
-        if (api_quota := call.data.get(API_QUOTA)) is not None:
-            validated_quota, error = validate_api_limit_value(api_quota, api_count)
+        # Validate and apply API limit.
+        if (api_limit := call.data.get(API_LIMIT)) is not None:
+            validated_quota, error = validate_api_limit_value(api_limit, api_count)
             if error is not None:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key=error)
             opt[API_QUOTA] = validated_quota

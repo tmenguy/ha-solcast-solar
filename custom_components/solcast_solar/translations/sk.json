@@ -542,7 +542,7 @@
           "description": "Kľúč(e) API, oddelené čiarkami pre viacero hodnôt.",
           "name": "Kľúč API"
         },
-        "api_quota": {
+        "api_limit": {
           "description": "Kvóta/kvóty API, oddelené čiarkami pre viacero kľúčov.",
           "name": "Kvóta API"
         },

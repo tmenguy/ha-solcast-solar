@@ -91,7 +91,7 @@ set_options:
   fields:
     api_key:
       example: "your-api-key"
-    api_quota:
+    api_limit:
       example: "10"
     auto_update:
       example: "1"

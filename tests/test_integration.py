@@ -1177,9 +1177,9 @@ async def test_remaining_actions(
         with pytest.raises(ServiceValidationError):
             await hass.services.async_call(DOMAIN, "set_options", {"site_export_limit": "101"}, blocking=True)
 
-        _LOGGER.debug("Test set_options with invalid api_quota")
+        _LOGGER.debug("Test set_options with invalid api_limit")
         with pytest.raises(ServiceValidationError):
-            await hass.services.async_call(DOMAIN, "set_options", {"api_quota": "abc"}, blocking=True)
+            await hass.services.async_call(DOMAIN, "set_options", {"api_limit": "abc"}, blocking=True)
 
         _LOGGER.debug("Test set_options with duplicate api_key")
         with pytest.raises(ServiceValidationError):
@@ -1283,8 +1283,8 @@ async def test_remaining_actions(
         assert entry.options[SITE_EXPORT_ENTITY] == "sensor.grid_export"
         assert entry.options[SITE_EXPORT_LIMIT] == 5.0
 
-        _LOGGER.debug("Test set_options api_quota valid")
-        await hass.services.async_call(DOMAIN, "set_options", {"api_quota": "15"}, blocking=True)
+        _LOGGER.debug("Test set_options api_limit valid")
+        await hass.services.async_call(DOMAIN, "set_options", {"api_limit": "15"}, blocking=True)
         await hass.async_block_till_done()
         assert entry.options[API_QUOTA] == "15"
 
@@ -1329,7 +1329,7 @@ async def test_remaining_actions(
         assert result is not None
         data = result["data"]
         assert data["api_key"] == entry.options["api_key"]  # type: ignore[union-attr]
-        assert data["api_quota"] == entry.options[API_QUOTA]  # type: ignore[union-attr]
+        assert data["api_limit"] == entry.options[API_QUOTA]  # type: ignore[union-attr]
         assert data["auto_update"] == entry.options[AUTO_UPDATE]  # type: ignore[union-attr]
         assert data["key_estimate"] == entry.options[KEY_ESTIMATE]  # type: ignore[union-attr]
         assert data["custom_hours"] == entry.options[CUSTOM_HOUR_SENSOR]  # type: ignore[union-attr]

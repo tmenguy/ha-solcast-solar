@@ -542,7 +542,7 @@
           "description": "Klucz(e) API, oddzielone przecinkami dla wielu wartości.",
           "name": "Klucz API"
         },
-        "api_quota": {
+        "api_limit": {
           "description": "Limit(y) API, oddzielone przecinkami dla wielu kluczy.",
           "name": "Limit API"
         },

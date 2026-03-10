@@ -542,7 +542,7 @@
           "description": "Chave(s) API, separadas por vírgulas para múltiplos valores.",
           "name": "Chave API"
         },
-        "api_quota": {
+        "api_limit": {
           "description": "Quota(s) API, separadas por vírgulas para múltiplas chaves.",
           "name": "Quota API"
         },
