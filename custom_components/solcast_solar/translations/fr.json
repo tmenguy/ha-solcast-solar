@@ -8,6 +8,7 @@
     },
     "error": {
       "api_duplicate": "Clé API en double spécifiée",
+      "api_key_empty": "La clé API ne doit pas être vide",
       "api_looks_like_site": "La clé API ressemble à un identifiant de site",
       "limit_not_number": "La limite de l'API n'est pas un nombre",
       "limit_one_or_greater": "La limite de l'API doit être égale ou supérieure à un",
@@ -146,6 +147,9 @@
     },
     "api_duplicate": {
       "message": "Clé API en double spécifiée."
+    },
+    "api_key_empty": {
+      "message": "La clé API ne doit pas être vide."
     },
     "api_looks_like_site": {
       "message": "La clé API ressemble à un identifiant de site."
@@ -339,6 +343,7 @@
       "actuals_not_enabled": "L'acquisition des valeurs réelles estimées n'est pas activée",
       "actuals_without_get": "Les estimations réelles ne peuvent pas être utilisées sans les obtenir",
       "api_duplicate": "Clé API en double spécifiée",
+      "api_key_empty": "La clé API ne doit pas être vide",
       "api_looks_like_site": "La clé API ressemble à un identifiant de site",
       "custom_invalid": "Capteur personnalisé non compris entre 1 et 144",
       "dampen_without_actuals": "Les valeurs réelles estimées doivent être sélectionnées pour utiliser l'amortissement automatique",

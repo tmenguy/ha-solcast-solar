@@ -8,6 +8,7 @@
     },
     "error": {
       "api_duplicate": "Doppelter API-Schlüssel angegeben",
+      "api_key_empty": "API-Schlüssel darf nicht leer sein",
       "api_looks_like_site": "Der API-Schlüssel sieht aus wie eine Site-ID",
       "limit_not_number": "Das API-Limit ist keine Zahl",
       "limit_one_or_greater": "Das API-Limit muss eins oder größer sein",
@@ -146,6 +147,9 @@
     },
     "api_duplicate": {
       "message": "Doppelter API-Schlüssel angegeben."
+    },
+    "api_key_empty": {
+      "message": "API-Schlüssel darf nicht leer sein."
     },
     "api_looks_like_site": {
       "message": "Der API-Schlüssel sieht aus wie eine Site-ID."
@@ -339,6 +343,7 @@
       "actuals_not_enabled": "Die Erfassung geschätzter Istwerte ist nicht aktiviert",
       "actuals_without_get": "Geschätzte Istwerte können nicht verwendet werden, ohne sie zu erhalten",
       "api_duplicate": "Doppelter API-Schlüssel angegeben",
+      "api_key_empty": "API-Schlüssel darf nicht leer sein",
       "api_looks_like_site": "Der API-Schlüssel sieht aus wie eine Site-ID",
       "custom_invalid": "Benutzerdefinierter Sensor nicht zwischen 1 und 144",
       "dampen_without_actuals": "Um die automatische Dämpfung zu verwenden, müssen geschätzte Istwerte ausgewählt werden.",

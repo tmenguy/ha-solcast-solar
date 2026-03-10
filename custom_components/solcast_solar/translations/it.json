@@ -8,6 +8,7 @@
     },
     "error": {
       "api_duplicate": "Chiave API duplicata specificata",
+      "api_key_empty": "La chiave API non deve essere vuota",
       "api_looks_like_site": "La chiave API sembra un ID sito",
       "limit_not_number": "Il limite API non è un numero",
       "limit_one_or_greater": "Il limite API deve essere uno o superiore",
@@ -146,6 +147,9 @@
     },
     "api_duplicate": {
       "message": "Chiave API duplicata specificata."
+    },
+    "api_key_empty": {
+      "message": "La chiave API non deve essere vuota."
     },
     "api_looks_like_site": {
       "message": "La chiave API sembra un ID sito."
@@ -339,6 +343,7 @@
       "actuals_not_enabled": "L'acquisizione dei dati effettivi stimati non è abilitata",
       "actuals_without_get": "I valori effettivi stimati non possono essere utilizzati senza ottenerli",
       "api_duplicate": "Chiave API duplicata specificata",
+      "api_key_empty": "La chiave API non deve essere vuota",
       "api_looks_like_site": "La chiave API sembra un ID sito",
       "custom_invalid": "Sensore personalizzato non compreso tra 1 e 144",
       "dampen_without_actuals": "Per utilizzare l'auto-smorzamento è necessario selezionare i valori effettivi stimati",

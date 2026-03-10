@@ -8,6 +8,7 @@
     },
     "error": {
       "api_duplicate": "Określono duplikat klucza API",
+      "api_key_empty": "Klucz API nie może być pusty",
       "api_looks_like_site": "Klucz API wygląda jak identyfikator witryny",
       "limit_not_number": "Limit API nie jest liczbą",
       "limit_one_or_greater": "Limit API musi wynosić jeden lub więcej",
@@ -146,6 +147,9 @@
     },
     "api_duplicate": {
       "message": "Określono duplikat klucza API."
+    },
+    "api_key_empty": {
+      "message": "Klucz API nie może być pusty."
     },
     "api_looks_like_site": {
       "message": "Klucz API wygląda jak identyfikator witryny."
@@ -339,6 +343,7 @@
       "actuals_not_enabled": "Pozyskiwanie szacunkowych wartości rzeczywistych nie jest włączone",
       "actuals_without_get": "Nie można używać szacunkowych wartości rzeczywistych bez ich uzyskania",
       "api_duplicate": "Określono duplikat klucza API",
+      "api_key_empty": "Klucz API nie może być pusty",
       "api_looks_like_site": "Klucz API wygląda jak identyfikator witryny",
       "custom_invalid": "Niestandardowy czujnik nie znajduje się pomiędzy 1 a 144",
       "dampen_without_actuals": "Aby użyć automatycznego tłumienia, należy wybrać szacowane wartości rzeczywiste",

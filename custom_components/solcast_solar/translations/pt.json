@@ -8,6 +8,7 @@
     },
     "error": {
       "api_duplicate": "Chave de API duplicada especificada",
+      "api_key_empty": "A chave da API não pode estar vazia",
       "api_looks_like_site": "A chave da API parece um ID de site",
       "limit_not_number": "O limite da API não é um número",
       "limit_one_or_greater": "O limite da API deve ser um ou maior",
@@ -146,6 +147,9 @@
     },
     "api_duplicate": {
       "message": "Chave de API duplicada especificada."
+    },
+    "api_key_empty": {
+      "message": "A chave da API não pode estar vazia."
     },
     "api_looks_like_site": {
       "message": "A chave da API parece um ID de site."
@@ -339,6 +343,7 @@
       "actuals_not_enabled": "A aquisição de valores reais estimados não está habilitada",
       "actuals_without_get": "Os valores reais estimados não podem ser usados ​​sem obtê-los",
       "api_duplicate": "Chave de API duplicada especificada",
+      "api_key_empty": "A chave da API não pode estar vazia",
       "api_looks_like_site": "A chave da API parece um ID de site",
       "custom_invalid": "Sensor personalizado não entre 1 e 144",
       "dampen_without_actuals": "Os valores reais estimados devem ser selecionados para usar o amortecimento automático",

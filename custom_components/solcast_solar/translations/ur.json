@@ -8,6 +8,7 @@
     },
     "error": {
       "api_duplicate": "پلیکیٹ API کلید بتائی گئی ہے۔",
+      "api_key_empty": "API کلید خالی نہیں ہونی چاہی۔",
       "api_looks_like_site": "API کلید سائٹ ID کی طرح نظر آتی ہے۔",
       "limit_not_number": "API کی حد نمبر نہیں ہے۔",
       "limit_one_or_greater": "API کی حد ایک یا اس سے زیادہ ہونی چاہیے۔",
@@ -146,6 +147,9 @@
     },
     "api_duplicate": {
       "message": "ڈپلیکیٹ API کلید بتائی گئی ہے۔"
+    },
+    "api_key_empty": {
+      "message": "API کلید خالی نہیں ہونی چاہی۔"
     },
     "api_looks_like_site": {
       "message": "API کلید سائٹ ID کی طرح نظر آتی ہے۔"
@@ -339,6 +343,7 @@
       "actuals_not_enabled": "تخمینی حقیقی حصول فعال نہیں ہے۔",
       "actuals_without_get": "تخمینہ شدہ حقیقی ان کو حاصل کیے بغیر استعمال نہیں کیا جا سکتا",
       "api_duplicate": "پلیکیٹ API کلید بتائی گئی ہے۔",
+      "api_key_empty": "API کلید خالی نہیں ہونی چاہی۔",
       "api_looks_like_site": "API کلید سائٹ ID کی طرح نظر آتی ہے۔",
       "custom_invalid": "حسب ضرورت سینسر 1 اور 144 کے درمیان نہیں ہے۔",
       "dampen_without_actuals": "آٹو ڈیمپننگ کا استعمال کرنے کے لیے تخمینی حقیقی کا انتخاب کرنا ضروری ہے۔",

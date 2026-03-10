@@ -10,6 +10,7 @@ from homeassistant.const import CONF_API_KEY
 from .const import (
     API_QUOTA,
     EXCEPTION_API_DUPLICATE,
+    EXCEPTION_API_KEY_EMPTY,
     EXCEPTION_API_LOOKS_LIKE_SITE,
     EXCEPTION_HARD_NOT_POSITIVE_NUMBER,
     EXCEPTION_HARD_TOO_MANY,
@@ -39,6 +40,8 @@ def validate_api_key_value(api_key: str) -> tuple[str, int, str | None]:
     """
     api_key_cleaned = api_key.replace(" ", "")
     keys = [s for s in api_key_cleaned.split(",") if s]
+    if not keys:
+        return "", 0, EXCEPTION_API_KEY_EMPTY
     for index, key in enumerate(keys):
         if re.match(LIKE_SITE_ID, key):
             return "", 0, EXCEPTION_API_LOOKS_LIKE_SITE

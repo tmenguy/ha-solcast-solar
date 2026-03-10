@@ -1181,6 +1181,10 @@ async def test_remaining_actions(
         with pytest.raises(ServiceValidationError):
             await hass.services.async_call(DOMAIN, "set_options", {"api_limit": "abc"}, blocking=True)
 
+        _LOGGER.debug("Test set_options with empty api_key")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"api_key": ""}, blocking=True)
+
         _LOGGER.debug("Test set_options with duplicate api_key")
         with pytest.raises(ServiceValidationError):
             await hass.services.async_call(DOMAIN, "set_options", {"api_key": "abc123,abc123"}, blocking=True)
