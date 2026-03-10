@@ -452,6 +452,10 @@ class ServiceActions:
         Returns:
             The current integration configuration options.
 
+            The API key will be returned in the response unredacted, and this is intentional.
+            Why anyone would want this returned is unclear, but if they do, they get it
+            unredacted because all config options are treated equally by this action.
+
         """
         _LOGGER.info("Action: Get options")
         opt = self._entry.options

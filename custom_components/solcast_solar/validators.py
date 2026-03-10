@@ -112,14 +112,15 @@ def validate_hard_limit_value(hard_limit: str, api_count: int) -> tuple[str, str
         tuple[str, str | None]: The validated hard limit string, and error key or None.
 
     """
-    if hard_limit == "0":
-        hard_limit = "100.0"
     to_set: list[str] = []
     for h in hard_limit.split(","):
         h = h.strip()
         if not h.replace(".", "", 1).isdigit():
             return "", EXCEPTION_HARD_NOT_POSITIVE_NUMBER
         val = float(h)
+        # A value of 0 means "disable the hard limit", normalised to 100.0.
+        if val == 0.0:
+            val = 100.0
         to_set.append(f"{val:.1f}")
     if len(to_set) > api_count:
         return "", EXCEPTION_HARD_TOO_MANY
@@ -155,9 +156,10 @@ def validate_auto_update_value(value: str) -> tuple[int, str | None]:
         tuple[int, str | None]: The validated auto update integer, and error key or None.
 
     """
-    if value not in ("0", "1", "2"):
+    stripped = value.strip()
+    if not stripped.isdigit() or stripped not in ("0", "1", "2"):
         return 0, EXCEPTION_INVALID_AUTO_UPDATE
-    return int(value), None
+    return int(stripped), None
 
 
 def validate_key_estimate_value(value: str) -> tuple[str, str | None]:
@@ -185,9 +187,10 @@ def validate_use_actuals_value(value: str) -> tuple[int, str | None]:
         tuple[int, str | None]: The validated use actuals integer, and error key or None.
 
     """
-    if value not in ("0", "1", "2"):
+    stripped = value.strip()
+    if not stripped.isdigit() or stripped not in ("0", "1", "2"):
         return 0, EXCEPTION_INVALID_USE_ACTUALS
-    return int(value), None
+    return int(stripped), None
 
 
 def validate_export_limit_value(value: str) -> tuple[float, str | None]:

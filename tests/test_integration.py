@@ -1088,6 +1088,12 @@ async def test_remaining_actions(
         assert hass.states.get("sensor.solcast_pv_forecast_hard_limit_set_1").state == "False"  # type: ignore[union-attr]
         assert hass.states.get("sensor.solcast_pv_forecast_hard_limit_set_2").state == "False"  # type: ignore[union-attr]
 
+        _LOGGER.debug("Test disable hard limit via zero for both API keys")
+        solcast = await _set_hard_limit("0,0")
+        assert solcast.hard_limit == "100.0,100.0"
+        assert hass.states.get("sensor.solcast_pv_forecast_hard_limit_set_1").state == "False"  # type: ignore[union-attr]
+        assert hass.states.get("sensor.solcast_pv_forecast_hard_limit_set_2").state == "False"  # type: ignore[union-attr]
+
         _LOGGER.debug("Test set hard limit for both API keys")
         solcast = await _set_hard_limit("5.0,5.0")
         assert solcast.hard_limit == "5.0,5.0"
@@ -1180,6 +1186,22 @@ async def test_remaining_actions(
         _LOGGER.debug("Test set_options with invalid api_limit")
         with pytest.raises(ServiceValidationError):
             await hass.services.async_call(DOMAIN, "set_options", {"api_limit": "abc"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid auto_update (boolean coerced to string)")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"auto_update": "True"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid auto_update (out of range)")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"auto_update": "3"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid use_actuals (boolean coerced to string)")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"use_actuals": "True"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid use_actuals (out of range)")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"use_actuals": "3"}, blocking=True)
 
         _LOGGER.debug("Test set_options with empty api_key")
         with pytest.raises(ServiceValidationError):
