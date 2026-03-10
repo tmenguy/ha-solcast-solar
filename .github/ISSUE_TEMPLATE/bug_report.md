@@ -49,6 +49,14 @@ A clear and concise description of what you expected to happen.
 
 If applicable, add screenshots to help explain your problem.
 
+## AI
+
+I confirm:
+
+- [ ] I have **not used AI** to generate any Home Assistant configuration, automations, or custom components related to this issue, and I believe this is a bug in the Solcast integration itself
+- [ ] I **have used AI** but have **read the documentation before raising this issue** and can confirm that the problem is not caused by AI‑generated Home Assistant configuration, automations, or custom components
+- [ ] I have included **debug** logs for any AI related issues.
+
 ## Logs
 
 I confirm:
@@ -76,13 +84,21 @@ If you are using docker, it sometimes can be easier to gather logs using `docker
 
 - Integration Version [e.g. 4.0.29]
 
-## Desktop (please complete the following information)
+## Home Assistant Environment
 
-- OS: [e.g. iOS]
-- Browser [e.g. chrome, safari]
-- Version [e.g. 22]
+- Home Assistant Version [e.g. 2026.0]
+- Installation method [e.g. Home Assistant OS / Docker / HA Green]
+- Home Assistant Core Version [e.g. 2026.3.1]
+- Home Assistant Supervisor Version [e.g. 2026.02.3]
+- Operating System [e.g. HAOS 17.1 / Linux Ubuntu 24.03]
+- Home Assistant Frontend Version [e.g. 20260304.0]
 
-## Smartphone (please complete the following information)
+### Desktop (please complete the following information if you encounter the error on your desktop / PC)
+
+- OS and Version: [e.g. Windows 11, macOS 14, Ubuntu 24.04]
+- Browser and Version [e.g. chrome 145.0.7632.160 (Official Build) (64-bit), safari]
+
+### Smartphone (please complete the following information if you encounter the error on your phone)
 
 - Device: [e.g. iPhone6]
 - OS: [e.g. iOS8.1]
