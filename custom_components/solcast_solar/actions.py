@@ -456,6 +456,8 @@ class ServiceActions:
             Why anyone would want this returned is unclear, but if they do, they get it
             unredacted because all config options are treated equally by this action.
 
+            API quota is returned as API limit.
+
         """
         _LOGGER.info("Action: Get options")
         opt = self._entry.options

@@ -157,7 +157,7 @@ def validate_auto_update_value(value: str) -> tuple[int, str | None]:
 
     """
     stripped = value.strip()
-    if not stripped.isdigit() or stripped not in ("0", "1", "2"):
+    if stripped not in ("0", "1", "2"):
         return 0, EXCEPTION_INVALID_AUTO_UPDATE
     return int(stripped), None
 
@@ -188,7 +188,7 @@ def validate_use_actuals_value(value: str) -> tuple[int, str | None]:
 
     """
     stripped = value.strip()
-    if not stripped.isdigit() or stripped not in ("0", "1", "2"):
+    if stripped not in ("0", "1", "2"):
         return 0, EXCEPTION_INVALID_USE_ACTUALS
     return int(stripped), None
 

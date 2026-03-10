@@ -546,6 +546,10 @@ YAML:
 >
 > Also note, that when the user interface validation fails unexpectedly, this action can be used to 'force' set the API key because it bypasses that validation.
 
+> [!NOTE]
+>
+> The `get_options` action will return all options set, and this includes the un-redacted API key(s). This is intentional.
+
 Example parameters are provided here for each `query`, `set` and `get` action. Use `Developer tools` | `Actions` to show the available parameters for each with a description. 
 
 Where a 'site' parameter is needed, use the Solcast site resource ID and not the site name.
