@@ -100,7 +100,7 @@ set_options:
     custom_hours:
       example: "6"
     hard_limit:
-      example: "6000"
+      example: "100"
     attr_brk_estimate:
       example: true
     attr_brk_estimate10:
