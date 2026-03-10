@@ -534,7 +534,7 @@
       "description": "Évitez que les valeurs prévues soient supérieures à ce que l'onduleur peut produire.",
       "fields": {
         "hard_limit": {
-          "description": "Définissez la valeur maximale en watts que l'onduleur peut produire.",
+          "description": "Définissez la valeur maximale en watts que l'onduleur peut produire. Utilisez 0 pour désactiver la limite.",
           "name": "Valeur limite en Watts"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Obtenir les valeurs réelles"
         },
         "hard_limit": {
-          "description": "Limite stricte de l'onduleur en Watts. Séparée par des virgules pour plusieurs clés.",
+          "description": "Limite stricte de l'onduleur en Watts, ou 0 ou 100 pour désactiver. Séparée par des virgules pour plusieurs clés.",
           "name": "Limite stricte"
         },
         "key_estimate": {

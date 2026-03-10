@@ -534,7 +534,7 @@
       "description": "Impedir que os valores de previsão sejam superiores ao que o inversor pode produzir.",
       "fields": {
         "hard_limit": {
-          "description": "Definir o valor máximo em Watts que o inversor pode produzir.",
+          "description": "Definir o valor máximo em Watts que o inversor pode produzir. Use 0 para desativar o limite.",
           "name": "Valor do limite em Watts"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Obter valores reais"
         },
         "hard_limit": {
-          "description": "Limite rígido do inversor em Watts. Separado por vírgulas para múltiplas chaves.",
+          "description": "Limite rígido do inversor em Watts, ou 0 ou 100 para desativar. Separado por vírgulas para múltiplas chaves.",
           "name": "Limite rígido"
         },
         "key_estimate": {

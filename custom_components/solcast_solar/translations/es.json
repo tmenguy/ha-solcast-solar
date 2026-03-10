@@ -534,7 +534,7 @@
       "description": "Evitar que los valores previstos sean superiores a los que el inversor puede producir.",
       "fields": {
         "hard_limit": {
-          "description": "Establezca el valor máximo en vatios que puede producir el inversor.",
+          "description": "Establezca el valor máximo en vatios que puede producir el inversor. Use 0 para desactivar el límite.",
           "name": "Valor límite en Watts"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Obtener valores reales"
         },
         "hard_limit": {
-          "description": "Límite duro del inversor en Vatios. Separado por comas para múltiples claves.",
+          "description": "Límite duro del inversor en Vatios, o 0 o 100 para desactivar. Separado por comas para múltiples claves.",
           "name": "Límite duro"
         },
         "key_estimate": {

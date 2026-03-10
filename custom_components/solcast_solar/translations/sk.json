@@ -534,7 +534,7 @@
       "description": "Zabráňte tomu, aby boli predpovedané hodnoty vyššie, ako dokáže menič produkovať.",
       "fields": {
         "hard_limit": {
-          "description": "Nastavte maximálnu hodnotu vo wattoch, ktorú môže menič produkovať.",
+          "description": "Nastavte maximálnu hodnotu vo wattoch, ktorú môže menič produkovať. Použite 0 na deaktiváciu limitu.",
           "name": "Limitná hodnota vo wattoch"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Získať skutočné hodnoty"
         },
         "hard_limit": {
-          "description": "Pevný limit meniča vo Wattoch. Oddelené čiarkami pre viacero kľúčov.",
+          "description": "Pevný limit meniča vo Wattoch, alebo 0 alebo 100 na deaktiváciu. Oddelené čiarkami pre viacero kľúčov.",
           "name": "Pevný limit"
         },
         "key_estimate": {

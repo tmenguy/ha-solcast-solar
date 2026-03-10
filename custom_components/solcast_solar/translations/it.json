@@ -534,7 +534,7 @@
       "description": "Impedisci che i valori di previsione siano superiori a quelli che l'inverter può produrre.",
       "fields": {
         "hard_limit": {
-          "description": "Imposta il valore massimo in Watt che l'inverter può produrre.",
+          "description": "Imposta il valore massimo in Watt che l'inverter può produrre. Usare 0 per disabilitare il limite.",
           "name": "Valore limite in Watt"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Ottieni valori effettivi"
         },
         "hard_limit": {
-          "description": "Limite rigido dell'inverter in Watt. Separato da virgola per più chiavi.",
+          "description": "Limite rigido dell'inverter in Watt, o 0 o 100 per disabilitare. Separato da virgola per più chiavi.",
           "name": "Limite rigido"
         },
         "key_estimate": {

@@ -534,7 +534,7 @@
       "description": "Vermeiden Sie, dass die prognostizierten Werte höher sind, als der Wechselrichter erzeugen kann.",
       "fields": {
         "hard_limit": {
-          "description": "Stellen Sie den maximalen Wert in Watt ein, den der Wechselrichter erzeugen kann.",
+          "description": "Stellen Sie den maximalen Wert in Watt ein, den der Wechselrichter erzeugen kann. Verwenden Sie 0, um den Grenzwert zu deaktivieren.",
           "name": "Grenzwert in Watt"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Istwerte abrufen"
         },
         "hard_limit": {
-          "description": "Fester Grenzwert des Wechselrichters in Watt. Mehrere Werte durch Kommas getrennt.",
+          "description": "Fester Grenzwert des Wechselrichters in Watt, oder 0 oder 100 zum Deaktivieren. Mehrere Werte durch Kommas getrennt.",
           "name": "Fester Grenzwert"
         },
         "key_estimate": {

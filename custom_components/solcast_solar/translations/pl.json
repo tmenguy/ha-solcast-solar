@@ -534,7 +534,7 @@
       "description": "Zabrania wartości prognoz przekraczających maksymalną moc inwertera.",
       "fields": {
         "hard_limit": {
-          "description": "Ustaw maksymalną wartość w watach, jaką może wyprodukować inwerter.",
+          "description": "Ustaw maksymalną wartość w watach, jaką może wyprodukować inwerter. Użyj 0, aby wyłączyć limit.",
           "name": "Wartość limitu w watach"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Pobierz wartości rzeczywiste"
         },
         "hard_limit": {
-          "description": "Twardy limit falownika w Watach. Oddzielone przecinkami dla wielu kluczy.",
+          "description": "Twardy limit falownika w Watach, lub 0 lub 100 aby wyłączyć. Oddzielone przecinkami dla wielu kluczy.",
           "name": "Twardy limit"
         },
         "key_estimate": {

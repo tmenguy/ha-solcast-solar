@@ -534,7 +534,7 @@
       "description": "Prevent forecast values being higher than the inverter can produce.",
       "fields": {
         "hard_limit": {
-          "description": "Set the max value in Watts that the inverter can produce.",
+          "description": "Set the max value in Watts that the inverter can produce. Use 0 to disable the hard limit.",
           "name": "Limit value in Watts"
         }
       },
@@ -604,7 +604,7 @@
           "name": "Get actuals"
         },
         "hard_limit": {
-          "description": "Inverter hard limit in Watts, or 100 to disable. Comma separated for multiple keys.",
+          "description": "Inverter hard limit in Watts, or 0 or 100 to disable. Comma separated for multiple keys.",
           "name": "Hard limit"
         },
         "key_estimate": {

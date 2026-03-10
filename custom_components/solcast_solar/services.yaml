@@ -79,6 +79,7 @@ set_hard_limit:
   description: Prevent forecast values being higher than the inverter can produce
   fields:
     hard_limit:
+      description: Set the max value in Watts that the inverter can produce. Use 0 to disable the hard limit.
       example: "6.0"
 
 remove_hard_limit:
