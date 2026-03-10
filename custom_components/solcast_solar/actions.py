@@ -7,6 +7,7 @@ from typing import Any, Final
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv, issue_registry as ir
@@ -14,7 +15,6 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     ACTION,
-    API_KEY,
     API_LIMIT,
     API_QUOTA,
     AUTO_DAMPEN,
@@ -129,7 +129,7 @@ SERVICE_QUERY_ESTIMATE_SCHEMA: Final = vol.All(
 )
 SERVICE_SET_OPTIONS_SCHEMA: Final = vol.All(
     {
-        vol.Optional(API_KEY): cv.string,
+        vol.Optional(CONF_API_KEY): cv.string,
         vol.Optional(API_LIMIT): cv.string,
         vol.Optional(AUTO_UPDATE): cv.string,
         vol.Optional(KEY_ESTIMATE): cv.string,
@@ -457,7 +457,7 @@ class ServiceActions:
         opt = self._entry.options
         return {
             "data": {
-                API_KEY: opt.get(API_KEY, ""),
+                CONF_API_KEY: opt.get(CONF_API_KEY, ""),
                 API_LIMIT: opt.get(API_QUOTA, ""),
                 AUTO_UPDATE: opt.get(AUTO_UPDATE, 0),
                 KEY_ESTIMATE: opt.get(KEY_ESTIMATE, "estimate"),
@@ -515,7 +515,7 @@ class ServiceActions:
         self._raise_deprecation_issue(ISSUE_DEPRECATED_SET_HARD_LIMIT, SERVICE_SET_HARD_LIMIT)
 
         hard_limit = call.data.get(HARD_LIMIT, "100.0")
-        validated, error = validate_hard_limit_value(hard_limit, len(self._entry.options[API_KEY].split(",")))
+        validated, error = validate_hard_limit_value(hard_limit, len(self._entry.options[CONF_API_KEY].split(",")))
         if error is not None:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key=error)
 
@@ -577,13 +577,13 @@ class ServiceActions:
         opt = {**self._entry.options}
 
         # Validate and apply API key.
-        if (api_key := call.data.get(API_KEY)) is not None:
+        if (api_key := call.data.get(CONF_API_KEY)) is not None:
             validated_key, api_count, error = validate_api_key_value(api_key)
             if error is not None:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key=error)
-            opt[API_KEY] = validated_key
+            opt[CONF_API_KEY] = validated_key
         else:
-            api_count = len(opt[API_KEY].split(","))
+            api_count = len(opt[CONF_API_KEY].split(","))
 
         # Validate and apply API limit.
         if (api_limit := call.data.get(API_LIMIT)) is not None:

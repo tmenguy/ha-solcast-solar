@@ -22,6 +22,7 @@ from typing import Any
 from aiohttp import ClientSession
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 
@@ -30,7 +31,6 @@ from .const import (
     ADVANCED_FORECAST_FUTURE_DAYS,
     ADVANCED_HISTORY_MAX_DAYS,
     ALL,
-    API_KEY,
     AUTO_DAMPEN,
     AUTO_UPDATE,
     AUTO_UPDATED,
@@ -427,7 +427,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         api_key: str | None = None
         for _site in self.sites:
             if _site[RESOURCE_ID] == site:
-                api_key = _site[API_KEY]
+                api_key = _site[CONF_API_KEY]
                 break
         return api_key
 
@@ -483,7 +483,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             for site in self.sites:
                 if data[SITE_INFO].get(site[RESOURCE_ID]) is None:
                     continue
-                api_key_sites[site[API_KEY] if multi_key else ALL][site[RESOURCE_ID]] = {
+                api_key_sites[site[CONF_API_KEY] if multi_key else ALL][site[RESOURCE_ID]] = {
                     EARLIEST_PERIOD: data[SITE_INFO][site[RESOURCE_ID]][FORECASTS][0][PERIOD_START],
                     LAST_PERIOD: data[SITE_INFO][site[RESOURCE_ID]][FORECASTS][-1][PERIOD_START],
                 }
