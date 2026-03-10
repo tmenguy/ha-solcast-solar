@@ -350,6 +350,7 @@
       "dampen_without_generation": "Um die automatische Dämpfung zu nutzen, muss mindestens ein Wh/kWh/MWh-Sensor für die PV-Erzeugung angegeben werden.",
       "export_multiple_entities": "Die Site-Export-Entität muss eine einzelne Entität sein, nicht mehrere Entitäten.",
       "export_no_entity": "Die Site-Export-Entität muss angegeben werden, wenn das Site-Export-Limit festgelegt ist.",
+      "generation_mixed_types": "PV-Erzeugungsentitäten müssen alle denselben Typ haben (entweder alle Energie oder alle Leistung, keine Mischung)",
       "hard_not_positive_number": "Der fester Grenzwert ist keine positive Zahl",
       "hard_too_many": "Es sind mehr harte Grenzen als Schlüssel eingegeben",
       "limit_not_number": "Das API-Limit ist keine Zahl",

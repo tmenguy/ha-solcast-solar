@@ -1360,6 +1360,8 @@ async def test_remaining_actions(
         if result is not None:
             assert result["data"]["custom_hours"] is not None and result["data"]["custom_hours"] == 48  # type: ignore[union-attr]
             assert result["data"]["auto_update"] is not None and result["data"]["auto_update"] == 2  # type: ignore[union-attr]
+        else:
+            pytest.fail("get_options result is None")
 
         # Reset changes
         await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "24", "auto_update": "0"}, blocking=True)
