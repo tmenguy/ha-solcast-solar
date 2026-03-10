@@ -6,7 +6,6 @@ from collections.abc import Mapping
 from datetime import timezone
 import logging
 from pathlib import Path
-import re
 import traceback
 from types import MappingProxyType
 from typing import Any
@@ -58,19 +57,13 @@ from .const import (
     ENERGY_HISTORY,
     ENTRY_ID,
     EXCEPTION_ACTUALS_WITHOUT_GET,
-    EXCEPTION_API_DUPLICATE,
-    EXCEPTION_API_LOOKS_LIKE_SITE,
     EXCEPTION_CUSTOM_INVALID,
     EXCEPTION_DAMPEN_WITHOUT_ACTUALS,
     EXCEPTION_DAMPEN_WITHOUT_GENERATION,
     EXCEPTION_EXPORT_MULTIPLE_ENTITIES,
     EXCEPTION_EXPORT_NO_ENTITY,
     EXCEPTION_GENERATION_MIXED_TYPES,
-    EXCEPTION_HARD_NOT_NUMBER,
-    EXCEPTION_HARD_TOO_MANY,
     EXCEPTION_INTERNAL_ERROR,
-    EXCEPTION_LIMIT_NOT_NUMBER,
-    EXCEPTION_LIMIT_ONE_OR_GREATER,
     EXCEPTION_SINGLE_INSTANCE_ALLOWED,
     EXCLUDE_SITES,
     GENERATION_ENTITIES,
@@ -92,6 +85,12 @@ from .const import (
 )
 from .solcastapi import ConnectionOptions, SolcastApi
 from .util import HistoryType, SitesStatus
+from .validators import (
+    validate_api_key,
+    validate_api_limit,
+    validate_custom_hours_value,
+    validate_hard_limit_value,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -100,54 +99,6 @@ AUTO_UPDATE_OPTIONS: list[SelectOptionDict] = [
     SelectOptionDict(label="sunrise_sunset", value="1"),
     SelectOptionDict(label="all_day", value="2"),
 ]
-LIKE_SITE_ID = r"^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$"
-
-
-def validate_api_key(user_input: dict[str, Any]) -> tuple[str, int, str | None]:
-    """Validate the API key.
-
-    Arguments:
-        user_input (dict[str, Any]): The user input.
-
-    Returns:
-        tuple[str, int, str | None]: The API key, API count, and abort result.
-
-    """
-    api_key = user_input[CONF_API_KEY].replace(" ", "")
-    api_key = [s for s in api_key.split(",") if s]
-    for index, key in enumerate(api_key):
-        if re.match(LIKE_SITE_ID, key):
-            return "", 0, EXCEPTION_API_LOOKS_LIKE_SITE
-        for i, k in enumerate(api_key):
-            if index != i and key == k:
-                return "", 0, EXCEPTION_API_DUPLICATE
-    api_count = len(api_key)
-    api_key = ",".join(api_key)
-    return api_key, api_count, None
-
-
-def validate_api_limit(user_input: dict[str, Any], api_count: int) -> tuple[str, str | None]:
-    """Validate the API limit.
-
-    Arguments:
-        user_input (dict[str, Any]): The user input.
-        api_count (int): The number of API keys.
-
-    Returns:
-        tuple[str, str | None]: The API limit, and abort result.
-
-    """
-    api_quota = user_input[API_QUOTA].replace(" ", "")
-    api_quota = [s for s in api_quota.split(",") if s]
-    for q in api_quota:
-        if not q.isnumeric():
-            return "", EXCEPTION_LIMIT_NOT_NUMBER
-        if int(q) < 1:
-            return "", EXCEPTION_LIMIT_ONE_OR_GREATER
-    if len(api_quota) > api_count:
-        return "", "limit_too_many"
-    api_quota = ",".join(api_quota)
-    return api_quota, None
 
 
 async def _get_time_zone(hass: HomeAssistant) -> ZoneInfo | timezone:
@@ -514,8 +465,8 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
                 if not errors:
                     # Validate the custom hours sensor.
-                    custom_hour_sensor = user_input[CUSTOM_HOUR_SENSOR]
-                    if custom_hour_sensor < 1 or custom_hour_sensor > 144:
+                    custom_hour_sensor, abort = validate_custom_hours_value(str(user_input[CUSTOM_HOUR_SENSOR]))
+                    if abort is not None:
                         errors[BASE] = EXCEPTION_CUSTOM_INVALID
                         _LOGGER.debug("Options validation failed: %s", errors[BASE])
                     else:
@@ -523,25 +474,12 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
                 if not errors:
                     # Validate the hard limit.
-                    hard_limit = user_input[HARD_LIMIT_API]
-                    if hard_limit == "0":  # Hard limit can be disabled by setting to zero or 100
-                        hard_limit = "100.0"
-                    to_set: list[str] = []
-                    for h in hard_limit.split(","):
-                        h = h.strip()
-                        if not h.replace(".", "", 1).isdigit():
-                            errors[BASE] = EXCEPTION_HARD_NOT_NUMBER
-                            _LOGGER.debug("Options validation failed: %s", errors[BASE])
-                            break
-                        val = float(h)
-                        to_set.append(f"{val:.1f}")
-                    if not errors:
-                        if len(to_set) > api_count:
-                            errors[BASE] = EXCEPTION_HARD_TOO_MANY
-                            _LOGGER.debug("Options validation failed: %s", errors[BASE])
-                        else:
-                            hard_limit = ",".join(to_set)
-                            all_config_data[HARD_LIMIT_API] = hard_limit
+                    hard_limit, abort = validate_hard_limit_value(user_input[HARD_LIMIT_API], api_count)
+                    if abort is not None:
+                        errors[BASE] = abort
+                        _LOGGER.debug("Options validation failed: %s", errors[BASE])
+                    else:
+                        all_config_data[HARD_LIMIT_API] = hard_limit
 
                 # Validate estimated actuals and auto-dampen.
                 all_config_data[GET_ACTUALS] = user_input.get(GET_ACTUALS, False)

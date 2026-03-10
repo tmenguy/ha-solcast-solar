@@ -568,8 +568,8 @@ async def test_options_custom_hour_sensor(hass: HomeAssistant, options: dict[str
 @pytest.mark.parametrize(
     ("options", "value", "reason"),
     [
-        ((DEFAULT_INPUT1, "invalid", "hard_not_number")),
-        ((DEFAULT_INPUT1, "-1", "hard_not_number")),
+        ((DEFAULT_INPUT1, "invalid", "hard_not_positive_number")),
+        ((DEFAULT_INPUT1, "-1", "hard_not_positive_number")),
         ((DEFAULT_INPUT1, "6,6.0", "hard_too_many")),
         ((DEFAULT_INPUT1, "6", None)),
         ((DEFAULT_INPUT2, "6,6.0", None)),

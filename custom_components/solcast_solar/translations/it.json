@@ -141,6 +141,15 @@
     "actuals_not_enabled": {
       "message": "L'acquisizione dei dati effettivi stimati non è abilitata."
     },
+    "actuals_without_get": {
+      "message": "I valori effettivi stimati non possono essere utilizzati senza ottenerli."
+    },
+    "api_duplicate": {
+      "message": "Chiave API duplicata specificata."
+    },
+    "api_looks_like_site": {
+      "message": "La chiave API sembra un ID sito."
+    },
     "auto_use_force": {
       "message": "L'aggiornamento automatico è abilitato, ignorando l'evento di servizio per l'aggiornamento delle previsioni, utilizzare invece Aggiornamento forzato."
     },
@@ -179,6 +188,15 @@
     },
     "damp_use_all": {
       "message": "Lo smorzamento del sito non è impostato per {site}, 'all' è l'unico parametro del sito disponibile per la chiamata al servizio."
+    },
+    "dampen_without_actuals": {
+      "message": "Per utilizzare l'auto-smorzamento è necessario selezionare i valori effettivi stimati."
+    },
+    "dampen_without_generation": {
+      "message": "È necessario specificare almeno un sensore di generazione fotovoltaica per utilizzare l'auto-smorzamento."
+    },
+    "export_no_entity": {
+      "message": "Il sito di esportazione deve essere specificato se è impostato un limite di esportazione del sito."
     },
     "hard_empty": {
       "message": "Valore del limite rigido vuoto."
@@ -219,17 +237,45 @@
     "integration_prior_crash": {
       "message": "L'integrazione non è riuscita a caricarsi in precedenza, si riprova dopo un ritardo."
     },
+    "invalid_auto_update": {
+      "message": "Il valore di aggiornamento automatico deve essere 0, 1 o 2."
+    },
     "invalid_custom_hours_format": {
       "message": "Il valore delle ore deve essere un numero intero."
     },
     "invalid_custom_hours_range": {
       "message": "Il valore delle ore deve essere compreso tra 1 e 144."
     },
+    "invalid_export_limit": {
+      "message": "Il limite di esportazione deve essere un numero compreso tra 0,0 e 100,0."
+    },
+    "invalid_key_estimate": {
+      "message": "La chiave di stima deve essere 'estimate', 'estimate10' o 'estimate90'."
+    },
+    "invalid_use_actuals": {
+      "message": "Il valore 'usa valori effettivi' deve essere 0, 1 o 2."
+    },
+    "limit_not_number": {
+      "message": "Il limite API non è un numero."
+    },
+    "limit_one_or_greater": {
+      "message": "Il limite API deve essere uno o superiore."
+    },
+    "limit_too_many": {
+      "message": "Sono stati inseriti più conteggi dei limiti API rispetto alle chiavi."
+    },
     "remove_cache_failed": {
       "message": "Eliminazione di tutti i dati Solcast non riuscita."
+    },
+    "set_options_empty": {
+      "message": "Deve essere specificata almeno un'opzione."
     }
   },
   "issues": {
+    "action_deprecated": {
+      "description": "L'azione `{deprecated_action}` è obsoleta e verrà rimossa in una versione futura. Utilizzare invece l'azione `{new_action}`.",
+      "title": "Azione obsoleta"
+    },
     "advanced_deprecated": {
       "description": "L'opzione di configurazione avanzata `{option}` è stata modificata in `{new_option}`. Aggiorna le opzioni di configurazione avanzate per utilizzare il nuovo nome dell'opzione.{stops_working}",
       "title": "Opzione avanzata deprecata"
@@ -297,10 +343,10 @@
       "custom_invalid": "Sensore personalizzato non compreso tra 1 e 144",
       "dampen_without_actuals": "Per utilizzare l'auto-smorzamento è necessario selezionare i valori effettivi stimati",
       "dampen_without_generation": "È necessario specificare almeno un sensore di generazione fotovoltaica per utilizzare l'auto-smorzamento (energia o potenza)",
-      "generation_mixed_types": "Le entità di generazione fotovoltaica devono essere tutte dello stesso tipo (tutta energia o tutta potenza, non un mix)",
       "export_multiple_entities": "Il sito di esportazione deve essere una sola entità, non più entità",
       "export_no_entity": "Il sito di esportazione deve essere specificato se è impostato un limite di esportazione del sito",
-      "hard_not_number": "Il limite massimo non è un numero positivo",
+      "generation_mixed_types": "Le entità di generazione fotovoltaica devono essere tutte dello stesso tipo (tutta energia o tutta potenza, non un mix)",
+      "hard_not_positive_number": "Il limite massimo non è un numero positivo",
       "hard_too_many": "Sono stati inseriti più limiti rigidi che chiavi",
       "limit_not_number": "Il limite API non è un numero",
       "limit_one_or_greater": "Il limite API deve essere uno o superiore",
@@ -411,6 +457,10 @@
       },
       "name": "Ottieni smorzamento delle previsioni"
     },
+    "get_options": {
+      "description": "Ottieni le opzioni di configurazione attuali dell'integrazione.",
+      "name": "Ottieni opzioni"
+    },
     "query_estimate_data": {
       "description": "Restituisce un set di dati per una determinata query.",
       "fields": {
@@ -484,6 +534,92 @@
         }
       },
       "name": "Imposta il limite rigido delle previsioni dell'inverter"
+    },
+    "set_options": {
+      "description": "Imposta una o più opzioni di configurazione dell'integrazione.",
+      "fields": {
+        "api_key": {
+          "description": "Chiave/i API, separate da virgola per più valori.",
+          "name": "Chiave API"
+        },
+        "api_quota": {
+          "description": "Quota/e API, separate da virgola per più chiavi.",
+          "name": "Quota API"
+        },
+        "attr_brk_detailed": {
+          "description": "Abilita la suddivisione del sito per attributi di dettaglio semiorari e orari.",
+          "name": "Dettaglio sito completo"
+        },
+        "attr_brk_estimate": {
+          "description": "Abilita gli attributi del sensore di stima 50.",
+          "name": "Dettaglio stima"
+        },
+        "attr_brk_estimate10": {
+          "description": "Abilita gli attributi del sensore di stima 10.",
+          "name": "Dettaglio stima 10"
+        },
+        "attr_brk_estimate90": {
+          "description": "Abilita gli attributi del sensore di stima 90.",
+          "name": "Dettaglio stima 90"
+        },
+        "attr_brk_halfhourly": {
+          "description": "Abilita gli attributi di dettaglio semiorari delle previsioni.",
+          "name": "Dettaglio semiorario"
+        },
+        "attr_brk_hourly": {
+          "description": "Abilita gli attributi di dettaglio orari delle previsioni.",
+          "name": "Dettaglio orario"
+        },
+        "attr_brk_site": {
+          "description": "Abilita gli attributi del sensore di suddivisione del sito.",
+          "name": "Dettaglio sito"
+        },
+        "auto_dampen": {
+          "description": "Abilita lo smorzamento automatico.",
+          "name": "Smorzamento automatico"
+        },
+        "auto_update": {
+          "description": "Modalità di aggiornamento automatico: 0=nessuno, 1=alba al tramonto, 2=tutto il giorno.",
+          "name": "Aggiornamento automatico"
+        },
+        "custom_hours": {
+          "description": "Numero di ore per il sensore ore personalizzato (1-144).",
+          "name": "Ore personalizzate"
+        },
+        "exclude_sites": {
+          "description": "Sito/i da escludere, ID sito separati da virgola.",
+          "name": "Escludi siti"
+        },
+        "generation_entities": {
+          "description": "Entità di generazione fotovoltaica, separate da virgola.",
+          "name": "Entità di generazione"
+        },
+        "get_actuals": {
+          "description": "Abilita l'acquisizione dei valori effettivi stimati.",
+          "name": "Ottieni valori effettivi"
+        },
+        "hard_limit": {
+          "description": "Limite rigido dell'inverter in Watt. Separato da virgola per più chiavi.",
+          "name": "Limite rigido"
+        },
+        "key_estimate": {
+          "description": "Stima di previsione preferita: estimate, estimate10 o estimate90.",
+          "name": "Stima preferita"
+        },
+        "site_export_entity": {
+          "description": "Entità di esportazione del sito opzionale per smorzamento automatizzato.",
+          "name": "Entità esportazione sito"
+        },
+        "site_export_limit": {
+          "description": "Limite di esportazione del sito in kW (0,0-100,0).",
+          "name": "Limite esportazione sito"
+        },
+        "use_actuals": {
+          "description": "Storico previsioni per il dashboard Energia: 0=previsioni, 1=valori effettivi, 2=valori effettivi attenuati.",
+          "name": "Usa valori effettivi"
+        }
+      },
+      "name": "Imposta opzioni"
     },
     "update_forecasts": {
       "description": "Recupera gli ultimi dati delle previsioni da Solcast.",

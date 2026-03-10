@@ -532,11 +532,19 @@ YAML:
 | `solcast_solar.clear_all_solcast_data` | Deletes cached data, and initiates an immediate fetch of new past actual and forecast values. |
 | `solcast_solar.query_forecast_data` | Return a list of forecast data using a datetime range start - end. |
 | `solcast_solar.query_estimate_data` | Return a list of estimated actual data using a datetime range start - end. |
-| `solcast_solar.set_custom_hours` | Set the custom X hours sensor number of hours. |
 | `solcast_solar.set_dampening` | Update the dampening factors. |
 | `solcast_solar.get_dampening` | Get the currently set dampening factors. |
-| `solcast_solar.set_hard_limit` | Set inverter forecast hard limit. |
-| `solcast_solar.remove_hard_limit` | Remove inverter forecast hard limit. |
+| `solcast_solar.set_options` | Set any or all configuration options for the integration (may cause a re-load depending on options set). |
+| `solcast_solar.get_options` | Get all configuration options for the integration. |
+| `solcast_solar.set_custom_hours` | (deprecated, use `set_options`) Set the custom X hours sensor number of hours. |
+| `solcast_solar.set_hard_limit` | (deprecated, use `set_options`) Set inverter forecast hard limit. |
+| `solcast_solar.remove_hard_limit` | (deprecated, use `set_options`) Remove inverter forecast hard limit. |
+
+> [!NOTE]
+>
+> When the `set_options` action is used to set an API key, that key (or keys) is not validated by checking configured sites at solcast.com. This behaviour is different to setting the API key by using the Home Assistant integration settings user interface.
+>
+> Also note, that when the user interface validation fails unexpectedly, this action can be used to 'force' set the API key because it bypasses that validation.
 
 Example parameters are provided here for each `query`, `set` and `get` action. Use `Developer tools` | `Actions` to show the available parameters for each with a description. 
 
@@ -566,21 +574,23 @@ data:
 ```
 
 ```yaml
-action: solcast_solar.set_custom_hours
-data:
-  hours: 2
-```
-
-```yaml
-action: solcast_solar.set_hard_limit
-data:
-  hard_limit: 6
-```
-
-```yaml
 action: solcast_solar.get_dampening
 data:
   site: 1234-5678-9012-3456 (optional)
+```
+
+```yaml
+action: solcast_solar.set_options
+data:
+  api_key: xxxxxxxx-xxxxx-xxxx, yyyyyyyy-yyyyy-yyyyy
+  api_limit: 8
+  get_actuals: true
+  use_actuals: 2
+  generation_entities: sensor.inverter_power
+  exclude_sites: 1234-5678-9012-3456
+  site_export_entity: sensor.grid_export
+  site_export_limit: 5
+  hard_limit: 6
 ```
 
 ### Configuration
@@ -1305,6 +1315,12 @@ The code itself resides at `/config/custom_components/solcast_solar`, and removi
 ## Changes
 
 Latest minor/patch releases.
+
+v4.5.1
+
+* Add `set_options`/`get_options` actions and deprecate single-purpose actions by @autoSteve
+
+Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.5.0...v4.5.1
 
 v4.5.0
 

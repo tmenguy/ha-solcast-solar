@@ -141,6 +141,15 @@
     "actuals_not_enabled": {
       "message": "La adquisición de valores reales estimados no está habilitada."
     },
+    "actuals_without_get": {
+      "message": "Los valores reales estimados no se pueden utilizar sin obtenerlos."
+    },
+    "api_duplicate": {
+      "message": "Se especificó una clave API duplicada."
+    },
+    "api_looks_like_site": {
+      "message": "La clave API parece un ID de sitio."
+    },
     "auto_use_force": {
       "message": "La actualización automática está habilitada, ignorando el evento de servicio para la actualización del pronóstico, use Forzar actualización en su lugar."
     },
@@ -179,6 +188,15 @@
     },
     "damp_use_all": {
       "message": "La amortiguación del sitio no está configurada para {site}, 'all' es el único parámetro de sitio disponible para la llamada de servicio."
+    },
+    "dampen_without_actuals": {
+      "message": "Se deben seleccionar los valores reales estimados para usar la amortiguación automática."
+    },
+    "dampen_without_generation": {
+      "message": "Se debe especificar al menos un sensor de generación fotovoltaica para utilizar la amortiguación automática."
+    },
+    "export_no_entity": {
+      "message": "La entidad de exportación del sitio debe especificarse si se establece un límite de exportación del sitio."
     },
     "hard_empty": {
       "message": "Valor límite duro vacío."
@@ -219,17 +237,45 @@
     "integration_prior_crash": {
       "message": "La integración no se pudo cargar anteriormente; se intentará nuevamente después de un retraso."
     },
+    "invalid_auto_update": {
+      "message": "El valor de actualización automática debe ser 0, 1 o 2."
+    },
     "invalid_custom_hours_format": {
       "message": "El valor de las horas debe ser un número entero."
     },
     "invalid_custom_hours_range": {
       "message": "El valor de las horas debe estar entre 1 y 144."
     },
+    "invalid_export_limit": {
+      "message": "El límite de exportación debe ser un número entre 0,0 y 100,0."
+    },
+    "invalid_key_estimate": {
+      "message": "La clave de estimación debe ser 'estimate', 'estimate10' o 'estimate90'."
+    },
+    "invalid_use_actuals": {
+      "message": "El valor de 'usar valores reales' debe ser 0, 1 o 2."
+    },
+    "limit_not_number": {
+      "message": "El límite de API no es un número."
+    },
+    "limit_one_or_greater": {
+      "message": "El límite de API debe ser uno o mayor."
+    },
+    "limit_too_many": {
+      "message": "Se ingresaron más recuentos de límites de API que claves."
+    },
     "remove_cache_failed": {
       "message": "Error al borrar todos los datos de Solcast."
+    },
+    "set_options_empty": {
+      "message": "Se debe especificar al menos una opción."
     }
   },
   "issues": {
+    "action_deprecated": {
+      "description": "La acción `{deprecated_action}` está obsoleta y se eliminará en una versión futura. Use la acción `{new_action}` en su lugar.",
+      "title": "Acción obsoleta"
+    },
     "advanced_deprecated": {
       "description": "La(s) opción(es) de configuración avanzada `{option}` cambiaron a `{new_option}`. Actualice sus opciones de configuración avanzada para usar el nuevo nombre de opción.{stops_working}",
       "title": "Opción avanzada obsoleta"
@@ -297,10 +343,10 @@
       "custom_invalid": "Sensor personalizado no entre 1 y 144",
       "dampen_without_actuals": "Se deben seleccionar los valores reales estimados para utilizar la amortiguación automática",
       "dampen_without_generation": "Se debe especificar al menos un sensor de generación fotovoltaica para utilizar la amortiguación automática (energía o potencia)",
-      "generation_mixed_types": "Las entidades de generación fotovoltaica deben ser todas del mismo tipo (toda la energía o toda la potencia, no una mezcla)",
       "export_multiple_entities": "La entidad de exportación del sitio debe ser una sola entidad, no varias entidades",
       "export_no_entity": "La entidad de exportación del sitio debe ser especificada si se establece un límite de exportación del sitio",
-      "hard_not_number": "El límite duro no es un número positivo",
+      "generation_mixed_types": "Las entidades de generación fotovoltaica deben ser todas del mismo tipo (toda la energía o toda la potencia, no una mezcla)",
+      "hard_not_positive_number": "El límite duro no es un número positivo",
       "hard_too_many": "Se introducen más límites duros que claves",
       "limit_not_number": "El límite de API no es un número",
       "limit_one_or_greater": "El límite de API debe ser uno o mayor",
@@ -411,6 +457,10 @@
       },
       "name": "Obtener pronósticos de amortiguación"
     },
+    "get_options": {
+      "description": "Obtener las opciones de configuración actuales de la integración.",
+      "name": "Obtener opciones"
+    },
     "query_estimate_data": {
       "description": "Devuelve un conjunto de datos para una consulta determinada.",
       "fields": {
@@ -484,6 +534,92 @@
         }
       },
       "name": "Establecer límite estricto de previsión del inversor"
+    },
+    "set_options": {
+      "description": "Establece una o más opciones de configuración de la integración.",
+      "fields": {
+        "api_key": {
+          "description": "Clave(s) API, separadas por comas para múltiples valores.",
+          "name": "Clave API"
+        },
+        "api_quota": {
+          "description": "Cuota(s) API, separadas por comas para múltiples claves.",
+          "name": "Cuota API"
+        },
+        "attr_brk_detailed": {
+          "description": "Habilitar desglose del sitio para atributos de detalle semihora y hora.",
+          "name": "Desglose sitio detallado"
+        },
+        "attr_brk_estimate": {
+          "description": "Habilitar atributos del sensor de estimación 50.",
+          "name": "Desglose estimación"
+        },
+        "attr_brk_estimate10": {
+          "description": "Habilitar atributos del sensor de estimación 10.",
+          "name": "Desglose estimación 10"
+        },
+        "attr_brk_estimate90": {
+          "description": "Habilitar atributos del sensor de estimación 90.",
+          "name": "Desglose estimación 90"
+        },
+        "attr_brk_halfhourly": {
+          "description": "Habilitar atributos de detalle de pronóstico cada media hora.",
+          "name": "Desglose cada media hora"
+        },
+        "attr_brk_hourly": {
+          "description": "Habilitar atributos de detalle de pronóstico por hora.",
+          "name": "Desglose por hora"
+        },
+        "attr_brk_site": {
+          "description": "Habilitar atributos del sensor de desglose por sitio.",
+          "name": "Desglose sitio"
+        },
+        "auto_dampen": {
+          "description": "Habilitar la amortiguación automática.",
+          "name": "Amortiguación automática"
+        },
+        "auto_update": {
+          "description": "Modo de actualización automática: 0=ninguno, 1=amanecer a atardecer, 2=todo el día.",
+          "name": "Actualización automática"
+        },
+        "custom_hours": {
+          "description": "Número de horas para el sensor de horas personalizadas (1-144).",
+          "name": "Horas personalizadas"
+        },
+        "exclude_sites": {
+          "description": "Sitio(s) a excluir, IDs de sitio separados por comas.",
+          "name": "Excluir sitios"
+        },
+        "generation_entities": {
+          "description": "Entidad/entidades de generación fotovoltaica, separadas por comas.",
+          "name": "Entidades de generación"
+        },
+        "get_actuals": {
+          "description": "Habilitar la adquisición de valores reales estimados.",
+          "name": "Obtener valores reales"
+        },
+        "hard_limit": {
+          "description": "Límite duro del inversor en Vatios. Separado por comas para múltiples claves.",
+          "name": "Límite duro"
+        },
+        "key_estimate": {
+          "description": "Estimación de pronóstico preferida: estimate, estimate10 o estimate90.",
+          "name": "Estimación preferida"
+        },
+        "site_export_entity": {
+          "description": "Entidad de exportación de sitio opcional para amortiguación automatizada.",
+          "name": "Entidad de exportación de sitio"
+        },
+        "site_export_limit": {
+          "description": "Límite de exportación de sitio en kW (0,0-100,0).",
+          "name": "Límite de exportación de sitio"
+        },
+        "use_actuals": {
+          "description": "Historial de pronósticos para el panel de energía: 0=pronósticos, 1=reales, 2=reales amortiguados.",
+          "name": "Usar valores reales"
+        }
+      },
+      "name": "Establecer opciones"
     },
     "update_forecasts": {
       "description": "Obtiene los últimos datos de pronósticos de Solcast.",

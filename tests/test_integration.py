@@ -105,12 +105,14 @@ ACTIONS = [
     "force_update_estimates",
     "force_update_forecasts",
     "get_dampening",
+    "get_options",
     "query_estimate_data",
     "query_forecast_data",
     "remove_hard_limit",
     "set_dampening",
     "set_custom_hours",
     "set_hard_limit",
+    "set_options",
     "update_forecasts",
 ]
 
@@ -1139,6 +1141,225 @@ async def test_remaining_actions(
         solcast = await _set_custom_hours("  24  ")
         assert solcast.custom_hour_sensor == 24
         assert entry.options[CUSTOM_HOUR_SENSOR] == 24
+
+        caplog.clear()
+
+        # Test set_options action
+        _LOGGER.debug("Test set_options with no data")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid hard limit")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"hard_limit": "zzzz"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid custom hours")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "0"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid auto update")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"auto_update": "3"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid key estimate")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"key_estimate": "bad"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid use actuals")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"use_actuals": "5"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid export limit")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"site_export_limit": "abc"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with out of range export limit")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"site_export_limit": "101"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with invalid api_quota")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"api_quota": "abc"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with duplicate api_key")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"api_key": "abc123,abc123"}, blocking=True)
+
+        _LOGGER.debug("Test set_options with valid api_key (same key, no reload)")
+        original_key = entry.options[CONF_API_KEY]
+        await hass.services.async_call(DOMAIN, "set_options", {"api_key": original_key}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[CONF_API_KEY] == original_key
+
+        # Cross-validation errors
+        _LOGGER.debug("Test set_options use_actuals without get_actuals")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"use_actuals": "1", "get_actuals": False}, blocking=True)
+
+        _LOGGER.debug("Test set_options auto_dampen without get_actuals")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"auto_dampen": True, "get_actuals": False}, blocking=True)
+
+        _LOGGER.debug("Test set_options auto_dampen without generation entities")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(
+                DOMAIN, "set_options", {"auto_dampen": True, "get_actuals": True, "generation_entities": ""}, blocking=True
+            )
+
+        _LOGGER.debug("Test set_options export limit without entity")
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(DOMAIN, "set_options", {"site_export_limit": "5.0", "site_export_entity": ""}, blocking=True)
+
+        # Valid set_options calls
+        _LOGGER.debug("Test set_options custom hours only")
+        await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "12"}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[CUSTOM_HOUR_SENSOR] == 12
+
+        _LOGGER.debug("Test set_options hard limit only")
+        await hass.services.async_call(DOMAIN, "set_options", {"hard_limit": "5000"}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[HARD_LIMIT_API] == "5000.0"
+
+        _LOGGER.debug("Test set_options auto update")
+        await hass.services.async_call(DOMAIN, "set_options", {"auto_update": "2"}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[AUTO_UPDATE] == 2
+
+        _LOGGER.debug("Test set_options key estimate")
+        await hass.services.async_call(DOMAIN, "set_options", {"key_estimate": "estimate10"}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[KEY_ESTIMATE] == "estimate10"
+
+        _LOGGER.debug("Test set_options boolean breakdowns")
+        await hass.services.async_call(
+            DOMAIN,
+            "set_options",
+            {
+                "attr_brk_estimate": False,
+                "attr_brk_estimate10": False,
+                "attr_brk_estimate90": False,
+                "attr_brk_site": False,
+                "attr_brk_halfhourly": False,
+                "attr_brk_hourly": False,
+                "attr_brk_detailed": True,
+            },
+            blocking=True,
+        )
+        await hass.async_block_till_done()
+        assert entry.options[BRK_ESTIMATE] is False
+        assert entry.options[BRK_ESTIMATE10] is False
+        assert entry.options[BRK_ESTIMATE90] is False
+        assert entry.options[BRK_SITE] is False
+        assert entry.options[BRK_HALFHOURLY] is False
+        assert entry.options[BRK_HOURLY] is False
+        assert entry.options[BRK_SITE_DETAILED] is True
+
+        _LOGGER.debug("Test set_options get actuals and use actuals")
+        await hass.services.async_call(DOMAIN, "set_options", {"get_actuals": True, "use_actuals": "1"}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[GET_ACTUALS] is True
+        assert entry.options[USE_ACTUALS] == 1
+
+        _LOGGER.debug("Test set_options generation entities and exclude sites")
+        await hass.services.async_call(
+            DOMAIN,
+            "set_options",
+            {"generation_entities": "sensor.pv1, sensor.pv2", "exclude_sites": "1111-1111-1111-1111"},
+            blocking=True,
+        )
+        await hass.async_block_till_done()
+        assert entry.options[GENERATION_ENTITIES] == ["sensor.pv1", "sensor.pv2"]
+        assert entry.options[EXCLUDE_SITES] == ["1111-1111-1111-1111"]
+
+        _LOGGER.debug("Test set_options site export")
+        await hass.services.async_call(
+            DOMAIN,
+            "set_options",
+            {"site_export_entity": "sensor.grid_export", "site_export_limit": "5.0"},
+            blocking=True,
+        )
+        await hass.async_block_till_done()
+        assert entry.options[SITE_EXPORT_ENTITY] == "sensor.grid_export"
+        assert entry.options[SITE_EXPORT_LIMIT] == 5.0
+
+        _LOGGER.debug("Test set_options api_quota valid")
+        await hass.services.async_call(DOMAIN, "set_options", {"api_quota": "15"}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[API_QUOTA] == "15"
+
+        _LOGGER.debug("Test set_options auto_dampen")
+        await hass.services.async_call(DOMAIN, "set_options", {"auto_dampen": True}, blocking=True)
+        await hass.async_block_till_done()
+        assert entry.options[AUTO_DAMPEN] is True
+
+        # Reset breakdowns to True for later tests
+        await hass.services.async_call(
+            DOMAIN,
+            "set_options",
+            {
+                "attr_brk_estimate": True,
+                "attr_brk_estimate10": True,
+                "attr_brk_estimate90": True,
+                "attr_brk_site": True,
+                "attr_brk_halfhourly": True,
+                "attr_brk_hourly": True,
+                "attr_brk_detailed": False,
+                "hard_limit": "100",
+                "custom_hours": "24",
+                "auto_update": "0",
+                "key_estimate": "estimate",
+                "get_actuals": False,
+                "use_actuals": "0",
+                "auto_dampen": False,
+                "generation_entities": "",
+                "exclude_sites": "",
+                "site_export_entity": "",
+                "site_export_limit": "0",
+            },
+            blocking=True,
+        )
+        await hass.async_block_till_done()
+
+        caplog.clear()
+
+        # Test get_options action
+        _LOGGER.debug("Test get_options returns current configuration")
+        result = await hass.services.async_call(DOMAIN, "get_options", {}, blocking=True, return_response=True)
+        assert result is not None
+        data = result["data"]
+        assert data["api_key"] == entry.options["api_key"]  # type: ignore[union-attr]
+        assert data["api_quota"] == entry.options[API_QUOTA]  # type: ignore[union-attr]
+        assert data["auto_update"] == entry.options[AUTO_UPDATE]  # type: ignore[union-attr]
+        assert data["key_estimate"] == entry.options[KEY_ESTIMATE]  # type: ignore[union-attr]
+        assert data["custom_hours"] == entry.options[CUSTOM_HOUR_SENSOR]  # type: ignore[union-attr]
+        assert data["hard_limit"] == entry.options[HARD_LIMIT_API]  # type: ignore[union-attr]
+        assert data["attr_brk_estimate"] == entry.options[BRK_ESTIMATE]  # type: ignore[union-attr]
+        assert data["attr_brk_estimate10"] == entry.options[BRK_ESTIMATE10]  # type: ignore[union-attr]
+        assert data["attr_brk_estimate90"] == entry.options[BRK_ESTIMATE90]  # type: ignore[union-attr]
+        assert data["attr_brk_site"] == entry.options[BRK_SITE]  # type: ignore[union-attr]
+        assert data["attr_brk_halfhourly"] == entry.options[BRK_HALFHOURLY]  # type: ignore[union-attr]
+        assert data["attr_brk_hourly"] == entry.options[BRK_HOURLY]  # type: ignore[union-attr]
+        assert data["attr_brk_detailed"] == entry.options[BRK_SITE_DETAILED]  # type: ignore[union-attr]
+        assert data["get_actuals"] == entry.options[GET_ACTUALS]  # type: ignore[union-attr]
+        assert data["use_actuals"] == entry.options[USE_ACTUALS]  # type: ignore[union-attr]
+        assert data["auto_dampen"] == entry.options[AUTO_DAMPEN]  # type: ignore[union-attr]
+        assert data["generation_entities"] == ",".join(entry.options[GENERATION_ENTITIES])  # type: ignore[union-attr]
+        assert data["exclude_sites"] == ",".join(entry.options[EXCLUDE_SITES])  # type: ignore[union-attr]
+        assert data["site_export_entity"] == entry.options[SITE_EXPORT_ENTITY]  # type: ignore[union-attr]
+        assert data["site_export_limit"] == entry.options[SITE_EXPORT_LIMIT]  # type: ignore[union-attr]
+
+        _LOGGER.debug("Test get_options after modifying options")
+        await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "48", "auto_update": "2"}, blocking=True)
+        await hass.async_block_till_done()
+        result = await hass.services.async_call(DOMAIN, "get_options", {}, blocking=True, return_response=True)
+        if result is not None:
+            assert result["data"]["custom_hours"] is not None and result["data"]["custom_hours"] == 48  # type: ignore[union-attr]
+            assert result["data"]["auto_update"] is not None and result["data"]["auto_update"] == 2  # type: ignore[union-attr]
+
+        # Reset changes
+        await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "24", "auto_update": "0"}, blocking=True)
+        await hass.async_block_till_done()
 
         caplog.clear()
 
