@@ -545,10 +545,33 @@ YAML:
 > When the `set_options` action is used to set an API key, that key (or keys) is not validated by checking configured sites at solcast.com. This behaviour is different to setting the API key by using the Home Assistant integration settings user interface.
 >
 > Also note, that when the user interface validation fails unexpectedly, this action can be used to 'force' set the API key because it bypasses that validation.
-
-> [!NOTE]
 >
 > The `get_options` action will return all options set, and this includes the un-redacted API key(s). This is intentional.
+
+This is the complete list of settable items for `set_options`:
+
+| Option | Description | Value |
+| --- | --- | --- |
+| api_key | API key(s), comma separated for multiple. | String | 
+| api_quota | API quota(s), comma separated for multiple keys. | String of integers |
+| auto_update | Auto update mode: 0=none, 1=sunrise to sunset, 2=all day.	| Integer |
+| key_estimate | Preferred forecast estimate: estimate, estimate10, or estimate90. | String |
+| custom_hours | Number of hours for the custom hours sensor (1-144).	| Integer |
+| hard_limit | Inverter hard limit in Watts, or 100 to disable. Comma separated for multiple keys. | String of floats |
+| attr_brk_estimate | Enable estimate 50 sensor attributes. | Boolean |
+| attr_brk_estimate10 | Enable estimate 10 sensor attributes. | Boolean |
+| attr_brk_estimate90 | Enable estimate 90 sensor attributes. | Boolean |
+| attr_brk_site | Enable site breakdown sensor attributes. | Boolean |
+| attr_brk_halfhourly | Enable forecast half-hourly detail attributes. | Boolean |
+| attr_brk_hourly | Enable forecast hourly detail attributes. | Boolean |
+| attr_brk_detailed | Enable site breakdown for half-hourly and hourly detail attributes. | Boolean |
+| get_actuals | Enable estimated actuals acquisition. | Boolean |
+| use_actuals | Forecast history for the Energy dashboard: 0=forecasts, 1=actuals, 2=dampened actuals. | Integer |
+| auto_dampen | Enable automated dampening. | Boolean |
+| generation_entities | PV generation entity/entities, comma separated. | String |
+| exclude_sites | Site(s) to exclude, comma separated site IDs. | String |
+| site_export_entity | Optional site export entity for automated dampening. | String |
+| site_export_limit | Site export limit in kW (0.0-100.0). | Float |
 
 Example parameters are provided here for each `query`, `set` and `get` action. Use `Developer tools` | `Actions` to show the available parameters for each with a description. 
 
@@ -590,10 +613,7 @@ data:
   api_limit: 8
   get_actuals: true
   use_actuals: 2
-  generation_entities: sensor.inverter_power
   exclude_sites: 1234-5678-9012-3456
-  site_export_entity: sensor.grid_export
-  site_export_limit: 5
   hard_limit: 6
 ```
 
@@ -1323,6 +1343,7 @@ Latest minor/patch releases.
 v4.5.1
 
 * Add `set_options`/`get_options` actions and deprecate single-purpose actions by @autoSteve
+* Add Dutch translation by @BDVGitHub
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.5.0...v4.5.1
 
