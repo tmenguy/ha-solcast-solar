@@ -248,22 +248,22 @@ class ServiceActions:
             SERVICE_GET_DAMPENING: {
                 ACTION: self.async_get_dampening,
                 SCHEMA: SERVICE_DAMP_GET_SCHEMA,
-                SUPPORTS_RESPONSE_KEY: SupportsResponse.ONLY,
+                SUPPORTS_RESPONSE_KEY: SupportsResponse.OPTIONAL,
             },
             SERVICE_GET_OPTIONS: {
                 ACTION: self.async_get_options,
                 SCHEMA: None,
-                SUPPORTS_RESPONSE_KEY: SupportsResponse.ONLY,
+                SUPPORTS_RESPONSE_KEY: SupportsResponse.OPTIONAL,
             },
             SERVICE_QUERY_ESTIMATE_DATA: {
                 ACTION: self.async_get_estimate_data,
                 SCHEMA: SERVICE_QUERY_ESTIMATE_SCHEMA,
-                SUPPORTS_RESPONSE_KEY: SupportsResponse.ONLY,
+                SUPPORTS_RESPONSE_KEY: SupportsResponse.OPTIONAL,
             },
             SERVICE_QUERY_FORECAST_DATA: {
                 ACTION: self.async_get_forecast_data,
                 SCHEMA: SERVICE_QUERY_SCHEMA,
-                SUPPORTS_RESPONSE_KEY: SupportsResponse.ONLY,
+                SUPPORTS_RESPONSE_KEY: SupportsResponse.OPTIONAL,
             },
             SERVICE_REMOVE_HARD_LIMIT: {ACTION: self.async_remove_hard_limit},
             SERVICE_SET_DAMPENING: {ACTION: self.async_set_dampening, SCHEMA: SERVICE_DAMP_SCHEMA},
