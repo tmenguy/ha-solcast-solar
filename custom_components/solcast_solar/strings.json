@@ -289,7 +289,7 @@
       "title": "Advanced option problem"
     },
     "api_unavailable": {
-      "description": "The Solcast API has reported `429 / Try again later` status repeatedly during an update.\n\n* Do not attempt to fix this situation.\n* Do not change your API key.\n* Avoid restarting the integration\n* This is not an integration issue and will resolve itself. Change nothing.\n\n(To suppress this issue, create an advanced configuration option api_raise_issue and set it to false.)",
+      "description": "The Solcast API has reported `429 / Try again later` status repeatedly during an update.\n\n* Do not attempt to fix this situation.\n* Do not change your API key.\n* Do not attempt an integration upgrade.\n* Avoid restarting the integration\n* This is not an integration issue and will resolve itself. Change nothing.\n\n(To suppress this issue, create an advanced configuration option api_raise_issue and set it to false.)",
       "title": "Solcast API temporarily unavailable"
     },
     "corrupt_file": {
