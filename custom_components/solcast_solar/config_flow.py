@@ -106,6 +106,19 @@ async def _get_time_zone(hass: HomeAssistant) -> ZoneInfo | timezone:
     return tz if tz is not None else dt_util.UTC
 
 
+def _sync_legacy_keys(data: dict[str, Any]) -> None:
+    """Keep legacy option key names in sync with their renamed counterparts.
+
+    Maintains "api_quota" and "customhoursensor" alongside the current
+    API_LIMIT and CUSTOM_HOURS keys so that a downgrade to a version
+    predating their rename can still read the stored values.
+    """
+    if "api_quota" in data:
+        data["api_quota"] = data[API_LIMIT]
+    if "customhoursensor" in data:
+        data["customhoursensor"] = data[CUSTOM_HOURS]
+
+
 async def validate_sites(hass: HomeAssistant, user_input: dict[str, Any]) -> tuple[int, str]:
     """Validate the keys and sites with an API call.
 
@@ -207,6 +220,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 result = self.async_abort(reason=EXCEPTION_INTERNAL_ERROR)
                 if self.entry is not None:
                     data = {**self.entry.data, **all_config_data}
+                    _sync_legacy_keys(data)
                     self.hass.config_entries.async_update_entry(self.entry, title=TITLE, options=data)
                     if self.hass.data[DOMAIN].get(PRESUMED_DEAD, True):
                         _LOGGER.debug("Loading presumed dead integration")
@@ -259,6 +273,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 result = self.async_abort(reason=EXCEPTION_INTERNAL_ERROR)
                 if self.entry is not None:
                     data = {**self.entry.data, **all_config_data}
+                    _sync_legacy_keys(data)
                     self.hass.config_entries.async_update_entry(self.entry, title=TITLE, options=data)
                     if self.hass.data[DOMAIN].get(PRESUMED_DEAD, True):
                         _LOGGER.debug("Loading presumed dead integration")
@@ -336,6 +351,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                 if status != 200:
                     errors[BASE] = message
                 else:
+                    _sync_legacy_keys(options)
                     return self.async_create_entry(title=TITLE, data={}, options=options | damp)
 
         solcast_json_exists = Path(f"{self.hass.config.config_dir}/solcast.json").is_file()
@@ -552,6 +568,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     if user_input.get(CONFIG_DAMP) and not user_input.get(AUTO_DAMPEN, False):
                         return await self.async_step_dampen()
 
+                    _sync_legacy_keys(all_config_data)
                     self.hass.config_entries.async_update_entry(self._entry, title=TITLE, options=all_config_data)
                     await self.check_dead()
                     return self.async_abort(reason=AFFIRMATION_RECONFIGURED)
@@ -665,6 +682,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                 all_config_data[f"damp{factor:02d}"] = user_input[f"damp{factor:02d}"]
             all_config_data[SITE_DAMP] = False
 
+            _sync_legacy_keys(all_config_data)
             self.hass.config_entries.async_update_entry(self._entry, title=TITLE, options=all_config_data)
             await self.check_dead()
             return self.async_abort(reason=AFFIRMATION_RECONFIGURED)

@@ -88,7 +88,15 @@ BAD_INPUT = copy.deepcopy(DEFAULT_INPUT1_NO_DAMP)
 BAD_INPUT[CONF_API_KEY] = "badkey"
 
 SITE_DAMP_FACTORS: dict[str, float] = {f"damp{factor:02d}": 1.0 for factor in range(24)}
-DEFAULT_INPUT1 = DEFAULT_INPUT1_NO_DAMP | SITE_DAMP_FACTORS | {SITE_DAMP: False}
+DEFAULT_INPUT1 = (
+    DEFAULT_INPUT1_NO_DAMP
+    | SITE_DAMP_FACTORS
+    | {
+        SITE_DAMP: False,
+        "api_quota": DEFAULT_INPUT1_NO_DAMP[API_LIMIT],  # Legacy name, kept in sync with API_LIMIT
+        "customhoursensor": DEFAULT_INPUT1_NO_DAMP[CUSTOM_HOURS],  # Legacy name, kept in sync with CUSTOM_HOURS
+    }
+)
 ZONE_RAW = "Australia/Brisbane"  # Somewhere without daylight saving time by default
 
 DEFAULT_INPUT2 = copy.deepcopy(DEFAULT_INPUT1)
