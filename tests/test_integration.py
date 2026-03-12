@@ -1347,39 +1347,46 @@ async def test_remaining_actions(
 
         # Test get_options action
         _LOGGER.debug("Test get_options returns current configuration")
+        expect = {
+            "api_key": entry.options["api_key"],
+            "api_limit": entry.options[API_QUOTA],
+            "auto_update": entry.options[AUTO_UPDATE],
+            "key_estimate": entry.options[KEY_ESTIMATE],
+            "custom_hours": entry.options[CUSTOM_HOUR_SENSOR],
+            "hard_limit": entry.options[HARD_LIMIT_API],
+            "attr_brk_estimate": entry.options[BRK_ESTIMATE],
+            "attr_brk_estimate10": entry.options[BRK_ESTIMATE10],
+            "attr_brk_estimate90": entry.options[BRK_ESTIMATE90],
+            "attr_brk_site": entry.options[BRK_SITE],
+            "attr_brk_halfhourly": entry.options[BRK_HALFHOURLY],
+            "attr_brk_hourly": entry.options[BRK_HOURLY],
+            "attr_brk_detailed": entry.options[BRK_SITE_DETAILED],
+            "get_actuals": entry.options[GET_ACTUALS],
+            "use_actuals": entry.options[USE_ACTUALS],
+            "auto_dampen": entry.options[AUTO_DAMPEN],
+            "generation_entities": ",".join(entry.options[GENERATION_ENTITIES]),
+            "exclude_sites": ",".join(entry.options[EXCLUDE_SITES]),
+            "site_export_entity": entry.options[SITE_EXPORT_ENTITY],
+            "site_export_limit": entry.options[SITE_EXPORT_LIMIT],
+        }
         result = await hass.services.async_call(DOMAIN, "get_options", {}, blocking=True, return_response=True)
-        assert result is not None
-        data = result["data"]
-        assert data["api_key"] == entry.options["api_key"]  # type: ignore[union-attr]
-        assert data["api_limit"] == entry.options[API_QUOTA]  # type: ignore[union-attr]
-        assert data["auto_update"] == entry.options[AUTO_UPDATE]  # type: ignore[union-attr]
-        assert data["key_estimate"] == entry.options[KEY_ESTIMATE]  # type: ignore[union-attr]
-        assert data["custom_hours"] == entry.options[CUSTOM_HOUR_SENSOR]  # type: ignore[union-attr]
-        assert data["hard_limit"] == entry.options[HARD_LIMIT_API]  # type: ignore[union-attr]
-        assert data["attr_brk_estimate"] == entry.options[BRK_ESTIMATE]  # type: ignore[union-attr]
-        assert data["attr_brk_estimate10"] == entry.options[BRK_ESTIMATE10]  # type: ignore[union-attr]
-        assert data["attr_brk_estimate90"] == entry.options[BRK_ESTIMATE90]  # type: ignore[union-attr]
-        assert data["attr_brk_site"] == entry.options[BRK_SITE]  # type: ignore[union-attr]
-        assert data["attr_brk_halfhourly"] == entry.options[BRK_HALFHOURLY]  # type: ignore[union-attr]
-        assert data["attr_brk_hourly"] == entry.options[BRK_HOURLY]  # type: ignore[union-attr]
-        assert data["attr_brk_detailed"] == entry.options[BRK_SITE_DETAILED]  # type: ignore[union-attr]
-        assert data["get_actuals"] == entry.options[GET_ACTUALS]  # type: ignore[union-attr]
-        assert data["use_actuals"] == entry.options[USE_ACTUALS]  # type: ignore[union-attr]
-        assert data["auto_dampen"] == entry.options[AUTO_DAMPEN]  # type: ignore[union-attr]
-        assert data["generation_entities"] == ",".join(entry.options[GENERATION_ENTITIES])  # type: ignore[union-attr]
-        assert data["exclude_sites"] == ",".join(entry.options[EXCLUDE_SITES])  # type: ignore[union-attr]
-        assert data["site_export_entity"] == entry.options[SITE_EXPORT_ENTITY]  # type: ignore[union-attr]
-        assert data["site_export_limit"] == entry.options[SITE_EXPORT_LIMIT]  # type: ignore[union-attr]
+        assert result is not None, "get_options result is None"
+        data = result.get("data")
+        assert data is not None, "get_options data is None"
+        for key, value in expect.items():
+            assert data[key] == value  # type: ignore[union-attr]
+        _LOGGER.critical(type(data))
+        _LOGGER.critical(data)
+        unexpected = set(data.keys()) - set(expect.keys())  # pyright: ignore[reportAttributeAccessIssue]
+        assert not unexpected, f"get_options returned unexpected keys: {unexpected}"
 
         _LOGGER.debug("Test get_options after modifying options")
         await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "48", "auto_update": "2"}, blocking=True)
         await hass.async_block_till_done()
         result = await hass.services.async_call(DOMAIN, "get_options", {}, blocking=True, return_response=True)
-        if result is not None:
-            assert result["data"]["custom_hours"] is not None and result["data"]["custom_hours"] == 48  # type: ignore[union-attr]
-            assert result["data"]["auto_update"] is not None and result["data"]["auto_update"] == 2  # type: ignore[union-attr]
-        else:
-            pytest.fail("get_options result is None")
+        assert result is not None, "get_options result is None"
+        assert result["data"]["custom_hours"] is not None and result["data"]["custom_hours"] == 48  # type: ignore[union-attr]
+        assert result["data"]["auto_update"] is not None and result["data"]["auto_update"] == 2  # type: ignore[union-attr]
 
         # Reset changes
         await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "24", "auto_update": "0"}, blocking=True)
