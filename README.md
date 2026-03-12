@@ -1344,7 +1344,7 @@ v4.5.1
 
 * Add `set_options`/`get_options` actions and deprecate single-purpose actions by @autoSteve
 * Add Dutch translation by @BDVGitHub
-* Refine `429` storm issue raised by @autoSteve
+* Refine `429` storm raised issue by @autoSteve
 * Fix issue with advanced option default setting by @autoSteve
 
 Full Changelog: https://github.com/BJReplay/ha-solcast-solar/compare/v4.5.0...v4.5.1
