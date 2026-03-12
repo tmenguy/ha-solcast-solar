@@ -345,14 +345,14 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                     SITE_EXPORT_LIMIT: 0.0,
                     AUTO_DAMPEN: False,
                 }
-                damp = {f"damp{factor:02d}": 1.0 for factor in range(24)}
 
                 status, message = await validate_sites(self.hass, options)
                 if status != 200:
                     errors[BASE] = message
                 else:
-                    _sync_legacy_keys(options)
-                    return self.async_create_entry(title=TITLE, data={}, options=options | damp)
+                    return self.async_create_entry(
+                        title=TITLE, data={}, options=options | {f"damp{factor:02d}": 1.0 for factor in range(24)}
+                    )
 
         solcast_json_exists = Path(f"{self.hass.config.config_dir}/solcast.json").is_file()
         _LOGGER.debug(
