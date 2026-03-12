@@ -289,7 +289,7 @@
       "title": "Problema con opción avanzada"
     },
     "api_unavailable": {
-      "description": "La API de Solcast ha informado repetidamente el estado `429 / Inténtelo de nuevo más tarde` durante una actualización. Esto significa que la API de Solcast está ocupada y no puede proporcionar una previsión solar actualizada.\n\n* El sitio web solcast.com no se ve afectado, solo la API no está disponible temporalmente\n* La integración continuará proporcionando la última previsión solar que recuperó de Solcast\n* No intente solucionar esta situación.\n* No cambie su clave API.\n* No intente actualizar la integración.\n* Evite reiniciar la integración\n* Esto no es un problema de integración y se resolverá por sí solo. No cambies nada.\n\n(Para suprimir este problema, cree una opción de configuración avanzada api_raise_issue y configúrela en false.)",
+      "description": "La API de Solcast ha informado repetidamente el estado `429 / Inténtelo de nuevo más tarde` durante una actualización. Esto significa que la API de Solcast está ocupada y no puede proporcionar una previsión solar actualizada.\n\n* El sitio web solcast.com no se ve afectado, solo la API no está disponible temporalmente.\n* La integración continuará proporcionando la última previsión solar que recuperó de Solcast.\n* No intente solucionar esta situación.\n* No cambie su clave API.\n* No intente actualizar la integración.\n* Evite reiniciar la integración.\n* Esto no es un problema de integración y se resolverá por sí solo. No cambies nada.\n\n(Para suprimir este problema, cree una opción de configuración avanzada api_raise_issue y configúrela en false.)",
       "title": "Solcast API temporalmente no disponible"
     },
     "corrupt_file": {
