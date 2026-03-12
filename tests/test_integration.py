@@ -67,7 +67,7 @@ from homeassistant.components.solcast_solar.util import (
 )
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_API_KEY
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.exceptions import ConfigEntryAuthFailed, ServiceValidationError
 from homeassistant.helpers import entity_registry as er, issue_registry as ir
 from homeassistant.util import dt as dt_util
@@ -1999,6 +1999,51 @@ async def test_estimated_actuals(
         with pytest.raises(ServiceValidationError):
             await _exec_update_actuals(hass, coordinator, solcast, caplog, "force_update_estimates")
         assert "Estimated actuals not enabled" in caplog.text
+
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+async def test_service_supports_response(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+) -> None:
+    """Test that response-returning service actions are registered with SupportsResponse.OPTIONAL."""
+
+    try:
+        await async_init_integration(hass, DEFAULT_INPUT1)
+
+        response_actions = {
+            "get_dampening",
+            "get_options",
+            "query_estimate_data",
+            "query_forecast_data",
+        }
+        non_response_actions = {
+            "clear_all_solcast_data",
+            "force_update_estimates",
+            "force_update_forecasts",
+            "remove_hard_limit",
+            "set_custom_hours",
+            "set_dampening",
+            "set_hard_limit",
+            "set_options",
+            "update_forecasts",
+        }
+
+        registered = hass.services.async_services_for_domain(DOMAIN)
+
+        for action_name in response_actions:
+            assert action_name in registered, f"Action '{action_name}' not registered"
+            assert registered[action_name].supports_response is SupportsResponse.ONLY, (
+                f"Action '{action_name}' should have SupportsResponse.ONLY, got {registered[action_name].supports_response}"
+            )
+
+        for action_name in non_response_actions:
+            assert action_name in registered, f"Action '{action_name}' not registered"
+            assert registered[action_name].supports_response is not SupportsResponse.ONLY, (
+                f"Action '{action_name}' should not have SupportsResponse.ONLY, got {registered[action_name].supports_response}"
+            )
 
     finally:
         assert await async_cleanup_integration_tests(hass)
