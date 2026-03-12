@@ -92,6 +92,8 @@ from .util import (
     raise_and_record,
 )
 
+ENTRY_OPTIONS_DEVELOPMENT: Final = False  # For development, to force a re-upgrade of options at startup
+
 PLATFORMS: Final = [
     Platform.SELECT,
     Platform.SENSOR,
@@ -301,7 +303,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     random.seed()
 
-    # await async_migrate_entry(hass, entry)  # For development
+    if ENTRY_OPTIONS_DEVELOPMENT:
+        await async_migrate_entry(hass, entry)
 
     version = await get_version(hass)
     options = await __get_options(hass, entry)
@@ -726,9 +729,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         {VERSION: 19, UPGRADE_FUNCTION: __v19},
     ]
     for upgrade in upgrades:
-        if (
-            entry.version < upgrade[VERSION]
-        ):  # or upgrade[VERSION] == CONFIG_VERSION:  # For development, to re-run the latest upgrade, also modify async_setup_entry().
+        if (entry.version < upgrade[VERSION]) or (ENTRY_OPTIONS_DEVELOPMENT and upgrade[VERSION] == CONFIG_VERSION):
             await upgrade_to(upgrade[VERSION], entry, upgrade[UPGRADE_FUNCTION])
 
     return True
