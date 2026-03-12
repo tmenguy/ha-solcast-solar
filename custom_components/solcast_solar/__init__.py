@@ -28,7 +28,7 @@ from homeassistant.util import dt as dt_util
 from .actions import ServiceActions, register_stub_actions, unregister_actions
 from .const import (
     ADVANCED_USER_AGENT,
-    API_QUOTA,
+    API_LIMIT,
     AUTO_DAMPEN,
     AUTO_UPDATE,
     AUTO_UPDATED,
@@ -136,7 +136,7 @@ async def __get_options(hass: HomeAssistant, entry: ConfigEntry) -> ConnectionOp
 
     return ConnectionOptions(
         entry.options[CONF_API_KEY],
-        entry.options.get(API_QUOTA, 10),
+        entry.options.get(API_LIMIT, 10),
         DEFAULT_SOLCAST_HTTPS_URL,
         hass.config.path(
             f"{hass.config.config_dir}/{CONFIG_DISCRETE_NAME}/solcast.json"
@@ -171,14 +171,14 @@ def __log_entry_options(entry: ConfigEntry) -> None:
         "Options actuals": "_actuals",
         "Options attributes": "attr_",
         "Options auto": "auto_",
-        "Options custom": "custom",
+        "Options custom": "custom_",
         "Options estimate": "key_est",
         "Options exclude": "exclude_",
         "Options export": "export",
         "Options generation": "generation",
         "Options limit": "hard_",
         "Options schema": "VERSION",
-        "Options update_max": "api_quota",
+        "Options update_max": "api_limit",
     }
     for display, isin in display_options.items():
         _LOGGER.debug(
@@ -503,7 +503,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     # Config changes, which when changed will cause a reload.
     reload = (
         changed(CONF_API_KEY)
-        or changed(API_QUOTA)
+        or changed(API_LIMIT)
         or changed(AUTO_UPDATE)
         or changed(HARD_LIMIT_API)
         or changed(CUSTOM_HOUR_SENSOR)
@@ -644,7 +644,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             new_options[f"damp{str(a).zfill(2)}"] = 1.0
 
     async def __v6(hass: HomeAssistant, new_options: dict[str, Any]) -> None:
-        new_options[CUSTOM_HOUR_SENSOR] = 1
+        new_options["customhoursensor"] = 1
 
     async def __v7(hass: HomeAssistant, new_options: dict[str, Any]) -> None:
         new_options[KEY_ESTIMATE] = "estimate"
@@ -675,7 +675,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 e,
             )
             default = "10"
-        new_options[API_QUOTA] = default
+        new_options["api_quota"] = default
 
     async def __v12(hass: HomeAssistant, new_options: dict[str, Any]) -> None:
         new_options[AUTO_UPDATE] = int(new_options.get(AUTO_UPDATE, AutoUpdate.NONE))
@@ -700,6 +700,15 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         new_options[SITE_EXPORT_ENTITY] = ""
         new_options[SITE_EXPORT_LIMIT] = 0.0
 
+    async def __v19(hass: HomeAssistant, new_options: dict[str, Any]) -> None:
+        # Rename "api_quota" to "api_limit", and "customhoursensor" to "custom_hour_sensor".
+        # Old keys are kept for backward compatibility, but no longer maintained.
+        if "api_quota" in new_options:
+            new_options[API_LIMIT] = new_options["api_quota"]
+        # Rename , keeping the old key for backward compatibility.
+        if "customhoursensor" in new_options:
+            new_options[CUSTOM_HOUR_SENSOR] = new_options["customhoursensor"]
+
     upgrades: list[dict[str, Any]] = [
         {VERSION: 4, UPGRADE_FUNCTION: __v4},
         {VERSION: 5, UPGRADE_FUNCTION: __v5},
@@ -711,6 +720,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         {VERSION: 14, UPGRADE_FUNCTION: __v14},
         {VERSION: 15, UPGRADE_FUNCTION: __v15},
         {VERSION: 18, UPGRADE_FUNCTION: __v18},
+        {VERSION: 19, UPGRADE_FUNCTION: __v19},
     ]
     for upgrade in upgrades:
         if entry.version < upgrade[VERSION]:

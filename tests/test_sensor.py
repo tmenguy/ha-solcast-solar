@@ -16,7 +16,7 @@ import pytest
 from homeassistant.components.recorder import Recorder
 from homeassistant.components.sensor import SensorStateClass
 from homeassistant.components.solcast_solar.const import (
-    API_QUOTA,
+    API_LIMIT,
     BRK_ESTIMATE,
     BRK_ESTIMATE10,
     BRK_ESTIMATE90,
@@ -346,7 +346,7 @@ SENSORS: dict[str, dict[str, Any]] = {
         "can_be_unavailable": True,
     },
     "api_used": {"state": {"2": "4", "1": "4"}},
-    "api_limit": {"state": {"2": DEFAULT_INPUT1[API_QUOTA], "1": DEFAULT_INPUT1[API_QUOTA]}},
+    "api_limit": {"state": {"2": DEFAULT_INPUT1[API_LIMIT], "1": DEFAULT_INPUT1[API_LIMIT]}},
     "api_last_polled": {"state": {"2": "isodate", "1": "isodate"}},
 }
 

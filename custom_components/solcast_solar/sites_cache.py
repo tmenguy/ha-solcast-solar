@@ -980,11 +980,11 @@ class SitesCache:
 
             self.api.usage_status = UsageStatus.OK
             api_keys = self.api.options.api_key.split(",")
-            api_quota = self.api.options.api_quota.split(",")
-            for index in range(len(api_keys)):  # If only one quota value is present, yet there are multiple sites then use the same quota.
-                if len(api_quota) < index + 1:
-                    api_quota.append(api_quota[index - 1])
-            quota = {api_keys[index].strip(): int(api_quota[index].strip()) for index in range(len(api_quota))}
+            api_limit_values = self.api.options.api_limit.split(",")
+            for index in range(len(api_keys)):  # If only one limit value is present, yet there are multiple sites then use the same limit.
+                if len(api_limit_values) < index + 1:
+                    api_limit_values.append(api_limit_values[index - 1])
+            quota = {api_keys[index].strip(): int(api_limit_values[index].strip()) for index in range(len(api_limit_values))}
 
             for api_key in api_keys:
                 api_key = api_key.strip()

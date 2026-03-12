@@ -24,7 +24,7 @@
       "reconfigure_confirm": {
         "data": {
           "api_key": "Chave API (valores múltiplos separados por vírgula)",
-          "api_quota": "Limite da API (opcionalmente valores múltiplos separados por vírgula para cada chave)",
+          "api_limit": "Limite da API (opcionalmente valores múltiplos separados por vírgula para cada chave)",
           "auto_update": "Atualização automática"
         },
         "description": "Detalhes da conta Solcast\n\n(Se não usar a atualização automática, é necessária uma automação - consulte a documentação da integração)"
@@ -32,7 +32,7 @@
       "user": {
         "data": {
           "api_key": "Chave API (valores múltiplos separados por vírgula)",
-          "api_quota": "Limite da API (opcionalmente valores múltiplos separados por vírgula para cada chave)",
+          "api_limit": "Limite da API (opcionalmente valores múltiplos separados por vírgula para cada chave)",
           "auto_update": "Atualização automática"
         },
         "description": "Detalhes da conta Solcast\n\n(Se não usar a atualização automática, é necessária uma automação - consulte a documentação da integração)"
@@ -390,7 +390,7 @@
       "init": {
         "data": {
           "api_key": "Chave API (valores múltiplos separados por vírgula)",
-          "api_quota": "Limite da API (opcionalmente valores múltiplos separados por vírgula para cada chave)",
+          "api_limit": "Limite da API (opcionalmente valores múltiplos separados por vírgula para cada chave)",
           "attr_brk_detailed": "Ativar detalhamento do site para atributos de detalhe de meia hora/hora (estes não serão guardados nos atributos de estado da base de dados)",
           "attr_brk_estimate": "Ativar atributos de sensor de estimativa 50",
           "attr_brk_estimate10": "Ativar atributos de sensor de estimativa 10",
@@ -401,7 +401,7 @@
           "auto_dampen": "Amortecimento automático (requer estimativas reais e entidade de geração fotovoltaica, consulte a documentação de integração)",
           "auto_update": "Atualização automática (se não houver atualização automática, uma automação deve ser usada em vez disso)",
           "config_damp": "Modificar os fatores de amortecimento horários (após clicar em enviar)",
-          "customhoursensor": "Sensor personalizado das próximas X horas (mín=1, máx=144)",
+          "custom_hour_sensor": "Sensor personalizado das próximas X horas (mín=1, máx=144)",
           "exclude_sites": "Site(s) a serem excluídos do painel de energia e dos totais do sensor",
           "generation_entities": "Entidade/entidades de geração fotovoltaica para amortecimento automatizado (energia: Wh/kWh/MWh total crescente, ou potência: W/kW/MW instantânea)",
           "get_actuals": "Estimativas reais atualizadas à meia-noite (consulte a documentação de integração, usa uma chamada de API por site por dia, portanto, um limite de API reduzido é necessário com esta opção ativada)",

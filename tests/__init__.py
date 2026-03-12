@@ -20,7 +20,7 @@ from yarl import URL
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.solcast_solar.const import (
-    API_QUOTA,
+    API_LIMIT,
     AUTO_DAMPEN,
     AUTO_UPDATE,
     BRK_ESTIMATE,
@@ -63,7 +63,7 @@ KEY_NO_SITES = "no_sites"
 CUSTOM_HOURS = 2
 DEFAULT_INPUT1_NO_DAMP: dict[str, Any] = {
     CONF_API_KEY: KEY1,
-    API_QUOTA: "20",
+    API_LIMIT: "20",
     AUTO_UPDATE: "1",
     CUSTOM_HOUR_SENSOR: CUSTOM_HOURS,
     HARD_LIMIT_API: "100.0",
@@ -153,7 +153,7 @@ MOCK_OVER_LIMIT = "return_429_over"
 
 MOCK_SESSION_CONFIG: dict[str, Any] = {
     "aioresponses": None,
-    "api_limit": int(min(DEFAULT_INPUT2[API_QUOTA].split(","))),
+    "api_limit": int(min(DEFAULT_INPUT2[API_LIMIT].split(","))),
     "api_used": dict.fromkeys(DEFAULT_INPUT2[CONF_API_KEY].split(","), 0),
     MOCK_ALTER_HISTORY: False,
     MOCK_BAD_REQUEST: False,

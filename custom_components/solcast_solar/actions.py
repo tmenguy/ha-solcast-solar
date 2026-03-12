@@ -16,7 +16,6 @@ from homeassistant.util import dt as dt_util
 from .const import (
     ACTION,
     API_LIMIT,
-    API_QUOTA,
     AUTO_DAMPEN,
     AUTO_UPDATE,
     BRK_ESTIMATE,
@@ -464,7 +463,7 @@ class ServiceActions:
         return {
             "data": {
                 CONF_API_KEY: opt.get(CONF_API_KEY, ""),
-                API_LIMIT: opt.get(API_QUOTA, ""),
+                API_LIMIT: opt.get(API_LIMIT, ""),
                 AUTO_UPDATE: opt.get(AUTO_UPDATE, 0),
                 KEY_ESTIMATE: opt.get(KEY_ESTIMATE, "estimate"),
                 CUSTOM_HOURS: opt.get(CUSTOM_HOUR_SENSOR, 24),
@@ -596,7 +595,7 @@ class ServiceActions:
             validated_quota, error = validate_api_limit_value(api_limit, api_count)
             if error is not None:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key=error)
-            opt[API_QUOTA] = validated_quota
+            opt[API_LIMIT] = validated_quota
 
         # Validate and apply auto update.
         if (auto_update := call.data.get(AUTO_UPDATE)) is not None:

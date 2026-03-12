@@ -110,7 +110,7 @@ class ConnectionOptions:
     """Solcast options for the integration."""
 
     api_key: str
-    api_quota: str
+    api_limit: str
     host: str
     file_path: str
     tz: tzinfo
@@ -292,7 +292,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.options = ConnectionOptions(
             # All these options require a reload, and can not be dynamically set, hence retrieval from self.options...
             self.options.api_key,
-            self.options.api_quota,
+            self.options.api_limit,
             self.options.host,
             self.options.file_path,
             self.options.tz,

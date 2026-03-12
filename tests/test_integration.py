@@ -22,7 +22,7 @@ from voluptuous.error import MultipleInvalid
 
 from homeassistant.components.recorder import Recorder
 from homeassistant.components.solcast_solar.const import (
-    API_QUOTA,
+    API_LIMIT,
     AUTO_DAMPEN,
     AUTO_UPDATE,
     BRK_ESTIMATE,
@@ -35,6 +35,7 @@ from homeassistant.components.solcast_solar.const import (
     CONFIG_DISCRETE_NAME,
     CONFIG_FOLDER_DISCRETE,
     CUSTOM_HOUR_SENSOR,
+    CUSTOM_HOURS,
     DEFAULT_FORECAST_DAYS,
     DELAYED_RESTART_ON_CRASH,
     DOMAIN,
@@ -43,6 +44,7 @@ from homeassistant.components.solcast_solar.const import (
     EXCLUDE_SITES,
     GENERATION_ENTITIES,
     GET_ACTUALS,
+    HARD_LIMIT,
     HARD_LIMIT_API,
     ISSUE_CORRUPT_FILE,
     KEY_ESTIMATE,
@@ -1078,7 +1080,7 @@ async def test_remaining_actions(
         data["reset"] = (dt.now(datetime.UTC) - timedelta(days=5)).isoformat()
         usage_file.write_text(json.dumps(data), encoding="utf-8")
         config = copy.deepcopy(DEFAULT_INPUT2)
-        config[API_QUOTA] = "8,8"
+        config[API_LIMIT] = "8,8"
         session_reset_usage()
         entry = await async_init_integration(hass, config)
 
@@ -1258,13 +1260,13 @@ async def test_remaining_actions(
             DOMAIN,
             "set_options",
             {
-                "attr_brk_estimate": False,
-                "attr_brk_estimate10": False,
-                "attr_brk_estimate90": False,
-                "attr_brk_site": False,
-                "attr_brk_halfhourly": False,
-                "attr_brk_hourly": False,
-                "attr_brk_detailed": True,
+                BRK_ESTIMATE: False,
+                BRK_ESTIMATE10: False,
+                BRK_ESTIMATE90: False,
+                BRK_SITE: False,
+                BRK_HALFHOURLY: False,
+                BRK_HOURLY: False,
+                BRK_SITE_DETAILED: True,
             },
             blocking=True,
         )
@@ -1308,7 +1310,7 @@ async def test_remaining_actions(
         _LOGGER.debug("Test set_options api_limit valid")
         await hass.services.async_call(DOMAIN, "set_options", {"api_limit": "15"}, blocking=True)
         await hass.async_block_till_done()
-        assert entry.options[API_QUOTA] == "15"
+        assert entry.options[API_LIMIT] == "15"
 
         _LOGGER.debug("Test set_options auto_dampen")
         await hass.services.async_call(DOMAIN, "set_options", {"auto_dampen": True}, blocking=True)
@@ -1320,24 +1322,24 @@ async def test_remaining_actions(
             DOMAIN,
             "set_options",
             {
-                "attr_brk_estimate": True,
-                "attr_brk_estimate10": True,
-                "attr_brk_estimate90": True,
-                "attr_brk_site": True,
-                "attr_brk_halfhourly": True,
-                "attr_brk_hourly": True,
-                "attr_brk_detailed": False,
-                "hard_limit": "100",
-                "custom_hours": "24",
-                "auto_update": "0",
-                "key_estimate": "estimate",
-                "get_actuals": False,
-                "use_actuals": "0",
-                "auto_dampen": False,
-                "generation_entities": "",
-                "exclude_sites": "",
-                "site_export_entity": "",
-                "site_export_limit": "0",
+                BRK_ESTIMATE: True,
+                BRK_ESTIMATE10: True,
+                BRK_ESTIMATE90: True,
+                BRK_SITE: True,
+                BRK_HALFHOURLY: True,
+                BRK_HOURLY: True,
+                BRK_SITE_DETAILED: False,
+                HARD_LIMIT: "100",
+                CUSTOM_HOURS: "24",
+                AUTO_UPDATE: "0",
+                KEY_ESTIMATE: "estimate",
+                GET_ACTUALS: False,
+                USE_ACTUALS: "0",
+                AUTO_DAMPEN: False,
+                GENERATION_ENTITIES: "",
+                EXCLUDE_SITES: "",
+                SITE_EXPORT_ENTITY: "",
+                SITE_EXPORT_LIMIT: "0",
             },
             blocking=True,
         )
@@ -1348,26 +1350,26 @@ async def test_remaining_actions(
         # Test get_options action
         _LOGGER.debug("Test get_options returns current configuration")
         expect = {
-            "api_key": entry.options["api_key"],
-            "api_limit": entry.options[API_QUOTA],
-            "auto_update": entry.options[AUTO_UPDATE],
-            "key_estimate": entry.options[KEY_ESTIMATE],
-            "custom_hours": entry.options[CUSTOM_HOUR_SENSOR],
-            "hard_limit": entry.options[HARD_LIMIT_API],
-            "attr_brk_estimate": entry.options[BRK_ESTIMATE],
-            "attr_brk_estimate10": entry.options[BRK_ESTIMATE10],
-            "attr_brk_estimate90": entry.options[BRK_ESTIMATE90],
-            "attr_brk_site": entry.options[BRK_SITE],
-            "attr_brk_halfhourly": entry.options[BRK_HALFHOURLY],
-            "attr_brk_hourly": entry.options[BRK_HOURLY],
-            "attr_brk_detailed": entry.options[BRK_SITE_DETAILED],
-            "get_actuals": entry.options[GET_ACTUALS],
-            "use_actuals": entry.options[USE_ACTUALS],
-            "auto_dampen": entry.options[AUTO_DAMPEN],
-            "generation_entities": ",".join(entry.options[GENERATION_ENTITIES]),
-            "exclude_sites": ",".join(entry.options[EXCLUDE_SITES]),
-            "site_export_entity": entry.options[SITE_EXPORT_ENTITY],
-            "site_export_limit": entry.options[SITE_EXPORT_LIMIT],
+            CONF_API_KEY: entry.options[CONF_API_KEY],
+            API_LIMIT: entry.options[API_LIMIT],
+            AUTO_UPDATE: entry.options[AUTO_UPDATE],
+            KEY_ESTIMATE: entry.options[KEY_ESTIMATE],
+            CUSTOM_HOURS: entry.options[CUSTOM_HOUR_SENSOR],
+            HARD_LIMIT: entry.options[HARD_LIMIT_API],
+            BRK_ESTIMATE: entry.options[BRK_ESTIMATE],
+            BRK_ESTIMATE10: entry.options[BRK_ESTIMATE10],
+            BRK_ESTIMATE90: entry.options[BRK_ESTIMATE90],
+            BRK_SITE: entry.options[BRK_SITE],
+            BRK_HALFHOURLY: entry.options[BRK_HALFHOURLY],
+            BRK_HOURLY: entry.options[BRK_HOURLY],
+            BRK_SITE_DETAILED: entry.options[BRK_SITE_DETAILED],
+            GET_ACTUALS: entry.options[GET_ACTUALS],
+            USE_ACTUALS: entry.options[USE_ACTUALS],
+            AUTO_DAMPEN: entry.options[AUTO_DAMPEN],
+            GENERATION_ENTITIES: ",".join(entry.options[GENERATION_ENTITIES]),
+            EXCLUDE_SITES: ",".join(entry.options[EXCLUDE_SITES]),
+            SITE_EXPORT_ENTITY: entry.options[SITE_EXPORT_ENTITY],
+            SITE_EXPORT_LIMIT: entry.options[SITE_EXPORT_LIMIT],
         }
         result = await hass.services.async_call(DOMAIN, "get_options", {}, blocking=True, return_response=True)
         assert result is not None, "get_options result is None"
@@ -1381,15 +1383,15 @@ async def test_remaining_actions(
         assert not unexpected, f"get_options returned unexpected keys: {unexpected}"
 
         _LOGGER.debug("Test get_options after modifying options")
-        await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "48", "auto_update": "2"}, blocking=True)
+        await hass.services.async_call(DOMAIN, "set_options", {CUSTOM_HOURS: "48", AUTO_UPDATE: "2"}, blocking=True)
         await hass.async_block_till_done()
         result = await hass.services.async_call(DOMAIN, "get_options", {}, blocking=True, return_response=True)
         assert result is not None, "get_options result is None"
-        assert result["data"]["custom_hours"] is not None and result["data"]["custom_hours"] == 48  # type: ignore[union-attr]
-        assert result["data"]["auto_update"] is not None and result["data"]["auto_update"] == 2  # type: ignore[union-attr]
+        assert result["data"][CUSTOM_HOURS] is not None and result["data"][CUSTOM_HOURS] == 48  # type: ignore[union-attr]
+        assert result["data"][AUTO_UPDATE] is not None and result["data"][AUTO_UPDATE] == 2  # type: ignore[union-attr]
 
         # Reset changes
-        await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "24", "auto_update": "0"}, blocking=True)
+        await hass.services.async_call(DOMAIN, "set_options", {CUSTOM_HOURS: "24", AUTO_UPDATE: "0"}, blocking=True)
         await hass.async_block_till_done()
 
         caplog.clear()
@@ -1504,7 +1506,7 @@ async def test_scenarios(  # noqa: C901
         async with aiohttp.ClientSession() as session:
             connection_options = ConnectionOptions(
                 DEFAULT_INPUT1[CONF_API_KEY],
-                DEFAULT_INPUT1[API_QUOTA],
+                DEFAULT_INPUT1[API_LIMIT],
                 "api.whatever.com",
                 config_dir,
                 ZoneInfo(ZONE_RAW),

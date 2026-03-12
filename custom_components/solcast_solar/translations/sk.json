@@ -24,7 +24,7 @@
       "reconfigure_confirm": {
         "data": {
           "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
-          "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
+          "api_limit": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
           "auto_update": "Automatická aktualizácia"
         },
         "description": "Podrobnosti o účte Solcast\n\n(Ak nie je automatická aktualizácia, potom je potrebná automatizácia – pozrite si integračnú dokumentáciu)"
@@ -32,7 +32,7 @@
       "user": {
         "data": {
           "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
-          "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
+          "api_limit": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
           "auto_update": "Automatická aktualizácia"
         },
         "description": "Podrobnosti o účte Solcast\n\n(Ak nie je automatická aktualizácia, potom je potrebná automatizácia – pozrite si integračnú dokumentáciu)"
@@ -390,7 +390,7 @@
       "init": {
         "data": {
           "api_key": "Kľúč API (viac hodnôt oddelených čiarkou)",
-          "api_quota": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
+          "api_limit": "Kvóta rozhrania API (voliteľne čiarkou oddelené viaceré hodnoty pre každý kľúč)",
           "attr_brk_detailed": "Povoliť rozdelenie stránok pre polhodinové/hodinové atribúty podrobností (tieto sa neuložia do atribútov stavu databázy)",
           "attr_brk_estimate": "Povoliť odhad 50 atribútov senzora",
           "attr_brk_estimate10": "Povoliť odhad 10 atribútov senzora",
@@ -401,7 +401,7 @@
           "auto_dampen": "Automatické tlmenie (vyžaduje odhadované skutočné hodnoty a entitu generovania FV, pozri dokumentáciu k integrácii)",
           "auto_update": "Automatická aktualizácia (ak nie je automatická aktualizácia, musíte namiesto nej použiť automatizáciu)",
           "config_damp": "Upravte hodinové faktory tlmenia (po kliknutí na odoslať)",
-          "customhoursensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
+          "custom_hour_sensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
           "exclude_sites": "Lokality, ktoré sa majú vylúčiť zo súčtu energie a senzorov",
           "generation_entities": "Entita/entity FV výroby pre automatické tlmenie (energia: Wh/kWh/MWh celková nárast alebo výkon: W/kW/MW okamžitý)",
           "get_actuals": "Odhadované skutočné hodnoty sa aktualizujú o polnoci (pozri dokumentáciu k integrácii, používa jednu API volanie na lokalitu za deň, takže je potrebné znížiť limit API s touto možnosťou povolenou)",

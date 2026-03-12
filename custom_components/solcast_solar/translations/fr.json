@@ -24,7 +24,7 @@
       "reconfigure_confirm": {
         "data": {
           "api_key": "Clé API (plusieurs valeurs séparées par des virgules)",
-          "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)",
+          "api_limit": "Quota d'API (plusieurs valeurs séparées par des virgules)",
           "auto_update": "Mise à jour automatique"
         },
         "description": "Détails du compte Solcast\n\n(S'il n'y a pas de mise à jour automatique, une automatisation est requise - voir la documentation d'intégration)"
@@ -32,7 +32,7 @@
       "user": {
         "data": {
           "api_key": "Clé API (plusieurs valeurs séparées par des virgules)",
-          "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)",
+          "api_limit": "Quota d'API (plusieurs valeurs séparées par des virgules)",
           "auto_update": "Mise à jour automatique"
         },
         "description": "Détails du compte Solcast\n\n(S'il n'y a pas de mise à jour automatique, une automatisation est requise - voir la documentation d'intégration)"
@@ -390,7 +390,7 @@
       "init": {
         "data": {
           "api_key": "Clé API (plusieurs valeurs séparées par des virgules)",
-          "api_quota": "Quota d'API (plusieurs valeurs séparées par des virgules)",
+          "api_limit": "Quota d'API (plusieurs valeurs séparées par des virgules)",
           "attr_brk_detailed": "Activer la répartition du site pour les attributs de détail demi-horaires/horaires (ceux-ci ne seront pas enregistrés dans les attributs d'état de la base de données)",
           "attr_brk_estimate": "Activer l'estimation de 50 attributs de capteur",
           "attr_brk_estimate10": "Activer l'estimation de 10 attributs de capteur",
@@ -401,7 +401,7 @@
           "auto_dampen": "Auto-dampen (requiert des valeurs réelles estimées et une entité de génération PV, voir la documentation d'intégration)",
           "auto_update": "Mise à jour automatique (s'il n'y a pas de mise à jour automatique, une automatisation doit être utilisée à la place)",
           "config_damp": "Modifier les facteurs d'amortissement horaires (après avoir cliqué sur soumettre)",
-          "customhoursensor": "Capteur personnalisé des X prochaines heures (min=1, max=144)",
+          "custom_hour_sensor": "Capteur personnalisé des X prochaines heures (min=1, max=144)",
           "exclude_sites": "Site(s) à exclure du tableau de bord Énergie et des totaux des capteurs",
           "generation_entities": "Entité(s) de production PV pour l'amortissement automatisé (énergie : Wh/kWh/MWh total croissant, ou puissance : W/kW/MW instantanée)",
           "get_actuals": "Valeurs réelles estimées mises à jour à minuit (voir la documentation d'intégration, utilise un appel API par site et par jour, donc un quota API réduit est nécessaire avec cette option activée)",

@@ -23,7 +23,7 @@ from homeassistant.components.solcast_solar.config_flow import (
 from homeassistant.components.solcast_solar.const import (
     ADVANCED_INVALID_JSON_TASK,
     ADVANCED_OPTION,
-    API_QUOTA,
+    API_LIMIT,
     AUTO_DAMPEN,
     AUTO_UPDATE,
     BRK_ESTIMATE,
@@ -97,12 +97,12 @@ MOCK_ENTRY1 = MockConfigEntry(domain=DOMAIN, data={}, options=DEFAULT_INPUT1_COP
 MOCK_ENTRY2 = MockConfigEntry(domain=DOMAIN, data={}, options=DEFAULT_INPUT2_COPY)
 
 TEST_API_KEY: list[tuple[Any, Any]] = [
-    ({CONF_API_KEY: "1234-5678-8765-4321", API_QUOTA: "10", AUTO_UPDATE: "1"}, "api_looks_like_site"),
-    ({CONF_API_KEY: KEY1 + "," + KEY1, API_QUOTA: "10", AUTO_UPDATE: "1"}, "api_duplicate"),
-    ({CONF_API_KEY: KEY1, API_QUOTA: "10", AUTO_UPDATE: "0"}, None),
-    ({CONF_API_KEY: KEY1, API_QUOTA: "10", AUTO_UPDATE: "1"}, None),
-    ({CONF_API_KEY: KEY1 + "," + KEY2, API_QUOTA: "10", AUTO_UPDATE: "2"}, None),
-    ({CONF_API_KEY: KEY1 + "," + KEY2, API_QUOTA: "0", AUTO_UPDATE: "2"}, "limit_one_or_greater"),
+    ({CONF_API_KEY: "1234-5678-8765-4321", API_LIMIT: "10", AUTO_UPDATE: "1"}, "api_looks_like_site"),
+    ({CONF_API_KEY: KEY1 + "," + KEY1, API_LIMIT: "10", AUTO_UPDATE: "1"}, "api_duplicate"),
+    ({CONF_API_KEY: KEY1, API_LIMIT: "10", AUTO_UPDATE: "0"}, None),
+    ({CONF_API_KEY: KEY1, API_LIMIT: "10", AUTO_UPDATE: "1"}, None),
+    ({CONF_API_KEY: KEY1 + "," + KEY2, API_LIMIT: "10", AUTO_UPDATE: "2"}, None),
+    ({CONF_API_KEY: KEY1 + "," + KEY2, API_LIMIT: "0", AUTO_UPDATE: "2"}, "limit_one_or_greater"),
 ]
 
 TEST_REAUTH_API_KEY: list[tuple[Any, Any]] = [
@@ -115,44 +115,44 @@ TEST_REAUTH_API_KEY: list[tuple[Any, Any]] = [
 TEST_KEY_CHANGES: list[tuple[Any, Any, str | None, list[str]]] = [
     (
         None,
-        {CONF_API_KEY: "555", API_QUOTA: "10", AUTO_UPDATE: "1"},
+        {CONF_API_KEY: "555", API_LIMIT: "10", AUTO_UPDATE: "1"},
         "Bad API key, 403/Forbidden",
         ["component.solcast_solar.config.error.Bad API key, 403/Forbidden returned for ******555"],
     ),
     (
         None,
-        {CONF_API_KEY: "no_sites", API_QUOTA: "10", AUTO_UPDATE: "1"},
+        {CONF_API_KEY: "no_sites", API_LIMIT: "10", AUTO_UPDATE: "1"},
         "No sites for the API key",
         ["component.solcast_solar.config.error.No sites for the API key ******_sites are configured at solcast.com"],
     ),
     (
         MOCK_BUSY,
-        {CONF_API_KEY: "1", API_QUOTA: "10", AUTO_UPDATE: "1"},
+        {CONF_API_KEY: "1", API_LIMIT: "10", AUTO_UPDATE: "1"},
         "Error 429/Try again later for API key",
         ["component.solcast_solar.config.error.Error 429/Try again later for API key ******1"],
     ),
     (
         MOCK_EXCEPTION,
-        {CONF_API_KEY: "2", API_QUOTA: "10", AUTO_UPDATE: "1"},
+        {CONF_API_KEY: "2", API_LIMIT: "10", AUTO_UPDATE: "1"},
         None,
         [],
     ),
     (
         None,
-        {CONF_API_KEY: "1", API_QUOTA: "10", AUTO_UPDATE: "1"},
+        {CONF_API_KEY: "1", API_LIMIT: "10", AUTO_UPDATE: "1"},
         None,
         [],
     ),
 ]
 
-TEST_API_QUOTA: list[tuple[dict[Any, Any], dict[Any, Any], str | None]] = [
-    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_QUOTA: "invalid", AUTO_UPDATE: "1"}, "limit_not_number"),
-    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_QUOTA: "0", AUTO_UPDATE: "1"}, "limit_one_or_greater"),
-    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_QUOTA: "10,10", AUTO_UPDATE: "1"}, "limit_too_many"),
-    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_QUOTA: "10", AUTO_UPDATE: "1"}, None),
-    (DEFAULT_INPUT2, {CONF_API_KEY: KEY1 + "," + KEY2, API_QUOTA: "10,10", AUTO_UPDATE: "1"}, None),
-    (DEFAULT_INPUT2, {CONF_API_KEY: KEY1 + "," + KEY2, API_QUOTA: "10,10,10", AUTO_UPDATE: "1"}, "limit_too_many"),
-    (DEFAULT_INPUT2, {CONF_API_KEY: KEY1 + "," + KEY2, API_QUOTA: "10", AUTO_UPDATE: "1"}, None),
+TEST_API_LIMIT: list[tuple[dict[Any, Any], dict[Any, Any], str | None]] = [
+    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_LIMIT: "invalid", AUTO_UPDATE: "1"}, "limit_not_number"),
+    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_LIMIT: "0", AUTO_UPDATE: "1"}, "limit_one_or_greater"),
+    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_LIMIT: "10,10", AUTO_UPDATE: "1"}, "limit_too_many"),
+    (DEFAULT_INPUT1, {CONF_API_KEY: KEY1, API_LIMIT: "10", AUTO_UPDATE: "1"}, None),
+    (DEFAULT_INPUT2, {CONF_API_KEY: KEY1 + "," + KEY2, API_LIMIT: "10,10", AUTO_UPDATE: "1"}, None),
+    (DEFAULT_INPUT2, {CONF_API_KEY: KEY1 + "," + KEY2, API_LIMIT: "10,10,10", AUTO_UPDATE: "1"}, "limit_too_many"),
+    (DEFAULT_INPUT2, {CONF_API_KEY: KEY1 + "," + KEY2, API_LIMIT: "10", AUTO_UPDATE: "1"}, None),
 ]
 
 
@@ -178,7 +178,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
 
     expected_options: dict[str, Any] = {
         CONF_API_KEY: KEY1,
-        API_QUOTA: "10",
+        API_LIMIT: "10",
         AUTO_UPDATE: 1,
         CUSTOM_HOUR_SENSOR: 1,
         HARD_LIMIT_API: "100.0",
@@ -193,7 +193,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
         EXCLUDE_SITES: [],
     }
 
-    user_input = {CONF_API_KEY: KEY1, API_QUOTA: "10", AUTO_UPDATE: "1"}
+    user_input = {CONF_API_KEY: KEY1, API_LIMIT: "10", AUTO_UPDATE: "1"}
     result = await flow.async_step_user(user_input)
     assert result.get("type") == FlowResultType.CREATE_ENTRY
     assert result.get("title") == TITLE
@@ -225,19 +225,19 @@ async def test_config_api_key_invalid(hass: HomeAssistant) -> None:
     flow = SolcastSolarFlowHandler()
     flow.hass = hass
 
-    result = await flow.async_step_user({CONF_API_KEY: "555", API_QUOTA: "10", AUTO_UPDATE: "1"})
+    result = await flow.async_step_user({CONF_API_KEY: "555", API_LIMIT: "10", AUTO_UPDATE: "1"})
     assert "Bad API key, 403/Forbidden" in result["errors"]["base"]  # type: ignore[index]
 
-    result = await flow.async_step_user({CONF_API_KEY: "no_sites", API_QUOTA: "10", AUTO_UPDATE: "1"})
+    result = await flow.async_step_user({CONF_API_KEY: "no_sites", API_LIMIT: "10", AUTO_UPDATE: "1"})
     assert "No sites for the API key" in result["errors"]["base"]  # type: ignore[index]
 
     session_set(MOCK_BUSY)
-    result = await flow.async_step_user({CONF_API_KEY: "1", API_QUOTA: "10", AUTO_UPDATE: "1"})
+    result = await flow.async_step_user({CONF_API_KEY: "1", API_LIMIT: "10", AUTO_UPDATE: "1"})
     assert "Error 429/Try again later for API key" in result["errors"]["base"]  # type: ignore[index]
     session_clear(MOCK_BUSY)
 
 
-@pytest.mark.parametrize(("options", "user_input", "reason"), TEST_API_QUOTA)
+@pytest.mark.parametrize(("options", "user_input", "reason"), TEST_API_LIMIT)
 async def test_config_api_quota(hass: HomeAssistant, options: dict[str, Any], user_input: dict[str, Any], reason: str | None) -> None:
     """Test that valid/invalid API quota is handled in config flow."""
 
@@ -386,7 +386,7 @@ async def test_reconfigure_api_key1(
         )
         await hass.async_block_till_done()
         result = await hass.config_entries.flow.async_configure(  # pyright: ignore[reportUnknownMemberType]
-            result["flow_id"], user_input={CONF_API_KEY: "4" + "," + KEY2, API_QUOTA: "10", AUTO_UPDATE: "0"}
+            result["flow_id"], user_input={CONF_API_KEY: "4" + "," + KEY2, API_LIMIT: "10", AUTO_UPDATE: "0"}
         )
         await hass.async_block_till_done()
         assert "Connecting to https://api.solcast.com.au/rooftop_sites?format=json&api_key=******4" in caplog.text
@@ -464,7 +464,7 @@ async def test_reconfigure_api_quota(
         REASON = 2
 
         _input = None
-        for test in TEST_API_QUOTA:
+        for test in TEST_API_LIMIT:
             entry = await async_init_integration(hass, test[OPTIONS])  # type: ignore[arg-type]
             assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
             if _input is None or test[OPTIONS] != _input:
@@ -529,7 +529,7 @@ async def test_options_api_key_invalid(hass: HomeAssistant) -> None:
     session_clear(MOCK_BUSY)
 
 
-@pytest.mark.parametrize(("options", "user_input", "reason"), TEST_API_QUOTA)
+@pytest.mark.parametrize(("options", "user_input", "reason"), TEST_API_LIMIT)
 async def test_options_api_quota(hass: HomeAssistant, options: dict[str, Any], user_input: dict[str, Any], reason: str | None) -> None:
     """Test that valid/invalid API quota is handled in option flow init."""
 
@@ -669,7 +669,7 @@ async def test_entry_options_upgrade(
     """Test that entry options are upgraded as expected."""
 
     START_VERSION = 3
-    FINAL_VERSION = 18
+    FINAL_VERSION = 19
     V3OPTIONS: dict[str, Any] = {
         CONF_API_KEY: "1",
         "const_disableautopoll": False,
@@ -686,7 +686,7 @@ async def test_entry_options_upgrade(
         for a in range(24):
             assert entry.options.get(f"damp{a:02d}") == 1.0
         # V6
-        assert entry.options.get(CUSTOM_HOUR_SENSOR) == 1
+        assert entry.options.get("customhoursensor") == 1
         # V7
         assert entry.options.get(KEY_ESTIMATE) == "estimate"
         # V8
@@ -697,7 +697,7 @@ async def test_entry_options_upgrade(
         assert entry.options.get(BRK_HALFHOURLY) is True
         assert entry.options.get(BRK_HOURLY) is True
         # V9
-        assert entry.options.get(API_QUOTA) == "10"
+        assert entry.options.get("api_quota") == "10"
         # V12
         assert entry.options.get(AUTO_UPDATE) == 0
         assert entry.options.get(BRK_SITE_DETAILED) is False
@@ -714,6 +714,9 @@ async def test_entry_options_upgrade(
         assert entry.options.get(GENERATION_ENTITIES) == []
         assert entry.options.get(SITE_EXPORT_LIMIT) == 0.0
         assert entry.options.get(AUTO_DAMPEN) is False
+        # V19
+        assert entry.options.get(API_LIMIT) == "10"
+        assert entry.options.get(CUSTOM_HOUR_SENSOR) == 1
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
@@ -725,7 +728,7 @@ async def test_entry_options_upgrade(
         )
         entry = await async_init_integration(hass, copy.deepcopy(V3OPTIONS), version=START_VERSION)
         assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
-        assert entry.options.get(API_QUOTA) == "50"
+        assert entry.options.get("api_quota") == "50"
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()

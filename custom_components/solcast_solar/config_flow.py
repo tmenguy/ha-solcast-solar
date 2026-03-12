@@ -37,7 +37,7 @@ from . import get_session_headers, get_version
 from .const import (
     AFFIRMATION_REAUTH_SUCCESSFUL,
     AFFIRMATION_RECONFIGURED,
-    API_QUOTA,
+    API_LIMIT,
     AUTO_DAMPEN,
     AUTO_UPDATE,
     BASE,
@@ -120,7 +120,7 @@ async def validate_sites(hass: HomeAssistant, user_input: dict[str, Any]) -> tup
     session = async_get_clientsession(hass)
     options = ConnectionOptions(
         user_input[CONF_API_KEY],
-        user_input[API_QUOTA],
+        user_input[API_LIMIT],
         DEFAULT_SOLCAST_HTTPS_URL,
         hass.config.path(f"{hass.config.config_dir}/solcast.json"),
         await _get_time_zone(hass),
@@ -239,16 +239,16 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             api_key, api_count, abort = validate_api_key(user_input)
-            api_quota = "10"
+            api_limit = "10"
             if abort is not None:
                 errors[BASE] = abort
             if not errors:
-                api_quota, abort = validate_api_limit(user_input, api_count)
+                api_limit, abort = validate_api_limit(user_input, api_count)
                 if abort is not None:
                     errors[BASE] = abort
             if not errors:
                 all_config_data[CONF_API_KEY] = api_key
-                all_config_data[API_QUOTA] = api_quota
+                all_config_data[API_LIMIT] = api_limit
                 all_config_data[AUTO_UPDATE] = int(user_input[AUTO_UPDATE])
 
                 status, message = await validate_sites(self.hass, all_config_data)
@@ -272,7 +272,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY, default=all_config_data[CONF_API_KEY]): str,
-                    vol.Required(API_QUOTA, default=all_config_data[API_QUOTA]): str,
+                    vol.Required(API_LIMIT, default=all_config_data[API_LIMIT]): str,
                     vol.Required(AUTO_UPDATE, default=str(all_config_data[AUTO_UPDATE])): SelectSelector(
                         SelectSelectorConfig(options=AUTO_UPDATE_OPTIONS, mode=SelectSelectorMode.DROPDOWN, translation_key=AUTO_UPDATE)
                     ),
@@ -299,17 +299,17 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             api_key, api_count, abort = validate_api_key(user_input)
-            api_quota = "10"
+            api_limit = "10"
             if abort is not None:
                 errors[BASE] = abort
             if not errors:
-                api_quota, abort = validate_api_limit(user_input, api_count)
+                api_limit, abort = validate_api_limit(user_input, api_count)
                 if abort is not None:
                     errors[BASE] = abort
             if not errors:
                 options: dict[str, Any] = {
                     CONF_API_KEY: api_key,
-                    API_QUOTA: api_quota,
+                    API_LIMIT: api_limit,
                     AUTO_UPDATE: int(user_input[AUTO_UPDATE]),
                     # Remaining options set to default
                     CUSTOM_HOUR_SENSOR: 1,
@@ -349,7 +349,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY, default=""): str,
-                    vol.Required(API_QUOTA, default="10"): str,
+                    vol.Required(API_LIMIT, default="10"): str,
                     vol.Required(AUTO_UPDATE, default=str(int(not solcast_json_exists))): SelectSelector(
                         SelectSelectorConfig(options=AUTO_UPDATE_OPTIONS, mode=SelectSelectorMode.DROPDOWN, translation_key=AUTO_UPDATE)
                     ),
@@ -458,7 +458,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     _LOGGER.debug("Options validation failed: %s", abort)
 
                 if not errors:
-                    all_config_data[API_QUOTA], abort = validate_api_limit(user_input, api_count)
+                    all_config_data[API_LIMIT], abort = validate_api_limit(user_input, api_count)
                     if abort is not None:
                         errors[BASE] = abort
                         _LOGGER.debug("Options validation failed: %s", abort)
@@ -603,7 +603,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY, default=self._options.get(CONF_API_KEY)): str,
-                    vol.Required(API_QUOTA, default=self._options[API_QUOTA]): str,
+                    vol.Required(API_LIMIT, default=self._options[API_LIMIT]): str,
                     vol.Required(AUTO_UPDATE, default=str(int(self._options[AUTO_UPDATE]))): SelectSelector(
                         SelectSelectorConfig(options=update, mode=SelectSelectorMode.DROPDOWN, translation_key=AUTO_UPDATE)
                     ),

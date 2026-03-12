@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.const import CONF_API_KEY
 
 from .const import (
-    API_QUOTA,
+    API_LIMIT,
     EXCEPTION_API_DUPLICATE,
     EXCEPTION_API_KEY_EMPTY,
     EXCEPTION_API_LOOKS_LIKE_SITE,
@@ -64,19 +64,19 @@ def validate_api_key(user_input: dict[str, Any]) -> tuple[str, int, str | None]:
     return validate_api_key_value(user_input[CONF_API_KEY])
 
 
-def validate_api_limit_value(api_quota: str, api_count: int) -> tuple[str, str | None]:
+def validate_api_limit_value(api_limit: str, api_count: int) -> tuple[str, str | None]:
     """Validate the API limit string.
 
     Arguments:
-        api_quota: The API quota string (comma separated for multiple keys).
+        api_limit: The API limit string (comma separated for multiple keys).
         api_count: The number of API keys.
 
     Returns:
         tuple[str, str | None]: The validated API limit string, and error key or None.
 
     """
-    api_quota_cleaned = api_quota.replace(" ", "")
-    quotas = [s for s in api_quota_cleaned.split(",") if s]
+    api_limit_cleaned = api_limit.replace(" ", "")
+    quotas = [s for s in api_limit_cleaned.split(",") if s]
     for q in quotas:
         if not q.isnumeric():
             return "", EXCEPTION_LIMIT_NOT_NUMBER
@@ -98,7 +98,7 @@ def validate_api_limit(user_input: dict[str, Any], api_count: int) -> tuple[str,
         tuple[str, str | None]: The API limit, and abort result.
 
     """
-    return validate_api_limit_value(user_input[API_QUOTA], api_count)
+    return validate_api_limit_value(user_input[API_LIMIT], api_count)
 
 
 def validate_hard_limit_value(hard_limit: str, api_count: int) -> tuple[str, str | None]:

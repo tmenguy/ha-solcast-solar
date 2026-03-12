@@ -24,7 +24,7 @@
       "reconfigure_confirm": {
         "data": {
           "api_key": "Klucz API (wielokrotne wartości oddzielane przecinkiem)",
-          "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
+          "api_limit": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
           "auto_update": "Automatyczna aktualizacja"
         },
         "description": "Dane konta Solcast\n\n(Jeśli nie ma automatycznej aktualizacji, wymagana jest automatyzacja - zobacz dokumentację integracji)"
@@ -32,7 +32,7 @@
       "user": {
         "data": {
           "api_key": "Klucz API (wielokrotne wartości oddzielane przecinkiem)",
-          "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
+          "api_limit": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
           "auto_update": "Automatyczna aktualizacja"
         },
         "description": "Dane konta Solcast\n\n(Jeśli nie ma automatycznej aktualizacji, wymagana jest automatyzacja - zobacz dokumentację integracji)"
@@ -390,7 +390,7 @@
       "init": {
         "data": {
           "api_key": "Klucz API (wielokrotne wartości oddzielane przecinkiem)",
-          "api_quota": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
+          "api_limit": "Limit API (opcjonalnie wielokrotne wartości oddzielane przecinkiem)",
           "attr_brk_detailed": "Włącz podział witryny dla atrybutów szczegółów półgodzinnych/godzinnych (nie zostaną one zapisane w atrybutach stanu bazy danych)",
           "attr_brk_estimate": "Włącz oszacowanie 50 atrybutów czujnika",
           "attr_brk_estimate10": "Włącz oszacowanie 10 atrybutów czujnika",
@@ -401,7 +401,7 @@
           "auto_dampen": "Automatyczne tłumienie (wymaga szacowanych wartości rzeczywistych i jednostki generacji fotowoltaicznej, patrz dokumentacja integracji)",
           "auto_update": "Automatyczna aktualizacja (jeśli nie ma automatycznej aktualizacji, zamiast tego należy zastosować automatyzację)",
           "config_damp": "Zmodyfikuj godzinowe współczynniki tłumienia (po kliknięciu przycisku „ZATWIERDŹ”)",
-          "customhoursensor": "Niestandardowy czujnik następnej godziny X (min.=1, maks.=144)",
+          "custom_hour_sensor": "Niestandardowy czujnik następnej godziny X (min.=1, maks.=144)",
           "exclude_sites": "Miejsca, które należy wykluczyć z pulpitu nawigacyjnego Energy i sum czujników",
           "generation_entities": "Jednostka/jednostki generacji fotowoltaicznej do automatycznego tłumienia (energia: Wh/kWh/MWh łącznie wzrasta lub moc: W/kW/MW chwilowo)",
           "get_actuals": "Szacowane wartości rzeczywiste aktualizowane o północy (patrz dokumentacja integracji, używa jednego wywołania API na stronę dziennie, więc zredukowany limit API jest potrzebny z tą opcją włączoną)",

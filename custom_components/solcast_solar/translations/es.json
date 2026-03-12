@@ -24,7 +24,7 @@
       "reconfigure_confirm": {
         "data": {
           "api_key": "Clave API (varios valores separados por comas)",
-          "api_quota": "Límite de API (opcionalmente, separe con comas varios valores para cada clave)",
+          "api_limit": "Límite de API (opcionalmente, separe con comas varios valores para cada clave)",
           "auto_update": "Actualización automática"
         },
         "description": "Detalles de la cuenta Solcast\n\n(Si no se utiliza la actualización automática, se requiere una automatización; consulte la documentación de integración)"
@@ -32,7 +32,7 @@
       "user": {
         "data": {
           "api_key": "Clave API (varios valores separados por comas)",
-          "api_quota": "Límite de API (opcionalmente, separe con comas varios valores para cada clave)",
+          "api_limit": "Límite de API (opcionalmente, separe con comas varios valores para cada clave)",
           "auto_update": "Actualización automática"
         },
         "description": "Detalles de la cuenta Solcast\n\n(Si no se utiliza la actualización automática, se requiere una automatización; consulte la documentación de integración)"
@@ -390,7 +390,7 @@
       "init": {
         "data": {
           "api_key": "Clave API (varios valores separados por comas)",
-          "api_quota": "Límite de API (opcionalmente, separe con comas varios valores para cada clave)",
+          "api_limit": "Límite de API (opcionalmente, separe con comas varios valores para cada clave)",
           "attr_brk_detailed": "Habilitar el desglose del sitio para los atributos de detalle por media hora o por hora (estos no se guardarán en los atributos de estado de la base de datos)",
           "attr_brk_estimate": "Habilitar la estimación de 50 atributos de sensor",
           "attr_brk_estimate10": "Habilitar la estimación de 10 atributos de sensor",
@@ -401,7 +401,7 @@
           "auto_dampen": "Auto-dampen (requiere valores reales estimados y una entidad de generación PV, ver documentación de integración)",
           "auto_update": "Actualización automática (si no hay actualización automática, se debe utilizar una automatización en su lugar)",
           "config_damp": "Modificar los factores de amortiguación por hora (después de hacer clic en enviar)",
-          "customhoursensor": "Sensor personalizado para las próximas X horas (mín.=1, máx.=144)",
+          "custom_hour_sensor": "Sensor personalizado para las próximas X horas (mín.=1, máx.=144)",
           "exclude_sites": "Sitio(s) a excluir del panel de energía y de los totales de los sensores",
           "generation_entities": "Entidad/entidades de generación fotovoltaica para amortiguación automatizada (energía: Wh/kWh/MWh total creciente, o potencia: W/kW/MW instantánea)",
           "get_actuals": "Valores reales estimados actualizados a medianoche (ver documentación de integración, utiliza una llamada API por sitio por día, por lo que se necesita un límite API reducido con esta opción habilitada)",

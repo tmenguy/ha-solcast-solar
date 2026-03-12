@@ -24,7 +24,7 @@
       "reconfigure_confirm": {
         "data": {
           "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
-          "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
+          "api_limit": "API-Kontingent (mehrere Werte durch Kommas trennen)",
           "auto_update": "Automatische Aktualisierung"
         },
         "description": "Solcast-Kontodaten\n\n(Wenn keine automatische Aktualisierung erfolgt, ist eine Automatisierung erforderlich – siehe Integrationsdokumentation)"
@@ -32,7 +32,7 @@
       "user": {
         "data": {
           "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
-          "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
+          "api_limit": "API-Kontingent (mehrere Werte durch Kommas trennen)",
           "auto_update": "Automatische Aktualisierung"
         },
         "description": "Solcast-Kontodaten\n\n(Wenn keine automatische Aktualisierung erfolgt, ist eine Automatisierung erforderlich – siehe Integrationsdokumentation)"
@@ -390,7 +390,7 @@
       "init": {
         "data": {
           "api_key": "API-Schlüssel (mehrere Werte durch Kommas trennen)",
-          "api_quota": "API-Kontingent (mehrere Werte durch Kommas trennen)",
+          "api_limit": "API-Kontingent (mehrere Werte durch Kommas trennen)",
           "attr_brk_detailed": "Aktivieren Sie die Site-Aufschlüsselung für halbstündliche/stündliche Detailattribute (diese werden nicht in Datenbankstatusattributen gespeichert)",
           "attr_brk_estimate": "Aktivieren Sie die Schätzung von 50 Sensorattributen",
           "attr_brk_estimate10": "Aktivieren Sie die Schätzung von 10 Sensorattributen",
@@ -401,7 +401,7 @@
           "auto_dampen": "Automatische Dämpfung (erfordert geschätzte Istwerte und PV-Erzeugungseinheit, siehe Integrationsdokumentation)",
           "auto_update": "Automatische Aktualisierung (wenn keine automatische Aktualisierung vorhanden ist, muss stattdessen eine Automatisierung verwendet werden)",
           "config_damp": "Ändern Sie die stündlichen Dämpfungsfaktoren (nachdem Sie auf „Senden“ geklickt haben)",
-          "customhoursensor": "Nächster X-Stunden-Sensor (min=1, max=144)",
+          "custom_hour_sensor": "Nächster X-Stunden-Sensor (min=1, max=144)",
           "exclude_sites": "Vom Energie-Dashboard und den Sensorgesamtwerten auszuschließende Site(s)",
           "generation_entities": "PV-Erzeugungseinheit(en) für automatisierte Dämpfung (Wh/kWh/MWh, Gesamterhöhung)",
           "get_actuals": "Geschätzte Istwerte werden um Mitternacht aktualisiert (siehe Integrationsdokumentation, verwendet einen API-Aufruf pro Standort und Tag, daher ist ein reduzierter API-Limit erforderlich, wenn diese Option aktiviert ist)",
