@@ -43,7 +43,7 @@ from .const import (
     BRK_SITE_DETAILED,
     CONFIG_DISCRETE_NAME,
     CONFIG_FOLDER_DISCRETE,
-    CUSTOM_HOUR_SENSOR,
+    CUSTOM_HOURS,
     DAMPENING_FACTOR,
     DATA_SET_ACTUALS,
     DATA_SET_ACTUALS_UNDAMPENED,
@@ -299,7 +299,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
             self.options.auto_update,
             # Options that can be dynamically set...
             self.damp,
-            options[CUSTOM_HOUR_SENSOR],
+            options[CUSTOM_HOURS],
             options.get(KEY_ESTIMATE, self.options.key_estimate),
             options.get(HARD_LIMIT_API, "100.0"),
             options[BRK_ESTIMATE],

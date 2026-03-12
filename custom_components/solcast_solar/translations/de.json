@@ -401,7 +401,7 @@
           "auto_dampen": "Automatische Dämpfung (erfordert geschätzte Istwerte und PV-Erzeugungseinheit, siehe Integrationsdokumentation)",
           "auto_update": "Automatische Aktualisierung (wenn keine automatische Aktualisierung vorhanden ist, muss stattdessen eine Automatisierung verwendet werden)",
           "config_damp": "Ändern Sie die stündlichen Dämpfungsfaktoren (nachdem Sie auf „Senden“ geklickt haben)",
-          "custom_hour_sensor": "Nächster X-Stunden-Sensor (min=1, max=144)",
+          "custom_hours": "Nächster X-Stunden-Sensor (min=1, max=144)",
           "exclude_sites": "Vom Energie-Dashboard und den Sensorgesamtwerten auszuschließende Site(s)",
           "generation_entities": "PV-Erzeugungseinheit(en) für automatisierte Dämpfung (Wh/kWh/MWh, Gesamterhöhung)",
           "get_actuals": "Geschätzte Istwerte werden um Mitternacht aktualisiert (siehe Integrationsdokumentation, verwendet einen API-Aufruf pro Standort und Tag, daher ist ein reduzierter API-Limit erforderlich, wenn diese Option aktiviert ist)",

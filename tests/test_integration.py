@@ -34,7 +34,6 @@ from homeassistant.components.solcast_solar.const import (
     BRK_SITE_DETAILED,
     CONFIG_DISCRETE_NAME,
     CONFIG_FOLDER_DISCRETE,
-    CUSTOM_HOUR_SENSOR,
     CUSTOM_HOURS,
     DEFAULT_FORECAST_DAYS,
     DELAYED_RESTART_ON_CRASH,
@@ -1142,13 +1141,13 @@ async def test_remaining_actions(
         _LOGGER.debug("Test set custom hours valid inputs")
         solcast = await _set_custom_hours("1")
         assert solcast.custom_hour_sensor == 1
-        assert entry.options[CUSTOM_HOUR_SENSOR] == 1
+        assert entry.options[CUSTOM_HOURS] == 1
         solcast = await _set_custom_hours("144")
         assert solcast.custom_hour_sensor == 144
-        assert entry.options[CUSTOM_HOUR_SENSOR] == 144
+        assert entry.options[CUSTOM_HOURS] == 144
         solcast = await _set_custom_hours("  24  ")
         assert solcast.custom_hour_sensor == 24
-        assert entry.options[CUSTOM_HOUR_SENSOR] == 24
+        assert entry.options[CUSTOM_HOURS] == 24
 
         caplog.clear()
 
@@ -1238,7 +1237,7 @@ async def test_remaining_actions(
         _LOGGER.debug("Test set_options custom hours only")
         await hass.services.async_call(DOMAIN, "set_options", {"custom_hours": "12"}, blocking=True)
         await hass.async_block_till_done()
-        assert entry.options[CUSTOM_HOUR_SENSOR] == 12
+        assert entry.options[CUSTOM_HOURS] == 12
 
         _LOGGER.debug("Test set_options hard limit only")
         await hass.services.async_call(DOMAIN, "set_options", {"hard_limit": "5000"}, blocking=True)
@@ -1354,7 +1353,7 @@ async def test_remaining_actions(
             API_LIMIT: entry.options[API_LIMIT],
             AUTO_UPDATE: entry.options[AUTO_UPDATE],
             KEY_ESTIMATE: entry.options[KEY_ESTIMATE],
-            CUSTOM_HOURS: entry.options[CUSTOM_HOUR_SENSOR],
+            CUSTOM_HOURS: entry.options[CUSTOM_HOURS],
             HARD_LIMIT: entry.options[HARD_LIMIT_API],
             BRK_ESTIMATE: entry.options[BRK_ESTIMATE],
             BRK_ESTIMATE10: entry.options[BRK_ESTIMATE10],
@@ -1512,7 +1511,7 @@ async def test_scenarios(  # noqa: C901
                 ZoneInfo(ZONE_RAW),
                 DEFAULT_INPUT1[AUTO_UPDATE],
                 {str(hour): DEFAULT_INPUT1[f"damp{hour:02}"] for hour in range(24)},
-                DEFAULT_INPUT1[CUSTOM_HOUR_SENSOR],
+                DEFAULT_INPUT1[CUSTOM_HOURS],
                 DEFAULT_INPUT1[KEY_ESTIMATE],
                 DEFAULT_INPUT1[HARD_LIMIT_API],
                 DEFAULT_INPUT1[BRK_ESTIMATE],

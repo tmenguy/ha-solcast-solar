@@ -41,7 +41,8 @@ from .const import (
     BRK_SITE_DETAILED,
     CONFIG_DISCRETE_NAME,
     CONFIG_FOLDER_DISCRETE,
-    CUSTOM_HOUR_SENSOR,
+    CONFIG_VERSION,
+    CUSTOM_HOURS,
     DAILY_LIMIT,
     DEFAULT_SOLCAST_HTTPS_URL,
     DELAYED_RESTART_ON_CRASH,
@@ -146,7 +147,7 @@ async def __get_options(hass: HomeAssistant, entry: ConfigEntry) -> ConnectionOp
         await __get_time_zone(hass),
         entry.options.get(AUTO_UPDATE, AutoUpdate.NONE),
         dampening_option,
-        entry.options.get(CUSTOM_HOUR_SENSOR, 1),
+        entry.options.get(CUSTOM_HOURS, 1),
         entry.options.get(KEY_ESTIMATE, "estimate"),
         entry.options.get(HARD_LIMIT_API, "100.0"),
         entry.options.get(BRK_ESTIMATE, True),
@@ -299,6 +300,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
 
     random.seed()
+
+    # await async_migrate_entry(hass, entry)  # For development
 
     version = await get_version(hass)
     options = await __get_options(hass, entry)
@@ -506,7 +509,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         or changed(API_LIMIT)
         or changed(AUTO_UPDATE)
         or changed(HARD_LIMIT_API)
-        or changed(CUSTOM_HOUR_SENSOR)
+        or changed(CUSTOM_HOURS)
         or changed(SITE_EXPORT_ENTITY)
     )
 
@@ -597,7 +600,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     v13:            Unlucky for some, skipped
     v14: (4.2.4)    Hard limit adjustable by Solcast account
     v15: (4.3.3)    Exclude sites from core forecast
-    v18: (4.4.0)    Auto-dampen
+    v18: (4.4.0)    Auto-dampen, and add new options for export entity and generation entities
+    v19: (4.5.1)    Rename some options for clarity
 
     An upgrade of the integration will sequentially upgrade options to the current
     version, with this function needing to consider all upgrade history and new defaults.
@@ -628,12 +632,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         def upgraded() -> None:
             _LOGGER.info("Upgraded to options version %s", entry.version)
 
-        if entry.version < version:
-            if upgrade_function is not None:
-                new_options = {**entry.options}
-                await upgrade_function(hass, new_options)
-                hass.config_entries.async_update_entry(entry, options=new_options, version=version)
-                upgraded()
+        if upgrade_function is not None:
+            new_options = {**entry.options}
+            await upgrade_function(hass, new_options)
+            hass.config_entries.async_update_entry(entry, options=new_options, version=version)
+            upgraded()
 
     async def __v4(hass: HomeAssistant, new_options: dict[str, Any]) -> None:
         with contextlib.suppress(Exception):
@@ -701,13 +704,13 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         new_options[SITE_EXPORT_LIMIT] = 0.0
 
     async def __v19(hass: HomeAssistant, new_options: dict[str, Any]) -> None:
-        # Rename "api_quota" to "api_limit", and "customhoursensor" to "custom_hour_sensor".
+        # Rename "api_quota" to "api_limit", and "customhoursensor" to "custom_hours".
         # Old keys are kept for backward compatibility, but no longer maintained.
         if "api_quota" in new_options:
             new_options[API_LIMIT] = new_options["api_quota"]
         # Rename , keeping the old key for backward compatibility.
         if "customhoursensor" in new_options:
-            new_options[CUSTOM_HOUR_SENSOR] = new_options["customhoursensor"]
+            new_options[CUSTOM_HOURS] = new_options["customhoursensor"]
 
     upgrades: list[dict[str, Any]] = [
         {VERSION: 4, UPGRADE_FUNCTION: __v4},
@@ -723,7 +726,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         {VERSION: 19, UPGRADE_FUNCTION: __v19},
     ]
     for upgrade in upgrades:
-        if entry.version < upgrade[VERSION]:
+        if (
+            entry.version < upgrade[VERSION]
+        ):  # or upgrade[VERSION] == CONFIG_VERSION:  # For development, to re-run the latest upgrade, also modify async_setup_entry().
             await upgrade_to(upgrade[VERSION], entry, upgrade[UPGRADE_FUNCTION])
 
     return True

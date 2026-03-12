@@ -401,7 +401,7 @@
           "auto_dampen": "Automatické tlmenie (vyžaduje odhadované skutočné hodnoty a entitu generovania FV, pozri dokumentáciu k integrácii)",
           "auto_update": "Automatická aktualizácia (ak nie je automatická aktualizácia, musíte namiesto nej použiť automatizáciu)",
           "config_damp": "Upravte hodinové faktory tlmenia (po kliknutí na odoslať)",
-          "custom_hour_sensor": "Vlastný senzor ďalších X hodín (min=1, max=144)",
+          "custom_hours": "Vlastný senzor ďalších X hodín (min=1, max=144)",
           "exclude_sites": "Lokality, ktoré sa majú vylúčiť zo súčtu energie a senzorov",
           "generation_entities": "Entita/entity FV výroby pre automatické tlmenie (energia: Wh/kWh/MWh celková nárast alebo výkon: W/kW/MW okamžitý)",
           "get_actuals": "Odhadované skutočné hodnoty sa aktualizujú o polnoci (pozri dokumentáciu k integrácii, používa jednu API volanie na lokalitu za deň, takže je potrebné znížiť limit API s touto možnosťou povolenou)",

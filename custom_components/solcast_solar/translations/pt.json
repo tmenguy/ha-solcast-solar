@@ -401,7 +401,7 @@
           "auto_dampen": "Amortecimento automático (requer estimativas reais e entidade de geração fotovoltaica, consulte a documentação de integração)",
           "auto_update": "Atualização automática (se não houver atualização automática, uma automação deve ser usada em vez disso)",
           "config_damp": "Modificar os fatores de amortecimento horários (após clicar em enviar)",
-          "custom_hour_sensor": "Sensor personalizado das próximas X horas (mín=1, máx=144)",
+          "custom_hours": "Sensor personalizado das próximas X horas (mín=1, máx=144)",
           "exclude_sites": "Site(s) a serem excluídos do painel de energia e dos totais do sensor",
           "generation_entities": "Entidade/entidades de geração fotovoltaica para amortecimento automatizado (energia: Wh/kWh/MWh total crescente, ou potência: W/kW/MW instantânea)",
           "get_actuals": "Estimativas reais atualizadas à meia-noite (consulte a documentação de integração, usa uma chamada de API por site por dia, portanto, um limite de API reduzido é necessário com esta opção ativada)",

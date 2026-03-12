@@ -25,7 +25,6 @@ from .const import (
     BRK_HOURLY,
     BRK_SITE,
     BRK_SITE_DETAILED,
-    CUSTOM_HOUR_SENSOR,
     CUSTOM_HOURS,
     DAMP_FACTOR,
     DOMAIN,
@@ -466,7 +465,7 @@ class ServiceActions:
                 API_LIMIT: opt.get(API_LIMIT, ""),
                 AUTO_UPDATE: opt.get(AUTO_UPDATE, 0),
                 KEY_ESTIMATE: opt.get(KEY_ESTIMATE, "estimate"),
-                CUSTOM_HOURS: opt.get(CUSTOM_HOUR_SENSOR, 24),
+                CUSTOM_HOURS: opt.get(CUSTOM_HOURS, 24),
                 HARD_LIMIT: opt.get(HARD_LIMIT_API, "100.0"),
                 BRK_ESTIMATE: opt.get(BRK_ESTIMATE, True),
                 BRK_ESTIMATE10: opt.get(BRK_ESTIMATE10, False),
@@ -547,7 +546,7 @@ class ServiceActions:
             raise ServiceValidationError(translation_domain=DOMAIN, translation_key=error)
 
         opt = {**self._entry.options}
-        opt[CUSTOM_HOUR_SENSOR] = hour_val
+        opt[CUSTOM_HOURS] = hour_val
         self._hass.config_entries.async_update_entry(self._entry, options=opt)
 
     async def async_remove_hard_limit(self, call: ServiceCall) -> None:
@@ -616,7 +615,7 @@ class ServiceActions:
             hour_val, error = validate_custom_hours_value(custom_hours)
             if error is not None:
                 raise ServiceValidationError(translation_domain=DOMAIN, translation_key=error)
-            opt[CUSTOM_HOUR_SENSOR] = hour_val
+            opt[CUSTOM_HOURS] = hour_val
 
         # Validate and apply hard limit.
         if (hard_limit := call.data.get(HARD_LIMIT)) is not None:

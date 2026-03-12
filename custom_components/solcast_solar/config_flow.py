@@ -50,7 +50,7 @@ from .const import (
     BRK_SITE_DETAILED,
     CONFIG_DAMP,
     CONFIG_VERSION,
-    CUSTOM_HOUR_SENSOR,
+    CUSTOM_HOURS,
     DEFAULT_SOLCAST_HTTPS_URL,
     DEVICE_NAME,
     DOMAIN,
@@ -126,7 +126,7 @@ async def validate_sites(hass: HomeAssistant, user_input: dict[str, Any]) -> tup
         await _get_time_zone(hass),
         user_input[AUTO_UPDATE],
         {str(a): 1.0 for a in range(24)},
-        user_input[CUSTOM_HOUR_SENSOR],
+        user_input[CUSTOM_HOURS],
         user_input[KEY_ESTIMATE],
         user_input[HARD_LIMIT_API],
         user_input[BRK_ESTIMATE],
@@ -312,7 +312,7 @@ class SolcastSolarFlowHandler(ConfigFlow, domain=DOMAIN):
                     API_LIMIT: api_limit,
                     AUTO_UPDATE: int(user_input[AUTO_UPDATE]),
                     # Remaining options set to default
-                    CUSTOM_HOUR_SENSOR: 1,
+                    CUSTOM_HOURS: 1,
                     HARD_LIMIT_API: "100.0",
                     KEY_ESTIMATE: "estimate",
                     BRK_ESTIMATE: True,
@@ -465,12 +465,12 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
 
                 if not errors:
                     # Validate the custom hours sensor.
-                    custom_hour_sensor, abort = validate_custom_hours_value(str(user_input[CUSTOM_HOUR_SENSOR]))
+                    custom_hour_sensor, abort = validate_custom_hours_value(str(user_input[CUSTOM_HOURS]))
                     if abort is not None:
                         errors[BASE] = EXCEPTION_CUSTOM_INVALID
                         _LOGGER.debug("Options validation failed: %s", errors[BASE])
                     else:
-                        all_config_data[CUSTOM_HOUR_SENSOR] = custom_hour_sensor
+                        all_config_data[CUSTOM_HOURS] = custom_hour_sensor
 
                 if not errors:
                     # Validate the hard limit.
@@ -610,7 +610,7 @@ class SolcastSolarOptionFlowHandler(OptionsFlow):
                     vol.Required(KEY_ESTIMATE, default=self._options.get(KEY_ESTIMATE, "estimate")): SelectSelector(
                         SelectSelectorConfig(options=forecasts, mode=SelectSelectorMode.DROPDOWN, translation_key=KEY_ESTIMATE)
                     ),
-                    vol.Required(CUSTOM_HOUR_SENSOR, default=self._options[CUSTOM_HOUR_SENSOR]): int,
+                    vol.Required(CUSTOM_HOURS, default=self._options[CUSTOM_HOURS]): int,
                     vol.Required(HARD_LIMIT_API, default=self._options.get(HARD_LIMIT_API)): str,
                     vol.Optional(BRK_ESTIMATE10, default=self._options[BRK_ESTIMATE10]): bool,
                     vol.Optional(BRK_ESTIMATE, default=self._options[BRK_ESTIMATE]): bool,

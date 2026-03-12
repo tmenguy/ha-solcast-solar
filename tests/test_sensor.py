@@ -23,7 +23,7 @@ from homeassistant.components.solcast_solar.const import (
     BRK_SITE,
     CONFIG_DISCRETE_NAME,
     CONFIG_FOLDER_DISCRETE,
-    CUSTOM_HOUR_SENSOR,
+    CUSTOM_HOURS,
     DEFAULT_FORECAST_DAY_SENSORS,
     DEFAULT_FORECAST_DAYS,
 )
@@ -568,7 +568,7 @@ async def test_sensor_x_hours_long(
 
     try:
         options = copy.deepcopy(DEFAULT_INPUT1)
-        options[CUSTOM_HOUR_SENSOR] = 48
+        options[CUSTOM_HOURS] = 48
         entry = await async_init_integration(hass, options)
 
         er.async_get(hass).async_update_entity("sensor.solcast_pv_forecast_forecast_next_x_hours", disabled_by=None)
@@ -594,7 +594,7 @@ async def test_sensor_unavailable(
 
     try:
         options = copy.deepcopy(DEFAULT_INPUT1)
-        options[CUSTOM_HOUR_SENSOR] = 120
+        options[CUSTOM_HOURS] = 120
         entry = await async_init_integration(hass, options)
         async with asyncio.timeout(10):
             while "Start is not stale" not in caplog.text:

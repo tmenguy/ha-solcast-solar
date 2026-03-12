@@ -33,7 +33,7 @@ from homeassistant.components.solcast_solar.const import (
     CONFIG_DISCRETE_NAME,
     CONFIG_FOLDER_DISCRETE,
     CONFIG_VERSION,
-    CUSTOM_HOUR_SENSOR,
+    CUSTOM_HOURS,
     DOMAIN,
     EXCLUDE_SITES,
     GENERATION_ENTITIES,
@@ -60,12 +60,12 @@ from tests.common import MockConfigEntry
 KEY1 = "1"
 KEY2 = "2"
 KEY_NO_SITES = "no_sites"
-CUSTOM_HOURS = 2
+CUSTOM_HOURS_HOW_MANY_HOURS = 2
 DEFAULT_INPUT1_NO_DAMP: dict[str, Any] = {
     CONF_API_KEY: KEY1,
     API_LIMIT: "20",
     AUTO_UPDATE: "1",
-    CUSTOM_HOUR_SENSOR: CUSTOM_HOURS,
+    CUSTOM_HOURS: CUSTOM_HOURS_HOW_MANY_HOURS,
     HARD_LIMIT_API: "100.0",
     KEY_ESTIMATE: "estimate",
     BRK_ESTIMATE: True,

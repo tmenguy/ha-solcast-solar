@@ -35,7 +35,7 @@ from homeassistant.components.solcast_solar.const import (
     BRK_SITE_DETAILED,
     CONFIG_DISCRETE_NAME,
     CONFIG_FOLDER_DISCRETE,
-    CUSTOM_HOUR_SENSOR,
+    CUSTOM_HOURS,
     DOMAIN,
     EXCLUDE_SITES,
     GENERATION_ENTITIES,
@@ -180,7 +180,7 @@ async def test_create_entry(hass: HomeAssistant) -> None:
         CONF_API_KEY: KEY1,
         API_LIMIT: "10",
         AUTO_UPDATE: 1,
-        CUSTOM_HOUR_SENSOR: 1,
+        CUSTOM_HOURS: 1,
         HARD_LIMIT_API: "100.0",
         KEY_ESTIMATE: "estimate",
         BRK_ESTIMATE: True,
@@ -559,7 +559,7 @@ async def test_options_custom_hour_sensor(hass: HomeAssistant, options: dict[str
     flow.hass = hass
 
     user_input = copy.deepcopy(options)
-    user_input[CUSTOM_HOUR_SENSOR] = value
+    user_input[CUSTOM_HOURS] = value
     result = await flow.async_step_init(user_input)
     if reason is not None:
         assert result["errors"]["base"] == reason  # type: ignore[index]
@@ -716,7 +716,7 @@ async def test_entry_options_upgrade(
         assert entry.options.get(AUTO_DAMPEN) is False
         # V19
         assert entry.options.get(API_LIMIT) == "10"
-        assert entry.options.get(CUSTOM_HOUR_SENSOR) == 1
+        assert entry.options.get(CUSTOM_HOURS) == 1
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()

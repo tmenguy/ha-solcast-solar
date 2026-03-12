@@ -80,7 +80,6 @@ CONFIG_FOLDER_DISCRETE: Final[bool] = True  # Whether to use a sub-folder for co
 CONFIG_VERSION: Final[int] = 19
 CURRENT_NAME: Final[str] = "current_name"
 CUSTOM_HOURS: Final[str] = "custom_hours"
-CUSTOM_HOUR_SENSOR: Final[str] = "custom_hour_sensor"
 DAILY_LIMIT: Final[str] = "daily_limit"
 DAILY_LIMIT_CONSUMED: Final[str] = "daily_limit_consumed"
 DAMP_FACTOR: Final[str] = "damp_factor"
