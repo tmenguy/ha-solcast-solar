@@ -40,6 +40,7 @@ from .const import (
     FORECASTS,
     FORMAT,
     GENERATION,
+    INTEGRATION_VERSION,
     ISSUE_UNUSUAL_AZIMUTH_NORTHERN,
     ISSUE_UNUSUAL_AZIMUTH_SOUTHERN,
     JSON,
@@ -93,6 +94,7 @@ FRESH_DATA: Final[dict[str, Any]] = {
     LAST_ATTEMPT: dt.fromtimestamp(0, UTC),
     AUTO_UPDATED: 0,
     FAILURE: {LAST_24H: 0, LAST_7D: [0] * 7, LAST_14D: [0] * 14},
+    INTEGRATION_VERSION: "",
     VERSION: JSON_VERSION,
 }
 
@@ -633,6 +635,7 @@ class SitesCache:
             bool: Success or failure.
         """
         if self.api.loaded_data and data[LAST_UPDATED] != dt.fromtimestamp(0, UTC):
+            data[INTEGRATION_VERSION] = self.api.integration_version
             payload = json.dumps(data, ensure_ascii=False, cls=DateTimeEncoder)
             async with self.api.serialise_lock, aiofiles.open(filename, "w") as file:
                 await file.write(payload)

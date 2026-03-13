@@ -500,10 +500,10 @@ async def test_schema_upgrade_caller(
         data.pop("auto_updated")
         data_file.write_text(json.dumps(data), encoding="utf-8")
         await _reload(hass, entry)
-        assert "version from v4 to v8" in caplog.text
+        assert "version from v4 to v9" in caplog.text
         assert "Migrating un-dampened history" in caplog.text
         upgraded = json.loads(data_file.read_text(encoding="utf-8"))
-        assert upgraded["version"] == 8
+        assert upgraded["version"] == 9
         caplog.clear()
 
         # Incompatible schema (exercises the SchemaIncompatibleError except branch).

@@ -181,6 +181,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.hard_limit: str = options.hard_limit
         self.hass: HomeAssistant = hass
         self.headers: dict[str, str] = {}
+        self.integration_version: str = ""
         self.latest_period: dt | None = None
         self.loaded_data = False
         self.options: ConnectionOptions = options

@@ -28,6 +28,7 @@ from .const import (
     ESTIMATE90,
     FAILURE,
     FORECASTS,
+    INTEGRATION_VERSION,
     ISSUE_ADVANCED_DEPRECATED,
     ISSUE_ADVANCED_PROBLEM,
     ISSUE_UNUSUAL_AZIMUTH_NORTHERN,
@@ -407,6 +408,13 @@ def upgrade_cache_schema(
         data[VERSION] = 8
         data[FAILURE][LAST_14D] = data[FAILURE][LAST_7D] + [0] * 7
         json_version = 8
+
+    # Add integration version, introduced v4.x.x.
+    if json_version < 9:
+        _LOGGER.debug("Upgrading to v9 cache structure")
+        data[VERSION] = 9
+        data[INTEGRATION_VERSION] = "unknown"
+        json_version = 9
 
     return json_version
 

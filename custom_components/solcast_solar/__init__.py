@@ -345,6 +345,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await solcast.advanced_opt.read_advanced_options()
 
     solcast.headers = get_session_headers(solcast, version)
+    solcast.integration_version = version
     await solcast.sites_cache.get_sites_and_usage(prior_crash=prior_crash)
     match solcast.sites_status:
         case SitesStatus.BAD_KEY:

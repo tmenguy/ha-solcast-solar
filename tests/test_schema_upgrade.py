@@ -11,6 +11,7 @@ from homeassistant.components.solcast_solar.const import (
     CONFIG_VERSION,
     FAILURE,
     FORECASTS,
+    INTEGRATION_VERSION,
     JSON_VERSION,
     LAST_7D,
     LAST_14D,
@@ -32,13 +33,14 @@ SITE_ID = "3333-3333-3333-3333"
 SAMPLE_FORECASTS: list = [{"period_start": "2025-01-01T00:00:00", "pv_estimate": 1.0}]
 LAST_UPDATED_VALUE = "2025-01-01T00:00:00+00:00"
 
-# Base data resembling a current v8 cache file.
+# Base data resembling a current v9 cache file.
 BASE_DATA: dict = {
     SITE_INFO: {SITE_ID: {FORECASTS: copy.deepcopy(SAMPLE_FORECASTS)}},
     LAST_UPDATED: LAST_UPDATED_VALUE,
     LAST_ATTEMPT: LAST_UPDATED_VALUE,
     AUTO_UPDATED: 0,
     FAILURE: {LAST_24H: 0, LAST_7D: [0] * 7, LAST_14D: [0] * 14},
+    INTEGRATION_VERSION: "",
     VERSION: JSON_VERSION,
 }
 
@@ -57,6 +59,7 @@ def test_upgrade_from_v4() -> None:
     assert data[LAST_ATTEMPT] == LAST_UPDATED_VALUE
     assert data[AUTO_UPDATED] == 99999
     assert data[FAILURE] == {LAST_24H: 0, LAST_7D: [0] * 7, LAST_14D: [0] * 14}
+    assert data[INTEGRATION_VERSION] == "unknown"
 
 
 def test_upgrade_from_ancient() -> None:
@@ -74,6 +77,7 @@ def test_upgrade_from_ancient() -> None:
     assert data[VERSION] == JSON_VERSION
     assert data[LAST_ATTEMPT] == LAST_UPDATED_VALUE
     assert data[AUTO_UPDATED] == 99999
+    assert data[INTEGRATION_VERSION] == "unknown"
     # Forecasts should have been migrated under siteinfo.
     assert data[SITE_INFO] == {SITE_ID: {FORECASTS: SAMPLE_FORECASTS}}
     assert FORECASTS not in data
