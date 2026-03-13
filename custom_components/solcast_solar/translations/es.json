@@ -35,7 +35,7 @@
           "api_limit": "Límite de API (opcionalmente, separe con comas varios valores para cada clave)",
           "auto_update": "Actualización automática"
         },
-        "description": "Detalles de la cuenta Solcast\n\n(Si no se utiliza la actualización automática, se requiere una automatización; consulte la documentación de integración)\n\nLa API de Solcast debe estar disponible para configurar esta integración por primera vez. Si recibe el mensaje de estado '429 / Inténtelo de nuevo más tarde', significa que la API no está disponible y la configuración no puede completarse. Debe esperar. Tenga en cuenta que la página de estado de la API en status.solcast.com casi con certeza no mostrará ningún problema de API. Es algo propio de la API para aficionados causado por un usuario indebido."
+        "description": "Detalles de la cuenta Solcast\n\n(Si no se utiliza la actualización automática, se requiere una automatización; consulte la documentación de integración)\n\nLa API de Solcast debe estar disponible para configurar esta integración por primera vez. Si recibe el mensaje de estado '429 / Inténtelo de nuevo más tarde', significa que la API no está disponible y la configuración no puede completarse. Debe esperar. Tenga en cuenta que la página de estado de la API en status.solcast.com casi con certeza no mostrará ningún problema de API. La causa más probable es un único usuario problemático de la API que afecta la disponibilidad para todos."
       }
     }
   },
