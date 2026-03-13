@@ -62,6 +62,7 @@ class AdvancedOptions:
             api: The parent SolcastApi instance.
         """
         self.api = api
+        self.set_default_advanced_options()
 
     def advanced_options_with_aliases(self) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
         """Return advanced options including aliases."""

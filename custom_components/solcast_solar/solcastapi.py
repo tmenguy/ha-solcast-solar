@@ -201,7 +201,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.use_forecast_confidence = f"pv_{options.key_estimate}"
 
         # Private attributes.
-        self._better_mape_issue_raised: bool = False
         self._sites_actual_hard_limit: defaultdict[str, Any] = defaultdict(dict)
         self._sites_actual_hard_limit_undampened: defaultdict[str, Any] = defaultdict(dict)
         self._sites_hard_limit: defaultdict[str, Any] = defaultdict(dict)
@@ -213,9 +212,6 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         _LOGGER.debug("Configuration directory is %s", self.config_dir)
 
         file_path = Path(self.config_dir) / Path(options.file_path).name
-        self.advanced_opt = AdvancedOptions(self)
-        self.advanced_opt.set_default_advanced_options()
-
         self.filename = f"{file_path}"
         self.filename_actuals = f"{file_path.parent / file_path.stem}-actuals{file_path.suffix}"
         self.filename_actuals_dampened = f"{file_path.parent / file_path.stem}-actuals-dampened{file_path.suffix}"
@@ -226,6 +222,7 @@ class SolcastApi:  # pylint: disable=too-many-public-methods
         self.filename_undampened = f"{file_path.parent / file_path.stem}-undampened{file_path.suffix}"
 
         # Child objects.
+        self.advanced_opt = AdvancedOptions(self)
         self.dampening = Dampening(self)
         self.fetcher = Fetcher(self)
         self.query = ForecastQuery(self)
