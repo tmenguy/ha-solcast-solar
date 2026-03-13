@@ -35,7 +35,7 @@
           "api_limit": "API limit (optionally comma separate multiple values for each key)",
           "auto_update": "Auto-update"
         },
-        "description": "Solcast Account Details\n\n(If not using auto-update then an automation is required - see the integration documentation)\n\nThe Solcast API must be available to initially configure this integration. If you receive a status message '429 / Try again later' then the API is unavailable and configuration cannot be completed. You need to wait. Note that the API status page at status.solcast.com will almost certainly not show any API issues. The cause most likely lies with a single bad API user who is affecting availability for everyone."
+        "description": "Solcast Account Details\n\n(If not using auto-update then an automation is required - see the integration documentation)\n\nThe Solcast API must be available to initially configure this integration. If you receive a status message '429 / Try again later' then the API is unavailable and configuration cannot be completed. You need to wait. Note that the API status page at status.solcast.com will almost certainly not show any API issues. The cause most likely lies with a single bad API user who is affecting availability for all hobbyists."
       }
     }
   },
