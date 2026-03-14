@@ -53,6 +53,7 @@ from .const import (
     LEARN_MORE,
     LEARN_MORE_UNUSUAL_AZIMUTH,
     OLD_API_KEY,
+    PERIOD_START,
     PROPOSAL,
     RESET,
     RESOURCE_ID,
@@ -418,6 +419,18 @@ class SitesCache:
                                 filename,
                                 type(json_data),
                             )
+                            for site_id, site_data in json_data.get(SITE_INFO, {}).items():
+                                bad = [f for f in site_data.get(FORECASTS, []) if PERIOD_START in f and not isinstance(f[PERIOD_START], dt)]
+                                if bad:
+                                    _LOGGER.warning(
+                                        "Dropping %d entry(s) with non-datetime period_start for site %s in %s",
+                                        len(bad),
+                                        site_id,
+                                        filename,
+                                    )
+                                    site_data[FORECASTS] = [
+                                        f for f in site_data[FORECASTS] if not (PERIOD_START in f and not isinstance(f[PERIOD_START], dt))
+                                    ]
                             data = json_data
                             if set_loaded:
                                 self.api.loaded_data = True

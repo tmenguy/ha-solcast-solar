@@ -1856,6 +1856,19 @@ async def test_scenarios(  # noqa: C901
         assert f"Raise issue `{issue.issue_id}`" in caplog.text
         caplog.clear()
 
+        # Corrupt solcast.json with a non-convertable ISO datetime string (e.g. year out of Python range).
+        _LOGGER.debug("Testing non-convertable period_start: solcast.json")
+        nc_data = json.loads(data_file.read_text(encoding="utf-8"))
+        first_site = next(iter(nc_data["siteinfo"]))
+        nc_data["siteinfo"][first_site]["forecasts"].insert(
+            0, {"period_start": "18409-09-29T02:00:00+00:00", "pv_estimate": 0.0, "pv_estimate10": 0.0, "pv_estimate90": 0.0}
+        )
+        data_file.write_text(json.dumps(nc_data), encoding="utf-8")
+        await _reload(hass, entry)
+        assert "Dropping 1 entry(s) with non-datetime period_start" in caplog.text
+        assert hass.data[DOMAIN].get(PRESUMED_DEAD, True) is False
+        caplog.clear()
+
         # Corrupt solcast.json
         _LOGGER.debug("Testing corruption: solcast.json")
         _corrupt_data()
