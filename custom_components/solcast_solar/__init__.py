@@ -93,6 +93,7 @@ from .util import (
     sync_actuals_api_limit_issue,
 )
 
+DAMPENING_ADAPTATIONS_DEVELOPMENT: Final = False  # For development, to force re-modelling of dampening adaptations at startup
 ENTRY_OPTIONS_DEVELOPMENT: Final = False  # For development, to force a re-upgrade of options at startup
 
 PLATFORMS: Final = [
@@ -403,6 +404,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await __check_stale_start(coordinator)
 
     ServiceActions(hass, entry, coordinator, solcast)
+
+    if DAMPENING_ADAPTATIONS_DEVELOPMENT:
+        await coordinator.solcast.dampening.adaptive.update_history()
+        await coordinator.solcast.dampening.adaptive.determine_best_settings()
 
     return True
 
