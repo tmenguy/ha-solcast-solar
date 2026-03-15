@@ -292,6 +292,10 @@
       "description": "Počas aktualizácie Solcast API opakovane hlásilo stav `429 / Try again later`. To znamená, že Solcast API je zaneprázdnené a aktívne blokuje požiadavky pre hobby účty.\n\n* Webová stránka solcast.com nie je ovplyvnená, ale API je dočasne nedostupné pre vás.\n* Stránka stavu API na status.solcast.com takmer určite neukáže žiadny problém.\n* Nesnažte sa túto situáciu riešiť.\n* Nezmeňte svoj kľúč API.\n* Nesnažte sa aktualizovať integráciu.\n* Vyhnite sa reštartovaniu integrácie.\n* Integrácia bude naďalej poskytovať poslednú predpoveď solárneho žiarenia získanú zo Solcastu.\n* Nie je to problém s integráciou a vyrieši sa to samo. Nič nemeňte.\n\n(Ak chcete tento problém potlačiť, vytvorte možnosť pokročilej konfigurácie api_raise_issue a nastavte ju na false.)",
       "title": "Solcast API dočasne nedostupné"
     },
+    "actuals_api_limit": {
+      "description": "Automatická aktualizácia a odhadované skutočné hodnoty sú povolené, pričom limity API sú nakonfigurované na maximálne hodnoty pre hobby používateľov (`{configured_value}`). Odhadované skutočné hodnoty sú zbierané tesne po polnoci a využívajú jedno volanie API pre každú strešnú inštaláciu pre každý nakonfigurovaný kľúč API. Znížte limity API na `{suggested_value}`, aby ste rezervovali volania pre odhadované skutočné hodnoty.",
+      "title": "Upraviť limit API pre odhadované skutočné hodnoty"
+    },
     "corrupt_file": {
       "description": "Súbor(y) s údajmi vo vyrovnávacej pamäti `{files}` je poškodený. ​​Integrácia sa pokúsi o obnovenie odstránením súboru(ov) a opätovným načítaním údajov zo Solcastu. V dôsledku tejto situácie očakávajte zvýšené využívanie rozhrania API a možné zlyhania rozhrania API a stratu histórie predpovedí. Súbory je možné obnoviť zo zálohy, ale stále očakávajte zlyhania volaní rozhrania API.",
       "title": "Poškodené údaje vo vyrovnávacej pamäti"

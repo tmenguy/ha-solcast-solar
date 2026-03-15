@@ -1343,6 +1343,7 @@ Latest minor/patch releases.
 v4.5.1
 
 * Add `set_options`/`get_options` actions and deprecate single-purpose actions by @autoSteve
+* Add raised issue when actuals enabled and API limit at maximum by @autoSteve
 * Add Dutch translation by @BDVGitHub
 * Refine `429` storm raised issue by @autoSteve
 * Refine config flow for `429` storm period advice by @autoSteve

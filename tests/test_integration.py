@@ -45,6 +45,7 @@ from homeassistant.components.solcast_solar.const import (
     GET_ACTUALS,
     HARD_LIMIT,
     HARD_LIMIT_API,
+    ISSUE_ACTUALS_API_LIMIT,
     ISSUE_CORRUPT_FILE,
     KEY_ESTIMATE,
     PRESUMED_DEAD,
@@ -65,6 +66,7 @@ from homeassistant.components.solcast_solar.util import (
     AutoUpdate,
     DateTimeEncoder,
     JSONDecoder,
+    sync_actuals_api_limit_issue,
 )
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_API_KEY
@@ -1473,6 +1475,133 @@ async def test_remaining_actions(
 
         no_error_or_exception(caplog)
 
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+@pytest.mark.parametrize("api_limit", ["10", "50"])
+async def test_actuals_api_limit_issue_raised_and_cleared(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+    api_limit: str,
+) -> None:
+    """Test warning issue is raised and then cleared for estimated actuals with auto-update."""
+
+    try:
+        options = copy.deepcopy(DEFAULT_INPUT1)
+        options[API_LIMIT] = api_limit
+        options[AUTO_UPDATE] = AutoUpdate.DAYLIGHT
+        options[GET_ACTUALS] = True
+        entry = await async_init_integration(hass, options)
+
+        issue = issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT)
+        assert issue is not None
+        assert issue.is_persistent is False
+
+        solcast = entry.runtime_data.coordinator.solcast
+        api_keys = [api_key.strip() for api_key in entry.options[CONF_API_KEY].split(",") if api_key.strip()]
+        limits = [limit.strip() for limit in entry.options[API_LIMIT].split(",") if limit.strip()]
+        while len(limits) < len(api_keys):
+            limits.append(limits[-1])
+        sites_per_key = dict.fromkeys(api_keys, 0)
+        for site in solcast.sites:
+            sites_per_key[site[CONF_API_KEY]] += 1
+        configured_value = ",".join(limits[: len(api_keys)])
+        suggested_value = ",".join(str(max(int(limits[index]) - sites_per_key[api_keys[index]], 1)) for index in range(len(api_keys)))
+
+        assert issue.translation_placeholders is not None
+        assert issue.translation_placeholders["configured_value"] == configured_value
+        assert issue.translation_placeholders["suggested_value"] == suggested_value
+
+        # User resolves by disabling estimated actuals acquisition.
+        new_options = {**entry.options, GET_ACTUALS: False}
+        hass.config_entries.async_update_entry(entry, options=new_options)
+        await hass.async_block_till_done()
+
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is None
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+async def test_actuals_api_limit_issue_not_raised_when_auto_update_disabled(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+) -> None:
+    """Test warning issue is not raised when auto-update is disabled."""
+
+    try:
+        options = copy.deepcopy(DEFAULT_INPUT1)
+        options[API_LIMIT] = "10"
+        options[AUTO_UPDATE] = AutoUpdate.NONE
+        options[GET_ACTUALS] = True
+        await async_init_integration(hass, options)
+
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is None
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
+async def test_actuals_api_limit_issue_invalid_option_paths(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+) -> None:
+    """Test helper paths for invalid option values clear the warning issue safely."""
+
+    try:
+        options = copy.deepcopy(DEFAULT_INPUT1)
+        options[API_LIMIT] = "10"
+        options[AUTO_UPDATE] = AutoUpdate.DAYLIGHT
+        options[GET_ACTUALS] = True
+        entry = await async_init_integration(hass, options)
+        solcast = entry.runtime_data.coordinator.solcast
+
+        valid = {
+            CONF_API_KEY: options[CONF_API_KEY],
+            API_LIMIT: "10",
+            AUTO_UPDATE: AutoUpdate.DAYLIGHT,
+            GET_ACTUALS: True,
+        }
+
+        sync_actuals_api_limit_issue(hass, valid, solcast.sites)
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is not None
+
+        sync_actuals_api_limit_issue(hass, {**valid, AUTO_UPDATE: "bad"}, solcast.sites)
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is None
+
+        sync_actuals_api_limit_issue(hass, valid, solcast.sites)
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is not None
+
+        sync_actuals_api_limit_issue(hass, {**valid, CONF_API_KEY: ""}, solcast.sites)
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is None
+
+        sync_actuals_api_limit_issue(hass, valid, solcast.sites)
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is not None
+
+        sync_actuals_api_limit_issue(hass, {**valid, API_LIMIT: "NaN"}, solcast.sites)
+        assert issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is None
+
+        # Numeric comparison is per key: suggested 8,48 from 10,50 still raises.
+        numeric = {
+            CONF_API_KEY: "a,b",
+            API_LIMIT: "10,50",
+            AUTO_UPDATE: AutoUpdate.DAYLIGHT,
+            GET_ACTUALS: True,
+        }
+        fake_sites = [
+            {CONF_API_KEY: "a"},
+            {CONF_API_KEY: "a"},
+            {CONF_API_KEY: "b"},
+            {CONF_API_KEY: "b"},
+        ]
+        sync_actuals_api_limit_issue(hass, numeric, fake_sites)
+        issue = issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT)
+        assert issue is not None
+        assert issue.translation_placeholders is not None
+        assert issue.translation_placeholders["configured_value"] == "10,50"
+        assert issue.translation_placeholders["suggested_value"] == "8,48"
     finally:
         assert await async_cleanup_integration_tests(hass)
 

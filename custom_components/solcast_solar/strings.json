@@ -292,6 +292,10 @@
       "description": "The Solcast API has reported `429 / Try again later` status repeatedly during an update. This means that the Solcast API is busy and is actively blocking requests for hobbyist accounts.\n\n* The solcast.com website is unaffected, but the API is temporarily unavailable to you.\n* The API status page at status.solcast.com will almost certainly indicate no issue.\n* Do not attempt to fix this situation.\n* Do not change your API key.\n* Do not attempt an integration upgrade.\n* Avoid restarting the integration.\n* The integration will continue providing the last solar forecast it retrieved from Solcast.\n* This is not an integration issue and will resolve itself. Change nothing.\n\n(To suppress this issue, create an advanced configuration option api_raise_issue and set it to false.)",
       "title": "Solcast API temporarily unavailable"
     },
+    "actuals_api_limit": {
+      "description": "Auto-update and estimated actuals are enabled while API limits are configured at hobbyist maximum values (`{configured_value}`). Estimated actuals are collected just after midnight and use one API call per rooftop site for each configured API key. Reduce your API limits to `{suggested_value}` to reserve calls for estimated actuals.",
+      "title": "Adjust API limit for estimated actuals"
+    },
     "corrupt_file": {
       "description": "The cached data file(s) `{files}` is corrupted. The integration will attempt to recover by deleting the file(s) and re-fetching data from Solcast. Expect increased API usage and potential API failures, and loss of forecast history due to this situation. Possibly recover the files from backup, but still expect API call failures.",
       "title": "Corrupted cached data"

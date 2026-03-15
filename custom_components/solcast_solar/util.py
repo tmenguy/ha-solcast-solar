@@ -2,7 +2,7 @@
 
 # pylint: disable=consider-using-enumerate
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime as dt, timedelta, tzinfo
 from enum import Enum
@@ -13,13 +13,15 @@ from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import ATTR_ENTITY_ID, CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    API_LIMIT,
+    AUTO_UPDATE,
     AUTO_UPDATED,
     DOMAIN,
     DT_DATE_ONLY_FORMAT,
@@ -28,7 +30,9 @@ from .const import (
     ESTIMATE90,
     FAILURE,
     FORECASTS,
+    GET_ACTUALS,
     INTEGRATION_VERSION,
+    ISSUE_ACTUALS_API_LIMIT,
     ISSUE_ADVANCED_DEPRECATED,
     ISSUE_ADVANCED_PROBLEM,
     ISSUE_UNUSUAL_AZIMUTH_NORTHERN,
@@ -146,6 +150,80 @@ class HistoryType(int, Enum):
     FORECASTS = 0
     ESTIMATED_ACTUALS = 1
     ESTIMATED_ACTUALS_ADJUSTED = 2
+
+
+def sync_actuals_api_limit_issue(hass: HomeAssistant, options: Mapping[str, Any], sites: list[dict[str, Any]]) -> None:
+    """Raise or remove warning issue when estimated actuals consume auto-update API calls."""
+
+    issue_registry = ir.async_get(hass)
+
+    def _remove_issue() -> None:
+        if issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT) is not None:
+            _LOGGER.debug("Remove issue for %s", ISSUE_ACTUALS_API_LIMIT)
+            ir.async_delete_issue(hass, DOMAIN, ISSUE_ACTUALS_API_LIMIT)
+
+    try:
+        auto_update = int(options.get(AUTO_UPDATE, AutoUpdate.NONE))
+    except (TypeError, ValueError):
+        _remove_issue()
+        return
+
+    if auto_update == AutoUpdate.NONE or not options.get(GET_ACTUALS, False):
+        _remove_issue()
+        return
+
+    api_keys = [key.strip() for key in str(options.get(CONF_API_KEY, "")).split(",") if key.strip()]
+    api_limits = [limit.strip() for limit in str(options.get(API_LIMIT, "")).split(",") if limit.strip()]
+    if not api_keys or not api_limits:
+        _remove_issue()
+        return
+
+    while len(api_limits) < len(api_keys):
+        api_limits.append(api_limits[-1])
+
+    try:
+        configured_limits = [int(api_limits[index]) for index in range(len(api_keys))]
+    except ValueError:
+        _remove_issue()
+        return
+
+    if not configured_limits or not all(limit in (10, 50) for limit in configured_limits):
+        _remove_issue()
+        return
+
+    sites_per_key = dict.fromkeys(api_keys, 0)
+    for site in sites:
+        if (site_key := site.get(CONF_API_KEY)) in sites_per_key:
+            sites_per_key[site_key] += 1
+
+    suggested_limits = [max(configured_limits[index] - sites_per_key.get(api_keys[index], 0), 1) for index in range(len(api_keys))]
+
+    # Compare numerically per API key to avoid lexicographic string comparison bugs.
+    if all(configured_limits[index] <= suggested_limits[index] for index in range(len(configured_limits))):
+        _remove_issue()
+        return
+
+    configured_value = ",".join(str(limit) for limit in configured_limits)
+    suggested_value = ",".join(str(limit) for limit in suggested_limits)
+    _LOGGER.debug(
+        "Raise issue `%s` for configured API limits %s, suggested %s",
+        ISSUE_ACTUALS_API_LIMIT,
+        configured_value,
+        suggested_value,
+    )
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        ISSUE_ACTUALS_API_LIMIT,
+        is_fixable=False,
+        is_persistent=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key=ISSUE_ACTUALS_API_LIMIT,
+        translation_placeholders={
+            "configured_value": configured_value,
+            "suggested_value": suggested_value,
+        },
+    )
 
 
 class DateTimeHelper:

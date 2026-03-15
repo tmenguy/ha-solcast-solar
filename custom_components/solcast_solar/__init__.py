@@ -90,6 +90,7 @@ from .util import (
     SolcastData,
     UsageStatus,
     raise_and_record,
+    sync_actuals_api_limit_issue,
 )
 
 ENTRY_OPTIONS_DEVELOPMENT: Final = False  # For development, to force a re-upgrade of options at startup
@@ -368,6 +369,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         case _:
             pass
 
+    sync_actuals_api_limit_issue(hass, entry.options, solcast.sites)
+
     await __get_granular_dampening(hass, entry, solcast)
     hass.data[DOMAIN][SOLCAST] = solcast
     hass.data[DOMAIN][ENTRY_OPTIONS] = {**entry.options}
@@ -569,6 +572,7 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     else:
         determination = "Refresh sensors only" + (", with spline recalculate" if recalculate_splines else "")
     _LOGGER.debug("Options updated, action: %s", determination)
+    sync_actuals_api_limit_issue(hass, entry.options, coordinator.solcast.sites)
     if not reload:
         await coordinator.solcast.set_options(entry.options)
         if recalculate_and_refresh:
