@@ -293,7 +293,7 @@
       "title": "Solcast API dočasne nedostupné"
     },
     "actuals_api_limit": {
-      "description": "Automatická aktualizácia a odhadované skutočné hodnoty sú povolené, pričom limity API sú nakonfigurované na maximálne hodnoty pre hobby používateľov (`{configured_value}`). Odhadované skutočné hodnoty sú zbierané tesne po polnoci a využívajú jedno volanie API pre každú strešnú inštaláciu pre každý nakonfigurovaný kľúč API. Znížte limity API na `{suggested_value}`, aby ste rezervovali volania pre odhadované skutočné hodnoty.",
+      "description": "Automatická aktualizácia a odhadované skutočné hodnoty sú povolené, pričom limit API je nakonfigurovaný na maximálnu hodnotu pre hobby používateľov (`{configured_value}`). Odhadované skutočné hodnoty sú zbierané tesne po polnoci a využívajú jedno volanie API pre každú strešnú inštaláciu pre každý nakonfigurovaný kľúč API. Znížte limit API na `{suggested_value}`, aby ste rezervovali volania pre odhadované skutočné hodnoty.",
       "title": "Upraviť limit API pre odhadované skutočné hodnoty"
     },
     "corrupt_file": {

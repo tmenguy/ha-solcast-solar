@@ -293,7 +293,7 @@
       "title": "Solcast-API vorübergehend nicht verfügbar"
     },
     "actuals_api_limit": {
-      "description": "Die automatische Aktualisierung und geschätzte Ist-Werte sind aktiviert, während die API-Limits auf die maximalen Hobbyisten-Werte (`{configured_value}`) konfiguriert sind. Geschätzte Ist-Werte werden kurz nach Mitternacht abgerufen und verwenden einen API-Aufruf pro Dachanlage für jeden konfigurierten API-Schlüssel. Reduzieren Sie Ihre API-Limits auf `{suggested_value}`, um Aufrufe für geschätzte Ist-Werte zu reservieren.",
+      "description": "Die automatische Aktualisierung und geschätzte Ist-Werte sind aktiviert, während das API-Limit auf den maximalen Hobbyisten-Wert (`{configured_value}`) konfiguriert ist. Geschätzte Ist-Werte werden kurz nach Mitternacht abgerufen und verwenden einen API-Aufruf pro Dachanlage für jeden konfigurierten API-Schlüssel. Reduzieren Sie Ihr API-Limit auf `{suggested_value}`, um Aufrufe für geschätzte Ist-Werte zu reservieren.",
       "title": "API-Limit für geschätzte Ist-Werte anpassen"
     },
     "corrupt_file": {

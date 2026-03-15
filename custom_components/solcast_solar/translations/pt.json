@@ -293,7 +293,7 @@
       "title": "API Solcast temporariamente indisponível"
     },
     "actuals_api_limit": {
-      "description": "A atualização automática e os valores reais estimados estão ativados enquanto os limites de API estão configurados nos valores máximos para hobbyistas (`{configured_value}`). Os valores reais estimados são recolhidos logo após a meia-noite e utilizam uma chamada de API por instalação no telhado para cada chave de API configurada. Reduza os seus limites de API para `{suggested_value}` para reservar chamadas para valores reais estimados.",
+      "description": "A atualização automática e os valores reais estimados estão ativados enquanto o limite de API está configurado no valor máximo para hobbyistas (`{configured_value}`). Os valores reais estimados são recolhidos logo após a meia-noite e utilizam uma chamada de API por instalação no telhado para cada chave de API configurada. Reduza o seu limite de API para `{suggested_value}` para reservar chamadas para valores reais estimados.",
       "title": "Ajustar o limite de API para valores reais estimados"
     },
     "corrupt_file": {

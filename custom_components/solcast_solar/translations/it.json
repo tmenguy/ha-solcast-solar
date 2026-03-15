@@ -293,7 +293,7 @@
       "title": "API Solcast temporaneamente non disponibile"
     },
     "actuals_api_limit": {
-      "description": "L'aggiornamento automatico e i valori effettivi stimati sono abilitati mentre i limiti API sono configurati ai valori massimi per hobbisti (`{configured_value}`). I valori effettivi stimati vengono raccolti subito dopo la mezzanotte e utilizzano una chiamata API per ogni impianto sul tetto per ciascuna chiave API configurata. Riduci i limiti API a `{suggested_value}` per riservare le chiamate ai valori effettivi stimati.",
+      "description": "L'aggiornamento automatico e i valori effettivi stimati sono abilitati mentre il limite API è configurato al valore massimo per hobbisti (`{configured_value}`). I valori effettivi stimati vengono raccolti subito dopo la mezzanotte e utilizzano una chiamata API per ogni impianto sul tetto per ciascuna chiave API configurata. Riduci il limite API a `{suggested_value}` per riservare le chiamate ai valori effettivi stimati.",
       "title": "Regola il limite API per i valori effettivi stimati"
     },
     "corrupt_file": {

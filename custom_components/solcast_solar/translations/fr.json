@@ -293,7 +293,7 @@
       "title": "API Solcast temporairement indisponible"
     },
     "actuals_api_limit": {
-      "description": "La mise à jour automatique et les valeurs réelles estimées sont activées alors que les limites d'API sont configurées aux valeurs maximales pour les amateurs (`{configured_value}`). Les valeurs réelles estimées sont collectées juste après minuit et utilisent un appel API par installation en toiture pour chaque clé API configurée. Réduisez vos limites d'API à `{suggested_value}` pour réserver des appels pour les valeurs réelles estimées.",
+      "description": "La mise à jour automatique et les valeurs réelles estimées sont activées alors que la limite d'API est configurée à la valeur maximale pour les amateurs (`{configured_value}`). Les valeurs réelles estimées sont collectées juste après minuit et utilisent un appel API par installation en toiture pour chaque clé API configurée. Réduisez votre limite d'API à `{suggested_value}` pour réserver des appels pour les valeurs réelles estimées.",
       "title": "Ajuster la limite d'API pour les valeurs réelles estimées"
     },
     "corrupt_file": {

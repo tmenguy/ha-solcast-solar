@@ -281,7 +281,7 @@
       "title": "Deprecated action"
     },
     "actuals_api_limit": {
-      "description": "Auto-update and estimated actuals are enabled while API limits are configured at hobbyist maximum values (`{configured_value}`). Estimated actuals are collected just after midnight and use one API call per rooftop site for each configured API key. Reduce your API limits to `{suggested_value}` to reserve calls for estimated actuals.",
+      "description": "Auto-update and estimated actuals are enabled while API limit is configured at hobbyist maximum value (`{configured_value}`). Estimated actuals are collected just after midnight and use one API call per rooftop site for each configured API key. Reduce your API limit to `{suggested_value}` to reserve calls for estimated actuals.",
       "title": "Adjust API limit for estimated actuals"
     },
     "advanced_deprecated": {

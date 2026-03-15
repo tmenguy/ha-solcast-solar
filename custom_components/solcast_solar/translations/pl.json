@@ -293,7 +293,7 @@
       "title": "Solcast API tymczasowo niedostępne"
     },
     "actuals_api_limit": {
-      "description": "Automatyczna aktualizacja i szacowane wartości rzeczywiste są włączone, podczas gdy limity API są skonfigurowane na maksymalne wartości dla hobbystów (`{configured_value}`). Szacowane wartości rzeczywiste są zbierane tuż po północy i wykorzystują jedno wywołanie API na każdą instalację dachową dla każdego skonfigurowanego klucza API. Zmniejsz limity API do `{suggested_value}`, aby zarezerwować wywołania dla szacowanych wartości rzeczywistych.",
+      "description": "Automatyczna aktualizacja i szacowane wartości rzeczywiste są włączone, podczas gdy limit API jest skonfigurowany na maksymalną wartość dla hobbystów (`{configured_value}`). Szacowane wartości rzeczywiste są zbierane tuż po północy i wykorzystują jedno wywołanie API na każdą instalację dachową dla każdego skonfigurowanego klucza API. Zmniejsz limit API do `{suggested_value}`, aby zarezerwować wywołania dla szacowanych wartości rzeczywistych.",
       "title": "Dostosuj limit API dla szacowanych wartości rzeczywistych"
     },
     "corrupt_file": {
