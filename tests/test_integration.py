@@ -1606,6 +1606,43 @@ async def test_actuals_api_limit_issue_invalid_option_paths(
         assert await async_cleanup_integration_tests(hass)
 
 
+async def test_actuals_api_limit_issue_single_limit_multiple_keys(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    issue_registry: ir.IssueRegistry,
+) -> None:
+    """Test that a single API limit covering multiple keys shows one suggested value."""
+
+    try:
+        options = copy.deepcopy(DEFAULT_INPUT1)
+        options[API_LIMIT] = "10"
+        options[AUTO_UPDATE] = AutoUpdate.DAYLIGHT
+        options[GET_ACTUALS] = True
+        await async_init_integration(hass, options)
+
+        # Two API keys, one limit; key "a" has 2 sites (suggests 8), key "b" has 1 site (suggests 9).
+        # The display should show a single configured value and the lowest suggestion (8).
+        single_limit = {
+            CONF_API_KEY: "a,b",
+            API_LIMIT: "10",
+            AUTO_UPDATE: AutoUpdate.DAYLIGHT,
+            GET_ACTUALS: True,
+        }
+        fake_sites = [
+            {CONF_API_KEY: "a"},
+            {CONF_API_KEY: "a"},
+            {CONF_API_KEY: "b"},
+        ]
+        sync_actuals_api_limit_issue(hass, single_limit, fake_sites)
+        issue = issue_registry.async_get_issue(DOMAIN, ISSUE_ACTUALS_API_LIMIT)
+        assert issue is not None
+        assert issue.translation_placeholders is not None
+        assert issue.translation_placeholders["configured_value"] == "10"
+        assert issue.translation_placeholders["suggested_value"] == "8"
+    finally:
+        assert await async_cleanup_integration_tests(hass)
+
+
 async def test_scenarios(  # noqa: C901
     recorder_mock: Recorder,
     hass: HomeAssistant,

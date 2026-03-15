@@ -178,6 +178,7 @@ def sync_actuals_api_limit_issue(hass: HomeAssistant, options: Mapping[str, Any]
         _remove_issue()
         return
 
+    original_limit_count = len(api_limits)
     while len(api_limits) < len(api_keys):
         api_limits.append(api_limits[-1])
 
@@ -198,13 +199,16 @@ def sync_actuals_api_limit_issue(hass: HomeAssistant, options: Mapping[str, Any]
 
     suggested_limits = [max(configured_limits[index] - sites_per_key.get(api_keys[index], 0), 1) for index in range(len(api_keys))]
 
-    # Compare numerically per API key to avoid lexicographic string comparison bugs.
     if all(configured_limits[index] <= suggested_limits[index] for index in range(len(configured_limits))):
         _remove_issue()
         return
 
-    configured_value = ",".join(str(limit) for limit in configured_limits)
-    suggested_value = ",".join(str(limit) for limit in suggested_limits)
+    if original_limit_count == 1:
+        configured_value = str(configured_limits[0])
+        suggested_value = str(min(suggested_limits))
+    else:
+        configured_value = ",".join(str(limit) for limit in configured_limits)
+        suggested_value = ",".join(str(limit) for limit in suggested_limits)
     _LOGGER.debug(
         "Raise issue `%s` for configured API limits %s, suggested %s",
         ISSUE_ACTUALS_API_LIMIT,
